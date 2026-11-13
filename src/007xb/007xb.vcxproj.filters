@@ -1,0 +1,1707 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <ItemGroup>
+    <Filter Include="Xbox host" />
+    <Filter Include="Original engine" />
+    <Filter Include="Fast3D" />
+    <Filter Include="Native resources" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ge_original_input.cpp">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
+    <ClCompile Include="gfx_cc.cpp">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
+    <ClCompile Include="xb_archive.cpp">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
+    <ClCompile Include="xb_ge_audio.cpp">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
+    <ClCompile Include="xb_ge_fast3d.cpp">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
+    <ClCompile Include="xb_ge_libultra.cpp">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
+    <ClCompile Include="xb_ge_memory.cpp">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
+    <ClCompile Include="xb_ge_os.cpp">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
+    <ClCompile Include="xb_ge_runtime.cpp">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
+    <ClCompile Include="xb_logo.cpp">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
+    <ClCompile Include="xb_render.cpp">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
+    <ClCompile Include="xb_video.cpp">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
+    <ClCompile Include="ge_native_platform.cpp">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
+    <ClCompile Include="ge_native_video.cpp">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
+    <ClCompile Include="ge_nv2a_combiner.cpp">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\assets\font_chardatae.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\assets\font_chardataj.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\assets\font_dl.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\assets\oddtextures.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\assets\rarewarelogo.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\port\src\drawdistgameplay.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\port\src\ge_xbox_abi.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\port\src\ge_xbox_math.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\port\src\gimgfixup.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\port\src\pc_netorder.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\port\src\random.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\port\src\ucode.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\audi.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\boss.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\cfb.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\deb.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\debugmenu.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\fr.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\alloc_window_pieces.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\bg.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\bg_portal_table.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\bgapply.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\bgfog.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\bgroomtrans.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\blood_animation.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\blood_decrypt.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\bondhead.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\bondinv.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\bondview.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\bondview2.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\bondview_r.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\bondwalk2.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\cheat.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\chr.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\chr_b.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\chraction.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\chrai.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\chraidata.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\chrprop.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\cleanexplosions.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\cleanplayersound.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\cleanupSFXRelated.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\cleanup_alarms.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\cleanup_guard_data.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\cleanup_object_sounds.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\cleanup_objectives.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\cleanup_objects.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\cleanwindowpieces.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\cobjdata.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\compiletime.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\crc.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\deb_loadallmodels.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\debug_camera.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\debugmenu_08FE00.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\debugmenu_handler.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\decompress.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\dyn.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\ejectedcartridges.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\explosion.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\file.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\file2.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\frametiming.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\front.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\game_debug.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\glass.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\glass2.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\gobjdata.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\gobjdata2.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\gun.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\gun_rodata.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\gunfire.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\image.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\image_bank.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\indy_commands.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\indy_comms.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initBondDATA.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initBondDATAdefaults.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initactorpropstuff.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initanitable.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initcheattext.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initexplosioncasing.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initgamedata.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initguards.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initimages.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initintromatrices.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\inititemslots.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initmenus.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initmttex.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initnull_0009D0.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initnull_000BC0.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initobjects.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initpathtablelinks.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initpathtablesomething.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initplayergaitobject.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initunk_0009E0.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initunk_005450.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initunk_005520.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initunk_007290.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\initweaponanigroups.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\language.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\lightfixture.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\line_tri_intersect.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\loadobjectmodel.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\lv.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\math_asinacos.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\math_asinfacosf.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\math_atan2f.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\math_ceil.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\math_floor.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\math_unk_05A9E0.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\matrixmath.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\matrixmath_misc.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\model.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\mp_music.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\mp_weapon.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\mpmenu.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\music_0D2720.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\null_007970.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\ob.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\objecthandler.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\objecthandler_2.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\objective.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\objective_status.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\objective_status2.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\options.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\othermodemicrocode.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\padhalllv.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\player.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\playerstats_007770.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\pobjdata.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\prop.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\propobj.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\quaternion.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\radar.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\ramromreplay.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\rle.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\rsp.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\setguscale.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\sky.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\spectrum.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\speedgraphrenderer.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\stan.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\stanintersection.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\tex.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\textrelated.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\title.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\title2.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\title3.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\unk_092E50.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\viewport.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\vtxstore.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\game\zlib.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\init.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\joy.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\auxbus.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\bnkf.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\cents2ratio.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\copy.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\cseq.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\cspgetstate.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\csplayer.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\cspplay.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\cspsetseq.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\cspsetvol.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\cspstop.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\event.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\filter.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\heapalloc.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\heapinit.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\load.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\mainbus.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\resample.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\save.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\seq.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\seqplayer.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\seqpsetbank.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\sl.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\synaddplayer.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\synallocfx.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\synallocvoice.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\syndelete.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\synfreevoice.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\synsetfxmix.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\synsetpan.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\synsetpitch.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\synsetpriority.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\synsetvol.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\synstartvoice.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\synstartvoiceparam.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\synstopvoice.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\audio\synthesizer.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\gu\align.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\gu\cosf.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\gu\coss.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\gu\lookat.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\gu\lookatref.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\gu\mtxutil.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\gu\normalize.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\gu\ortho.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\gu\perspective.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\gu\rotate.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\gu\scale.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\gu\sinf.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\gu\sins.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\gu\translate.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\libc\ldiv.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\libc\xldtob.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultra\libc\xlitob.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultrare\audio\drvrNew.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultrare\audio\env.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultrare\audio\reverb.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultrare\io\vitbl.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\libultrare\libc\xprintf.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\mema.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\memp.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\music.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\ramrom.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\sched.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\snd.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\speed_graph.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\sprintf.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\stacks.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\str.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\token.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\port\src\ge_asset32.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\port\src\romdata32.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\port\src\mixer.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\port\src\d318watchdog.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
+    <ClCompile Include="ge_native_tasks.c">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
+    <ClCompile Include="ge_native_options.c">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\port\fast3d\gfx_pc.cpp">
+      <Filter>Fast3D</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="engine\assets\animationtable_data.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\animationtable_entries.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\font_dl.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\image_externs.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_ame_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_arch_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_arec_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_ark_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_azt_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_cat_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_cave_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_crad_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_cryp_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_dam_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_depo_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_dest_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_dish_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_len_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_oat_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_ref_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_run_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_sev_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_sevb_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_sevx_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_silo_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_stat_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\bg_tra_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\e\bg_jun_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\e\bg_pete_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\j\bg_jun_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\j\bg_pete_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\u\bg_jun_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\bg\u\bg_pete_all_p.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\brief\Ubrief.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\file_resource_id_enums.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\obseg.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\setup\stagesetup.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\text\LgunE.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\text\LmiscE.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\text\LmpmenuE.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\text\LmpweaponsE.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\text\LoptionE.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\text\LpropobjE.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\obseg\text\LtitleE.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\assets\oddtextures.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\CPPLib.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\LibFixedPoint.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\PR\R4300.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\PR\abi.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\PR\gbi.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\PR\gs2dex.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\PR\gu.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\PR\libaudio.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\PR\libultra.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\PR\mbi.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\PR\os.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\PR\os_internal.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\PR\primage.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\PR\ram_ORIGINAL_rom.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\PR\rcp.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\PR\rdb.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\PR\region.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\PR\rm_ORIGINAL_on.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\PR\sptask.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\PR\ucode.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\PR\ultraerror.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\PR\ultratypes.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\assert.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\bstring.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\gbi_extension.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\limits.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\math.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\os_extension.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\platform_info.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\sgidefs.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\stdarg.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\stddef.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\stdlib.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\string.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\svr4_math.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\ultra64.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\unused.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\fast3d\gbiex.h">
+      <Filter>Fast3D</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\fast3d\ge_native_buffer.h">
+      <Filter>Fast3D</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\fast3d\gfx_api.h">
+      <Filter>Fast3D</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\fast3d\gfx_pc.h">
+      <Filter>Fast3D</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\fast3d\gfx_screen_config.h">
+      <Filter>Fast3D</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\fast3d\gfx_window_manager_api.h">
+      <Filter>Fast3D</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\audio.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\audiotrace.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\config.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\crash.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\dram.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\drawdistgameplay.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\envflag.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\floatvtx.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\frontoptions.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\fs.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\ge_asset32.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\ge_xbox_compat.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\gimgfixup.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\hudaspect.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\input.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\mixer.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\optionsoverlay.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\pc_protos.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\pccg.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\pcmodels.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\platform.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\port_math.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\portaddr.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\porttick.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\romconvert.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\romdata.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\system.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\updatecheck.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\utils.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\video.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\include\watchsettings.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\shim\CPPLib.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\shim\PR\R4300.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\shim\PR\gbi.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\shim\PR\os.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\shim\PR\ucode.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\shim\R4300.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\shim\bondaicommands.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\shim\bondconstants.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\shim\bondtypes.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\shim\libc\xstdio.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\shim\math.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\shim\sched.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\shim\stdarg.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\shim\stddef.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\shim\stdio.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\shim\stdlib.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\shim\string.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\aicommands2.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\audi.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\bondaicommands.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\bondconstants.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\bondgame.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\bondtypes.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\boot.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\boss.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\c_data_filler.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\crash.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\deb.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\debugmenu.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\fr.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\alloc_window_pieces.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\bg.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\bgfog.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\bgroomtrans.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\blood_animation.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\blood_decrypt.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\bondhead.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\bondinv.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\bondview.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\bondview_internal.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\bondview_r.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\bondwalk2.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\cheat.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\chr.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\chrObjRandom.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\chr_b.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\chraction.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\chrai.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\chraidata.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\chrobjdata.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\cleanup_alarms.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\cleanup_objects.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\compiletime.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\deb_loadallmodels.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\debug_camera.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\debugmenu_handler.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\decompress.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\dyn.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\ejectedcartridges.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\explosion.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\file.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\file2.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\frametiming.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\front.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\game_debug.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\glass.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\gun.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\image.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\image_bank.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\indy_commands.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\indy_comms.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\initBondDATA.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\initBondDATAdefaults.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\initactorpropstuff.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\initanitable.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\initcheattext.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\initexplosioncasing.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\initgamedata.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\initguards.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\initintromatrices.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\inititemslots.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\initmenus.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\initmttex.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\initobjects.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\initpathtablelinks.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\initpathtablesomething.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\initunk_005450.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\initunk_005520.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\initunk_007290.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\language.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\lightfixture.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\loadobjectmodel.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\lv.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\math_asinacos.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\math_asinfacosf.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\math_atan2f.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\math_ceil.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\math_floor.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\math_sincos.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\math_unk_05A9E0.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\matrixmath.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\model.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\mp_music.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\mp_weapon.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\mpmenu.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\music_0D2720.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\ob.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\objecthandler.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\objective.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\objective_status.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\options.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\othermodemicrocode.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\padhalllv.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\player.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\prop.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\propobj.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\quaternion.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\ramromreplay.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\rle.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\rsp.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\sky.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\spectrum.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\spectrum_hw.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\speedgraphrenderer.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\stan.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\stanintersection.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\tex.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\textrelated.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\title.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\title2.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\title3.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\unk_092E50.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\viewport.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\vtxstore.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\game\zlib.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\inflate\inflate.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\init.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\joy.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\libultra\audio\cseq.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\libultra\audio\cseqp.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\libultra\audio\initfx.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\libultra\audio\seq.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\libultra\audio\seqp.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\libultra\audio\synthInternals.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\libultra\gu\guint.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\libultra\gu\sintable.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\libultra\io\controller.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\libultra\io\piint.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\libultra\io\siint.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\libultra\io\viint.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\libultra\libc\xstdio.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\libultra\os\exceptasm.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\libultra\os\osint.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\libultrare\libultrare.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\macro.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\mema.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\memp.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\music.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\pi.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\ramrom.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\random.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\rmon.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\sched.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\snd.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\speed_graph.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\str.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\thread_config.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\tlb_hardwire.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\tlb_manage.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\tlb_random.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\tlb_resolve.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\token.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\usb.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\vi.h">
+      <Filter>Original engine</Filter>
+    </ClInclude>
+    <ClInclude Include="ge_native_audio.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="ge_native_error.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="ge_native_gfx.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="ge_native_platform.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="ge_native_video.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="ge_nv2a_combiner.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="ge_original_input.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="gfx_cc.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="gfx_rendering_api.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="xb_archive.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="xb_celmesh.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="xb_ge_audio.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="xb_ge_fast3d.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="xb_ge_libultra.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="xb_ge_memory.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="xb_ge_os.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="xb_ge_runtime.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="xb_logo.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="xb_render.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="xb_video.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="ge_native_frame_stats.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="ge_rom_symbols.asm">
+      <Filter>Native resources</Filter>
+    </MASM>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Media\Copy Assets Here.txt" />
+  </ItemGroup>
+</Project>

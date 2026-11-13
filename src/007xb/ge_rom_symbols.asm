@@ -1,0 +1,3750 @@
+; NTSC-U cartridge symbols and original animation-relative offsets.
+; Address constants only: no ROM or proprietary asset data is embedded.
+; Generated from supplied port/src/romassets_u.s and assets/animationtable_data.h.
+.386
+.model flat
+option casemap:none
+.data
+PUBLIC _ANIM_DATA_adjusting_crotch
+_ANIM_DATA_adjusting_crotch EQU 00000B854h
+PUBLIC _ANIM_DATA_aim_and_blow_one_handed_weapon
+_ANIM_DATA_aim_and_blow_one_handed_weapon EQU 00000A8BCh
+PUBLIC _ANIM_DATA_aim_one_handed_weapon_left
+_ANIM_DATA_aim_one_handed_weapon_left EQU 00000A94Ch
+PUBLIC _ANIM_DATA_aim_one_handed_weapon_left_right
+_ANIM_DATA_aim_one_handed_weapon_left_right EQU 000007C4Ch
+PUBLIC _ANIM_DATA_aim_one_handed_weapon_right
+_ANIM_DATA_aim_one_handed_weapon_right EQU 00000A9DCh
+PUBLIC _ANIM_DATA_aim_running_left_one_handed_weapon
+_ANIM_DATA_aim_running_left_one_handed_weapon EQU 0000076B8h
+PUBLIC _ANIM_DATA_aim_running_one_handed_weapon
+_ANIM_DATA_aim_running_one_handed_weapon EQU 0000075ECh
+PUBLIC _ANIM_DATA_aim_running_right_one_handed_weapon
+_ANIM_DATA_aim_running_right_one_handed_weapon EQU 000007650h
+PUBLIC _ANIM_DATA_aim_sprinting_one_handed_weapon
+_ANIM_DATA_aim_sprinting_one_handed_weapon EQU 000007714h
+PUBLIC _ANIM_DATA_aim_walking_left_one_handed_weapon
+_ANIM_DATA_aim_walking_left_one_handed_weapon EQU 000007514h
+PUBLIC _ANIM_DATA_aim_walking_one_handed_weapon
+_ANIM_DATA_aim_walking_one_handed_weapon EQU 0000074A4h
+PUBLIC _ANIM_DATA_aim_walking_right_one_handed_weapon
+_ANIM_DATA_aim_walking_right_one_handed_weapon EQU 000007588h
+PUBLIC _ANIM_DATA_bond_eye_fire
+_ANIM_DATA_bond_eye_fire EQU 000004298h
+PUBLIC _ANIM_DATA_bond_eye_fire_alt
+_ANIM_DATA_bond_eye_fire_alt EQU 00000D89Ch
+PUBLIC _ANIM_DATA_bond_eye_walk
+_ANIM_DATA_bond_eye_walk EQU 000004144h
+PUBLIC _ANIM_DATA_bond_watch
+_ANIM_DATA_bond_watch EQU 0000042C8h
+PUBLIC _ANIM_DATA_cock_one_handed_weapon_and_turn_around
+_ANIM_DATA_cock_one_handed_weapon_and_turn_around EQU 000007D04h
+PUBLIC _ANIM_DATA_cock_one_handed_weapon_turn_around_and_stand_up
+_ANIM_DATA_cock_one_handed_weapon_turn_around_and_stand_up EQU 000007F0Ch
+PUBLIC _ANIM_DATA_conversation
+_ANIM_DATA_conversation EQU 00000ACACh
+PUBLIC _ANIM_DATA_conversation_cleaned
+_ANIM_DATA_conversation_cleaned EQU 00000BC40h
+PUBLIC _ANIM_DATA_conversation_listener
+_ANIM_DATA_conversation_listener EQU 00000BF80h
+PUBLIC _ANIM_DATA_coughing_kneel1
+_ANIM_DATA_coughing_kneel1 EQU 00000CB78h
+PUBLIC _ANIM_DATA_coughing_kneel2
+_ANIM_DATA_coughing_kneel2 EQU 00000CE6Ch
+PUBLIC _ANIM_DATA_coughing_standing
+_ANIM_DATA_coughing_standing EQU 00000C838h
+PUBLIC _ANIM_DATA_cradle_fall
+_ANIM_DATA_cradle_fall EQU 00000E08Ch
+PUBLIC _ANIM_DATA_cradle_jump
+_ANIM_DATA_cradle_jump EQU 00000E05Ch
+PUBLIC _ANIM_DATA_credits_bond_kissing
+_ANIM_DATA_credits_bond_kissing EQU 00000E0BCh
+PUBLIC _ANIM_DATA_credits_natalya_kissing
+_ANIM_DATA_credits_natalya_kissing EQU 00000E18Ch
+PUBLIC _ANIM_DATA_dam_jump
+_ANIM_DATA_dam_jump EQU 00000DBE4h
+PUBLIC _ANIM_DATA_dancing
+_ANIM_DATA_dancing EQU 00000D348h
+PUBLIC _ANIM_DATA_dancing_one_handed_weapon
+_ANIM_DATA_dancing_one_handed_weapon EQU 00000D54Ch
+PUBLIC _ANIM_DATA_death_backward_fall_face_up1
+_ANIM_DATA_death_backward_fall_face_up1 EQU 0000032C8h
+PUBLIC _ANIM_DATA_death_backward_fall_face_up2
+_ANIM_DATA_death_backward_fall_face_up2 EQU 000003D04h
+PUBLIC _ANIM_DATA_death_backward_spin_face_down_left
+_ANIM_DATA_death_backward_spin_face_down_left EQU 0000035C8h
+PUBLIC _ANIM_DATA_death_backward_spin_face_down_right
+_ANIM_DATA_death_backward_spin_face_down_right EQU 0000033ACh
+PUBLIC _ANIM_DATA_death_backward_spin_face_up_left
+_ANIM_DATA_death_backward_spin_face_up_left EQU 0000036D8h
+PUBLIC _ANIM_DATA_death_backward_spin_face_up_right
+_ANIM_DATA_death_backward_spin_face_up_right EQU 0000034D4h
+PUBLIC _ANIM_DATA_death_explosion_back1
+_ANIM_DATA_death_explosion_back1 EQU 000009C4Ch
+PUBLIC _ANIM_DATA_death_explosion_back2
+_ANIM_DATA_death_explosion_back2 EQU 000009F48h
+PUBLIC _ANIM_DATA_death_explosion_back_left
+_ANIM_DATA_death_explosion_back_left EQU 000009B48h
+PUBLIC _ANIM_DATA_death_explosion_forward
+_ANIM_DATA_death_explosion_forward EQU 0000098C8h
+PUBLIC _ANIM_DATA_death_explosion_forward_face_down
+_ANIM_DATA_death_explosion_forward_face_down EQU 00000A1B8h
+PUBLIC _ANIM_DATA_death_explosion_forward_right1
+_ANIM_DATA_death_explosion_forward_right1 EQU 000009E44h
+PUBLIC _ANIM_DATA_death_explosion_forward_right2
+_ANIM_DATA_death_explosion_forward_right2 EQU 00000A424h
+PUBLIC _ANIM_DATA_death_explosion_forward_right2_alt
+_ANIM_DATA_death_explosion_forward_right2_alt EQU 00000A538h
+PUBLIC _ANIM_DATA_death_explosion_forward_right3
+_ANIM_DATA_death_explosion_forward_right3 EQU 00000A650h
+PUBLIC _ANIM_DATA_death_explosion_forward_roll
+_ANIM_DATA_death_explosion_forward_roll EQU 00000A094h
+PUBLIC _ANIM_DATA_death_explosion_left1
+_ANIM_DATA_death_explosion_left1 EQU 000009A2Ch
+PUBLIC _ANIM_DATA_death_explosion_left2
+_ANIM_DATA_death_explosion_left2 EQU 00000A2F8h
+PUBLIC _ANIM_DATA_death_explosion_right
+_ANIM_DATA_death_explosion_right EQU 000009D5Ch
+PUBLIC _ANIM_DATA_death_fetal_position_left
+_ANIM_DATA_death_fetal_position_left EQU 000003C10h
+PUBLIC _ANIM_DATA_death_fetal_position_right
+_ANIM_DATA_death_fetal_position_right EQU 000003AF0h
+PUBLIC _ANIM_DATA_death_forward_face_down
+_ANIM_DATA_death_forward_face_down EQU 0000030B8h
+PUBLIC _ANIM_DATA_death_forward_face_down_hard
+_ANIM_DATA_death_forward_face_down_hard EQU 00000384Ch
+PUBLIC _ANIM_DATA_death_forward_face_down_soft
+_ANIM_DATA_death_forward_face_down_soft EQU 0000039C0h
+PUBLIC _ANIM_DATA_death_forward_spin_face_up
+_ANIM_DATA_death_forward_spin_face_up EQU 0000031DCh
+PUBLIC _ANIM_DATA_death_genitalia
+_ANIM_DATA_death_genitalia EQU 00000282Ch
+PUBLIC _ANIM_DATA_death_head
+_ANIM_DATA_death_head EQU 0000051C4h
+PUBLIC _ANIM_DATA_death_left_leg
+_ANIM_DATA_death_left_leg EQU 00000540Ch
+PUBLIC _ANIM_DATA_death_neck
+_ANIM_DATA_death_neck EQU 000002E64h
+PUBLIC _ANIM_DATA_death_stagger_back_to_wall
+_ANIM_DATA_death_stagger_back_to_wall EQU 000002F94h
+PUBLIC _ANIM_DATA_draw_one_handed_weapon_and_look_around
+_ANIM_DATA_draw_one_handed_weapon_and_look_around EQU 0000078C8h
+PUBLIC _ANIM_DATA_draw_one_handed_weapon_and_stand_up
+_ANIM_DATA_draw_one_handed_weapon_and_stand_up EQU 000007AA8h
+PUBLIC _ANIM_DATA_draw_one_handed_weapon_and_turn_around
+_ANIM_DATA_draw_one_handed_weapon_and_turn_around EQU 000007FB4h
+PUBLIC _ANIM_DATA_drop_weapon_and_show_fight_stance
+_ANIM_DATA_drop_weapon_and_show_fight_stance EQU 00000B174h
+PUBLIC _ANIM_DATA_extending_left_hand
+_ANIM_DATA_extending_left_hand EQU 000005744h
+PUBLIC _ANIM_DATA_fire_hip
+_ANIM_DATA_fire_hip EQU 000000318h
+PUBLIC _ANIM_DATA_fire_hip_forward_one_handed_weapon
+_ANIM_DATA_fire_hip_forward_one_handed_weapon EQU 000006644h
+PUBLIC _ANIM_DATA_fire_hip_one_handed_weapon_fast
+_ANIM_DATA_fire_hip_one_handed_weapon_fast EQU 000006484h
+PUBLIC _ANIM_DATA_fire_hip_one_handed_weapon_slow
+_ANIM_DATA_fire_hip_one_handed_weapon_slow EQU 000006554h
+PUBLIC _ANIM_DATA_fire_jump_to_side_left
+_ANIM_DATA_fire_jump_to_side_left EQU 0000047BCh
+PUBLIC _ANIM_DATA_fire_jump_to_side_right
+_ANIM_DATA_fire_jump_to_side_right EQU 000004A40h
+PUBLIC _ANIM_DATA_fire_kneel_aiming_down_sights
+_ANIM_DATA_fire_kneel_aiming_down_sights EQU 0000095FCh
+PUBLIC _ANIM_DATA_fire_kneel_dual_wield
+_ANIM_DATA_fire_kneel_dual_wield EQU 000008698h
+PUBLIC _ANIM_DATA_fire_kneel_dual_wield_hands_crossed
+_ANIM_DATA_fire_kneel_dual_wield_hands_crossed EQU 000008AACh
+PUBLIC _ANIM_DATA_fire_kneel_dual_wield_hands_crossed_left
+_ANIM_DATA_fire_kneel_dual_wield_hands_crossed_left EQU 000008BF0h
+PUBLIC _ANIM_DATA_fire_kneel_dual_wield_hands_crossed_right
+_ANIM_DATA_fire_kneel_dual_wield_hands_crossed_right EQU 000008D28h
+PUBLIC _ANIM_DATA_fire_kneel_dual_wield_left
+_ANIM_DATA_fire_kneel_dual_wield_left EQU 000008800h
+PUBLIC _ANIM_DATA_fire_kneel_dual_wield_right
+_ANIM_DATA_fire_kneel_dual_wield_right EQU 000008978h
+PUBLIC _ANIM_DATA_fire_kneel_forward_one_handed_weapon_fast
+_ANIM_DATA_fire_kneel_forward_one_handed_weapon_fast EQU 000006D50h
+PUBLIC _ANIM_DATA_fire_kneel_forward_one_handed_weapon_slow
+_ANIM_DATA_fire_kneel_forward_one_handed_weapon_slow EQU 000006C18h
+PUBLIC _ANIM_DATA_fire_kneel_left
+_ANIM_DATA_fire_kneel_left EQU 000000DB4h
+PUBLIC _ANIM_DATA_fire_kneel_left_leg
+_ANIM_DATA_fire_kneel_left_leg EQU 000000B84h
+PUBLIC _ANIM_DATA_fire_kneel_left_one_handed_weapon
+_ANIM_DATA_fire_kneel_left_one_handed_weapon EQU 000007430h
+PUBLIC _ANIM_DATA_fire_kneel_left_one_handed_weapon_fast
+_ANIM_DATA_fire_kneel_left_one_handed_weapon_fast EQU 000007304h
+PUBLIC _ANIM_DATA_fire_kneel_left_one_handed_weapon_slow
+_ANIM_DATA_fire_kneel_left_one_handed_weapon_slow EQU 0000071D0h
+PUBLIC _ANIM_DATA_fire_kneel_right
+_ANIM_DATA_fire_kneel_right EQU 000001028h
+PUBLIC _ANIM_DATA_fire_kneel_right_leg
+_ANIM_DATA_fire_kneel_right_leg EQU 000000990h
+PUBLIC _ANIM_DATA_fire_kneel_right_one_handed_weapon_fast
+_ANIM_DATA_fire_kneel_right_one_handed_weapon_fast EQU 00000700Ch
+PUBLIC _ANIM_DATA_fire_kneel_right_one_handed_weapon_slow
+_ANIM_DATA_fire_kneel_right_one_handed_weapon_slow EQU 000006F08h
+PUBLIC _ANIM_DATA_fire_roll_left
+_ANIM_DATA_fire_roll_left EQU 000001334h
+PUBLIC _ANIM_DATA_fire_roll_left_fast
+_ANIM_DATA_fire_roll_left_fast EQU 0000017B4h
+PUBLIC _ANIM_DATA_fire_roll_right1
+_ANIM_DATA_fire_roll_right1 EQU 000001578h
+PUBLIC _ANIM_DATA_fire_roll_right2
+_ANIM_DATA_fire_roll_right2 EQU 000003FA0h
+PUBLIC _ANIM_DATA_fire_running
+_ANIM_DATA_fire_running EQU 0000045CCh
+PUBLIC _ANIM_DATA_fire_running_dual_wield
+_ANIM_DATA_fire_running_dual_wield EQU 000008340h
+PUBLIC _ANIM_DATA_fire_running_dual_wield_hands_crossed
+_ANIM_DATA_fire_running_dual_wield_hands_crossed EQU 0000083A4h
+PUBLIC _ANIM_DATA_fire_shoulder_left
+_ANIM_DATA_fire_shoulder_left EQU 0000003C4h
+PUBLIC _ANIM_DATA_fire_sprinting_dual_wield
+_ANIM_DATA_fire_sprinting_dual_wield EQU 000008404h
+PUBLIC _ANIM_DATA_fire_sprinting_dual_wield_hands_crossed
+_ANIM_DATA_fire_sprinting_dual_wield_hands_crossed EQU 00000845Ch
+PUBLIC _ANIM_DATA_fire_standing
+_ANIM_DATA_fire_standing EQU 000000144h
+PUBLIC _ANIM_DATA_fire_standing_aiming_down_sights
+_ANIM_DATA_fire_standing_aiming_down_sights EQU 000009444h
+PUBLIC _ANIM_DATA_fire_standing_draw_one_handed_weapon_fast
+_ANIM_DATA_fire_standing_draw_one_handed_weapon_fast EQU 000006254h
+PUBLIC _ANIM_DATA_fire_standing_draw_one_handed_weapon_slow
+_ANIM_DATA_fire_standing_draw_one_handed_weapon_slow EQU 00000637Ch
+PUBLIC _ANIM_DATA_fire_standing_dual_wield
+_ANIM_DATA_fire_standing_dual_wield EQU 000008E1Ch
+PUBLIC _ANIM_DATA_fire_standing_dual_wield_hands_crossed_left
+_ANIM_DATA_fire_standing_dual_wield_hands_crossed_left EQU 000009194h
+PUBLIC _ANIM_DATA_fire_standing_dual_wield_hands_crossed_right
+_ANIM_DATA_fire_standing_dual_wield_hands_crossed_right EQU 0000092ECh
+PUBLIC _ANIM_DATA_fire_standing_dual_wield_left
+_ANIM_DATA_fire_standing_dual_wield_left EQU 000008F2Ch
+PUBLIC _ANIM_DATA_fire_standing_dual_wield_right
+_ANIM_DATA_fire_standing_dual_wield_right EQU 000009084h
+PUBLIC _ANIM_DATA_fire_standing_fast
+_ANIM_DATA_fire_standing_fast EQU 000000214h
+PUBLIC _ANIM_DATA_fire_standing_left_one_handed_weapon_fast
+_ANIM_DATA_fire_standing_left_one_handed_weapon_fast EQU 000006A18h
+PUBLIC _ANIM_DATA_fire_standing_left_one_handed_weapon_slow
+_ANIM_DATA_fire_standing_left_one_handed_weapon_slow EQU 00000694Ch
+PUBLIC _ANIM_DATA_fire_standing_one_handed_weapon
+_ANIM_DATA_fire_standing_one_handed_weapon EQU 0000060D4h
+PUBLIC _ANIM_DATA_fire_standing_right_one_handed_weapon
+_ANIM_DATA_fire_standing_right_one_handed_weapon EQU 000006738h
+PUBLIC _ANIM_DATA_fire_step_right_one_handed_weapon
+_ANIM_DATA_fire_step_right_one_handed_weapon EQU 000006808h
+PUBLIC _ANIM_DATA_fire_throw_grenade
+_ANIM_DATA_fire_throw_grenade EQU 000005964h
+PUBLIC _ANIM_DATA_fire_turn_right1
+_ANIM_DATA_fire_turn_right1 EQU 000000610h
+PUBLIC _ANIM_DATA_fire_turn_right2
+_ANIM_DATA_fire_turn_right2 EQU 000000814h
+PUBLIC _ANIM_DATA_fire_walking
+_ANIM_DATA_fire_walking EQU 000004574h
+PUBLIC _ANIM_DATA_fire_walking_dual_wield
+_ANIM_DATA_fire_walking_dual_wield EQU 000008274h
+PUBLIC _ANIM_DATA_fire_walking_dual_wield_hands_crossed
+_ANIM_DATA_fire_walking_dual_wield_hands_crossed EQU 0000082E0h
+PUBLIC _ANIM_DATA_helicopter_cradle
+_ANIM_DATA_helicopter_cradle EQU 00000E470h
+PUBLIC _ANIM_DATA_helicopter_takeoff
+_ANIM_DATA_helicopter_takeoff EQU 00000E7C0h
+PUBLIC _ANIM_DATA_hit_butt_long
+_ANIM_DATA_hit_butt_long EQU 000004CE0h
+PUBLIC _ANIM_DATA_hit_butt_short
+_ANIM_DATA_hit_butt_short EQU 000004F14h
+PUBLIC _ANIM_DATA_hit_left_arm
+_ANIM_DATA_hit_left_arm EQU 000001A6Ch
+PUBLIC _ANIM_DATA_hit_left_hand
+_ANIM_DATA_hit_left_hand EQU 000001C9Ch
+PUBLIC _ANIM_DATA_hit_left_leg
+_ANIM_DATA_hit_left_leg EQU 000001F84h
+PUBLIC _ANIM_DATA_hit_left_shoulder
+_ANIM_DATA_hit_left_shoulder EQU 00000186Ch
+PUBLIC _ANIM_DATA_hit_neck
+_ANIM_DATA_hit_neck EQU 00000299Ch
+PUBLIC _ANIM_DATA_hit_right_arm
+_ANIM_DATA_hit_right_arm EQU 000001B54h
+PUBLIC _ANIM_DATA_hit_right_hand
+_ANIM_DATA_hit_right_hand EQU 000001E40h
+PUBLIC _ANIM_DATA_hit_right_leg
+_ANIM_DATA_hit_right_leg EQU 000002134h
+PUBLIC _ANIM_DATA_hit_right_shoulder
+_ANIM_DATA_hit_right_shoulder EQU 000001984h
+PUBLIC _ANIM_DATA_hit_taser
+_ANIM_DATA_hit_taser EQU 0000097BCh
+PUBLIC _ANIM_DATA_holster_one_handed_weapon_and_adjust_suit
+_ANIM_DATA_holster_one_handed_weapon_and_adjust_suit EQU 000008164h
+PUBLIC _ANIM_DATA_holster_one_handed_weapon_and_cross_arms
+_ANIM_DATA_holster_one_handed_weapon_and_cross_arms EQU 000007DD8h
+PUBLIC _ANIM_DATA_idle
+_ANIM_DATA_idle EQU 00000001Ch
+PUBLIC _ANIM_DATA_idle_unarmed
+_ANIM_DATA_idle_unarmed EQU 000008194h
+PUBLIC _ANIM_DATA_jump_backwards
+_ANIM_DATA_jump_backwards EQU 000005684h
+PUBLIC _ANIM_DATA_keyboard_left_hand
+_ANIM_DATA_keyboard_left_hand EQU 00000D6F8h
+PUBLIC _ANIM_DATA_keyboard_right_hand1
+_ANIM_DATA_keyboard_right_hand1 EQU 00000D5E4h
+PUBLIC _ANIM_DATA_keyboard_right_hand2
+_ANIM_DATA_keyboard_right_hand2 EQU 00000D668h
+PUBLIC _ANIM_DATA_keyboard_right_hand_tapping
+_ANIM_DATA_keyboard_right_hand_tapping EQU 00000D728h
+PUBLIC _ANIM_DATA_laughing_in_disbelief
+_ANIM_DATA_laughing_in_disbelief EQU 00000C410h
+PUBLIC _ANIM_DATA_look_around
+_ANIM_DATA_look_around EQU 000005EF0h
+PUBLIC _ANIM_DATA_null143
+_ANIM_DATA_null143 EQU 000000001h
+PUBLIC _ANIM_DATA_null144
+_ANIM_DATA_null144 EQU 000000001h
+PUBLIC _ANIM_DATA_null145
+_ANIM_DATA_null145 EQU 000000001h
+PUBLIC _ANIM_DATA_null146
+_ANIM_DATA_null146 EQU 000000001h
+PUBLIC _ANIM_DATA_null169
+_ANIM_DATA_null169 EQU 000000001h
+PUBLIC _ANIM_DATA_null50
+_ANIM_DATA_null50 EQU 000000001h
+PUBLIC _ANIM_DATA_null51
+_ANIM_DATA_null51 EQU 000000001h
+PUBLIC _ANIM_DATA_null91
+_ANIM_DATA_null91 EQU 000000001h
+PUBLIC _ANIM_DATA_null92
+_ANIM_DATA_null92 EQU 000000001h
+PUBLIC _ANIM_DATA_null93
+_ANIM_DATA_null93 EQU 000000001h
+PUBLIC _ANIM_DATA_null94
+_ANIM_DATA_null94 EQU 000000001h
+PUBLIC _ANIM_DATA_null95
+_ANIM_DATA_null95 EQU 000000001h
+PUBLIC _ANIM_DATA_null96
+_ANIM_DATA_null96 EQU 000000001h
+PUBLIC _ANIM_DATA_plane_runway
+_ANIM_DATA_plane_runway EQU 00000E5F4h
+PUBLIC _ANIM_DATA_running
+_ANIM_DATA_running EQU 0000040D4h
+PUBLIC _ANIM_DATA_running_female
+_ANIM_DATA_running_female EQU 000008520h
+PUBLIC _ANIM_DATA_running_hands_up
+_ANIM_DATA_running_hands_up EQU 00000A6B0h
+PUBLIC _ANIM_DATA_running_one_handed_weapon
+_ANIM_DATA_running_one_handed_weapon EQU 00000777Ch
+PUBLIC _ANIM_DATA_scratching_butt
+_ANIM_DATA_scratching_butt EQU 00000B7C8h
+PUBLIC _ANIM_DATA_scratching_leg
+_ANIM_DATA_scratching_leg EQU 00000B6B0h
+PUBLIC _ANIM_DATA_side_step_left
+_ANIM_DATA_side_step_left EQU 000003D9Ch
+PUBLIC _ANIM_DATA_slide_left
+_ANIM_DATA_slide_left EQU 000005554h
+PUBLIC _ANIM_DATA_slide_right
+_ANIM_DATA_slide_right EQU 0000054A0h
+PUBLIC _ANIM_DATA_sneeze
+_ANIM_DATA_sneeze EQU 00000B9A8h
+PUBLIC _ANIM_DATA_spotting_bond
+_ANIM_DATA_spotting_bond EQU 000005D10h
+PUBLIC _ANIM_DATA_sprinting
+_ANIM_DATA_sprinting EQU 000004070h
+PUBLIC _ANIM_DATA_sprinting_hands_up
+_ANIM_DATA_sprinting_hands_up EQU 00000A704h
+PUBLIC _ANIM_DATA_sprinting_one_handed_weapon
+_ANIM_DATA_sprinting_one_handed_weapon EQU 0000077D4h
+PUBLIC _ANIM_DATA_standing_up
+_ANIM_DATA_standing_up EQU 00000D0A8h
+PUBLIC _ANIM_DATA_startled_and_looking_around
+_ANIM_DATA_startled_and_looking_around EQU 00000C224h
+PUBLIC _ANIM_DATA_step_forward_and_hold_one_handed_weapon
+_ANIM_DATA_step_forward_and_hold_one_handed_weapon EQU 000008080h
+PUBLIC _ANIM_DATA_surface_vent_jump
+_ANIM_DATA_surface_vent_jump EQU 00000DD20h
+PUBLIC _ANIM_DATA_surrendering_armed
+_ANIM_DATA_surrendering_armed EQU 000004384h
+PUBLIC _ANIM_DATA_surrendering_armed_drop_weapon
+_ANIM_DATA_surrendering_armed_drop_weapon EQU 000004504h
+PUBLIC _ANIM_DATA_surrendering_unarmed
+_ANIM_DATA_surrendering_unarmed EQU 00000C544h
+PUBLIC _ANIM_DATA_swatting_flies
+_ANIM_DATA_swatting_flies EQU 00000B528h
+PUBLIC _ANIM_DATA_walking
+_ANIM_DATA_walking EQU 000004018h
+PUBLIC _ANIM_DATA_walking_female
+_ANIM_DATA_walking_female EQU 0000084C4h
+PUBLIC _ANIM_DATA_walking_unarmed
+_ANIM_DATA_walking_unarmed EQU 000008204h
+PUBLIC _ANIM_DATA_yawning
+_ANIM_DATA_yawning EQU 00000B2ACh
+PUBLIC _CarmourguardZ
+_CarmourguardZ EQU 0106ECB90h
+PUBLIC _CbaronsamediZ
+_CbaronsamediZ EQU 0106EF010h
+PUBLIC _CbluecamguardZ
+_CbluecamguardZ EQU 0106F2700h
+PUBLIC _CbluemanZ
+_CbluemanZ EQU 0106F4DF0h
+PUBLIC _CbluewomanZ
+_CbluewomanZ EQU 0106F6C00h
+PUBLIC _CboilerbondZ
+_CboilerbondZ EQU 0106F8AC0h
+PUBLIC _CboilertrevZ
+_CboilertrevZ EQU 0106FB6D0h
+PUBLIC _CborisZ
+_CborisZ EQU 0106FED50h
+PUBLIC _CcamguardZ
+_CcamguardZ EQU 010701E70h
+PUBLIC _CcardimanZ
+_CcardimanZ EQU 010704550h
+PUBLIC _CcheckmanZ
+_CcheckmanZ EQU 010706350h
+PUBLIC _CcommguardZ
+_CcommguardZ EQU 0107081D0h
+PUBLIC _CdjbondZ
+_CdjbondZ EQU 01070A7D0h
+PUBLIC _CfattechwomanZ
+_CfattechwomanZ EQU 01070D660h
+PUBLIC _Cgreatguard2Z
+_Cgreatguard2Z EQU 01070F580h
+PUBLIC _CgreatguardZ
+_CgreatguardZ EQU 010711CA0h
+PUBLIC _CgreyguardZ
+_CgreyguardZ EQU 010714320h
+PUBLIC _CgreymanZ
+_CgreymanZ EQU 0107169F0h
+PUBLIC _CheadalanZ
+_CheadalanZ EQU 0107187B0h
+PUBLIC _CheadbZ
+_CheadbZ EQU 010718D80h
+PUBLIC _CheadbalaclavaZ
+_CheadbalaclavaZ EQU 0107192F0h
+PUBLIC _CheadbikeZ
+_CheadbikeZ EQU 0107196C0h
+PUBLIC _CheadbrosnanZ
+_CheadbrosnanZ EQU 010719D60h
+PUBLIC _CheadbrosnanboilerZ
+_CheadbrosnanboilerZ EQU 01071AAB0h
+PUBLIC _CheadbrosnansnowZ
+_CheadbrosnansnowZ EQU 01071B650h
+PUBLIC _CheadbrosnansuitZ
+_CheadbrosnansuitZ EQU 01071C4D0h
+PUBLIC _CheadbrosnantimberZ
+_CheadbrosnantimberZ EQU 01071D250h
+PUBLIC _CheadchrisZ
+_CheadchrisZ EQU 01071DE10h
+PUBLIC _CheaddaveZ
+_CheaddaveZ EQU 01071E350h
+PUBLIC _CheaddesZ
+_CheaddesZ EQU 01071E8D0h
+PUBLIC _CheadduncanZ
+_CheadduncanZ EQU 01071EE00h
+PUBLIC _CheaddwayneZ
+_CheaddwayneZ EQU 01071F320h
+PUBLIC _CheadgrahamZ
+_CheadgrahamZ EQU 01071F8A0h
+PUBLIC _CheadgrantZ
+_CheadgrantZ EQU 01071FE10h
+PUBLIC _CheadjimZ
+_CheadjimZ EQU 010720340h
+PUBLIC _Cheadjoe2Z
+_Cheadjoe2Z EQU 010720870h
+PUBLIC _CheadjoeZ
+_CheadjoeZ EQU 010720C90h
+PUBLIC _CheadjoelZ
+_CheadjoelZ EQU 010721200h
+PUBLIC _CheadkarlZ
+_CheadkarlZ EQU 010721710h
+PUBLIC _CheadkenZ
+_CheadkenZ EQU 010721C70h
+PUBLIC _CheadleeZ
+_CheadleeZ EQU 0107221C0h
+PUBLIC _CheadmandyZ
+_CheadmandyZ EQU 010722740h
+PUBLIC _CheadmarionZ
+_CheadmarionZ EQU 010722B30h
+PUBLIC _CheadmarkZ
+_CheadmarkZ EQU 010722F40h
+PUBLIC _CheadmartinZ
+_CheadmartinZ EQU 010723470h
+PUBLIC _CheadmishkinZ
+_CheadmishkinZ EQU 0107239D0h
+PUBLIC _CheadneilZ
+_CheadneilZ EQU 010723F30h
+PUBLIC _CheadpeteZ
+_CheadpeteZ EQU 010724450h
+PUBLIC _CheadrobinZ
+_CheadrobinZ EQU 0107249E0h
+PUBLIC _CheadsallyZ
+_CheadsallyZ EQU 010724EF0h
+PUBLIC _CheadscottZ
+_CheadscottZ EQU 0107252F0h
+PUBLIC _CheadshaunZ
+_CheadshaunZ EQU 010725870h
+PUBLIC _CheadsteveeZ
+_CheadsteveeZ EQU 010725E50h
+PUBLIC _CheadstevehZ
+_CheadstevehZ EQU 0107263A0h
+PUBLIC _CheadvivienZ
+_CheadvivienZ EQU 0107268F0h
+PUBLIC _CjawsZ
+_CjawsZ EQU 010726D80h
+PUBLIC _CjeanwomanZ
+_CjeanwomanZ EQU 0107299C0h
+PUBLIC _CmaydayZ
+_CmaydayZ EQU 01072B9D0h
+PUBLIC _CmoonfemaleZ
+_CmoonfemaleZ EQU 01072E570h
+PUBLIC _CmoonguardZ
+_CmoonguardZ EQU 0107306C0h
+PUBLIC _CnatalyaZ
+_CnatalyaZ EQU 010732CB0h
+PUBLIC _CnavyguardZ
+_CnavyguardZ EQU 010736570h
+PUBLIC _CoddjobZ
+_CoddjobZ EQU 010738C50h
+PUBLIC _ColiveguardZ
+_ColiveguardZ EQU 01073BD80h
+PUBLIC _CorumovZ
+_CorumovZ EQU 01073E3D0h
+PUBLIC _CpilotZ
+_CpilotZ EQU 010741800h
+PUBLIC _CredmanZ
+_CredmanZ EQU 010744880h
+PUBLIC _CrusguardZ
+_CrusguardZ EQU 010746FB0h
+PUBLIC _CsnowbondZ
+_CsnowbondZ EQU 010748BE0h
+PUBLIC _CsnowguardZ
+_CsnowguardZ EQU 01074BF10h
+PUBLIC _CspicebondZ
+_CspicebondZ EQU 01074EB90h
+PUBLIC _Csuit_lf_handZ
+_Csuit_lf_handZ EQU 0107524B0h
+PUBLIC _CsuitbondZ
+_CsuitbondZ EQU 0107556D0h
+PUBLIC _CtechmanZ
+_CtechmanZ EQU 010758460h
+PUBLIC _CtechwomanZ
+_CtechwomanZ EQU 01075AB10h
+PUBLIC _CtimberbondZ
+_CtimberbondZ EQU 01075CB00h
+PUBLIC _CtrevelyanZ
+_CtrevelyanZ EQU 01075F830h
+PUBLIC _CtrevguardZ
+_CtrevguardZ EQU 010763000h
+PUBLIC _CvalentinZ
+_CvalentinZ EQU 010765610h
+PUBLIC _CxeniaZ
+_CxeniaZ EQU 010768580h
+PUBLIC _Gak47Z
+_Gak47Z EQU 01076BF70h
+PUBLIC _GaudiotapeZ
+_GaudiotapeZ EQU 01076C980h
+PUBLIC _GautoshotZ
+_GautoshotZ EQU 01076CD10h
+PUBLIC _GblackboxZ
+_GblackboxZ EQU 01076E520h
+PUBLIC _GblueprintsZ
+_GblueprintsZ EQU 01076EB20h
+PUBLIC _GbombcaseZ
+_GbombcaseZ EQU 01076EC20h
+PUBLIC _GbombdefuserZ
+_GbombdefuserZ EQU 01076F3B0h
+PUBLIC _GbriefcaseZ
+_GbriefcaseZ EQU 01076F9A0h
+PUBLIC _GbugZ
+_GbugZ EQU 010770130h
+PUBLIC _GbugdetectorZ
+_GbugdetectorZ EQU 010770AA0h
+PUBLIC _GbungeeZ
+_GbungeeZ EQU 010770DF0h
+PUBLIC _GcameraZ
+_GcameraZ EQU 010771140h
+PUBLIC _GcartblueZ
+_GcartblueZ EQU 0107715C0h
+PUBLIC _GcartridgeZ
+_GcartridgeZ EQU 010771820h
+PUBLIC _GcartrifleZ
+_GcartrifleZ EQU 010771950h
+PUBLIC _GcartshellZ
+_GcartshellZ EQU 010771B60h
+PUBLIC _GcircuitboardZ
+_GcircuitboardZ EQU 010771D60h
+PUBLIC _GclipboardZ
+_GclipboardZ EQU 010771EA0h
+PUBLIC _GcreditcardZ
+_GcreditcardZ EQU 010772090h
+PUBLIC _GdarkglassesZ
+_GdarkglassesZ EQU 0107723E0h
+PUBLIC _GdatathiefZ
+_GdatathiefZ EQU 010772730h
+PUBLIC _GdattapeZ
+_GdattapeZ EQU 010772870h
+PUBLIC _GdoordecoderZ
+_GdoordecoderZ EQU 0107729E0h
+PUBLIC _GdoorexploderZ
+_GdoorexploderZ EQU 010772F60h
+PUBLIC _GdossierredZ
+_GdossierredZ EQU 0107732B0h
+PUBLIC _GdynamiteZ
+_GdynamiteZ EQU 010773610h
+PUBLIC _GexplosivefloppyZ
+_GexplosivefloppyZ EQU 010773960h
+PUBLIC _GexplosivepenZ
+_GexplosivepenZ EQU 010773BB0h
+PUBLIC _GextinguisherZ
+_GextinguisherZ EQU 010773F00h
+PUBLIC _GfingergunZ
+_GfingergunZ EQU 0107746F0h
+PUBLIC _GfistZ
+_GfistZ EQU 010774A40h
+PUBLIC _GflarepistolZ
+_GflarepistolZ EQU 010776140h
+PUBLIC _Gfnp90Z
+_Gfnp90Z EQU 010776490h
+PUBLIC _GgaskeyringZ
+_GgaskeyringZ EQU 010777130h
+PUBLIC _GgoldbarZ
+_GgoldbarZ EQU 010777B60h
+PUBLIC _GgoldeneyekeyZ
+_GgoldeneyekeyZ EQU 010777EB0h
+PUBLIC _GgoldengunZ
+_GgoldengunZ EQU 010778860h
+PUBLIC _GgoldwppkZ
+_GgoldwppkZ EQU 01077A040h
+PUBLIC _GgrenadeZ
+_GgrenadeZ EQU 01077B9A0h
+PUBLIC _GgrenadelaunchZ
+_GgrenadelaunchZ EQU 01077C3D0h
+PUBLIC _GheroinZ
+_GheroinZ EQU 01077D450h
+PUBLIC _GjoypadZ
+_GjoypadZ EQU 01077D7A0h
+PUBLIC _GkeyanalysercaseZ
+_GkeyanalysercaseZ EQU 01077F650h
+PUBLIC _GkeyboltZ
+_GkeyboltZ EQU 01077FDE0h
+PUBLIC _GkeycardZ
+_GkeycardZ EQU 0107807D0h
+PUBLIC _GkeyyaleZ
+_GkeyyaleZ EQU 010780900h
+PUBLIC _GknifeZ
+_GknifeZ EQU 010781650h
+PUBLIC _GlaserZ
+_GlaserZ EQU 010783120h
+PUBLIC _GlectreZ
+_GlectreZ EQU 010783F10h
+PUBLIC _GlockexploderZ
+_GlockexploderZ EQU 010784260h
+PUBLIC _Gm16Z
+_Gm16Z EQU 0107845B0h
+PUBLIC _GmapZ
+_GmapZ EQU 010784FD0h
+PUBLIC _GmicrocameraZ
+_GmicrocameraZ EQU 0107850C0h
+PUBLIC _GmicrocodeZ
+_GmicrocodeZ EQU 010785700h
+PUBLIC _GmicrofilmZ
+_GmicrofilmZ EQU 010785A50h
+PUBLIC _GmoneyZ
+_GmoneyZ EQU 010785DA0h
+PUBLIC _Gmp5kZ
+_Gmp5kZ EQU 0107860F0h
+PUBLIC _Gmp5ksilZ
+_Gmp5ksilZ EQU 010786CD0h
+PUBLIC _GpitongunZ
+_GpitongunZ EQU 0107879D0h
+PUBLIC _GplansZ
+_GplansZ EQU 010787D20h
+PUBLIC _GplastiqueZ
+_GplastiqueZ EQU 010787EF0h
+PUBLIC _GpolarizedglassesZ
+_GpolarizedglassesZ EQU 010788240h
+PUBLIC _GproximitymineZ
+_GproximitymineZ EQU 0107887A0h
+PUBLIC _GremotemineZ
+_GremotemineZ EQU 010788F90h
+PUBLIC _GrocketlaunchZ
+_GrocketlaunchZ EQU 010789950h
+PUBLIC _GrugerZ
+_GrugerZ EQU 01078AB70h
+PUBLIC _GsafecrackercaseZ
+_GsafecrackercaseZ EQU 01078C900h
+PUBLIC _GshotgunZ
+_GshotgunZ EQU 01078D090h
+PUBLIC _GsilverwppkZ
+_GsilverwppkZ EQU 01078DF70h
+PUBLIC _GskorpionZ
+_GskorpionZ EQU 01078F8D0h
+PUBLIC _GsniperrifleZ
+_GsniperrifleZ EQU 010790AD0h
+PUBLIC _GspectreZ
+_GspectreZ EQU 010791B40h
+PUBLIC _GspooltapeZ
+_GspooltapeZ EQU 0107927C0h
+PUBLIC _GspyfileZ
+_GspyfileZ EQU 010792B10h
+PUBLIC _GstafflistZ
+_GstafflistZ EQU 010792E60h
+PUBLIC _GtaserZ
+_GtaserZ EQU 010793000h
+PUBLIC _GthrowknifeZ
+_GthrowknifeZ EQU 010794E60h
+PUBLIC _GtimedmineZ
+_GtimedmineZ EQU 010796950h
+PUBLIC _GtriggerZ
+_GtriggerZ EQU 010797410h
+PUBLIC _Gtt33Z
+_Gtt33Z EQU 01079A810h
+PUBLIC _GuziZ
+_GuziZ EQU 01079C330h
+PUBLIC _GvideotapeZ
+_GvideotapeZ EQU 01079CC40h
+PUBLIC _GwatchcommunicatorZ
+_GwatchcommunicatorZ EQU 01079CE50h
+PUBLIC _GwatchgeigercounterZ
+_GwatchgeigercounterZ EQU 01079E2B0h
+PUBLIC _GwatchidentifierZ
+_GwatchidentifierZ EQU 01079F710h
+PUBLIC _GwatchlaserZ
+_GwatchlaserZ EQU 0107A0B70h
+PUBLIC _GwatchmagnetattractZ
+_GwatchmagnetattractZ EQU 0107A3F70h
+PUBLIC _GwatchmagnetrepelZ
+_GwatchmagnetrepelZ EQU 0107A53C0h
+PUBLIC _GweaponcaseZ
+_GweaponcaseZ EQU 0107A6820h
+PUBLIC _GwppkZ
+_GwppkZ EQU 0107A6FB0h
+PUBLIC _GwppksilZ
+_GwppksilZ EQU 0107A8C40h
+PUBLIC _GwristdartZ
+_GwristdartZ EQU 0107AA980h
+PUBLIC _LameE
+_LameE EQU 0108E7410h
+PUBLIC _LameJ
+_LameJ EQU 0108E7420h
+PUBLIC _LarchE
+_LarchE EQU 0108E7430h
+PUBLIC _LarchJ
+_LarchJ EQU 0108E7A60h
+PUBLIC _LarecE
+_LarecE EQU 0108E80C0h
+PUBLIC _LarecJ
+_LarecJ EQU 0108E8690h
+PUBLIC _LarkE
+_LarkE EQU 0108E8C20h
+PUBLIC _LarkJ
+_LarkJ EQU 0108E92C0h
+PUBLIC _LashE
+_LashE EQU 0108E9970h
+PUBLIC _LashJ
+_LashJ EQU 0108E9980h
+PUBLIC _LaztE
+_LaztE EQU 0108E9990h
+PUBLIC _LaztJ
+_LaztJ EQU 0108E9DD0h
+PUBLIC _LcatE
+_LcatE EQU 0108EA280h
+PUBLIC _LcatJ
+_LcatJ EQU 0108EA290h
+PUBLIC _LcaveE
+_LcaveE EQU 0108EA2A0h
+PUBLIC _LcaveJ
+_LcaveJ EQU 0108EA6A0h
+PUBLIC _LcradE
+_LcradE EQU 0108EAB00h
+PUBLIC _LcradJ
+_LcradJ EQU 0108EAFD0h
+PUBLIC _LcrypE
+_LcrypE EQU 0108EB480h
+PUBLIC _LcrypJ
+_LcrypJ EQU 0108EB6D0h
+PUBLIC _LdamE
+_LdamE EQU 0108EB990h
+PUBLIC _LdamJ
+_LdamJ EQU 0108EBDE0h
+PUBLIC _LdepoE
+_LdepoE EQU 0108EC250h
+PUBLIC _LdepoJ
+_LdepoJ EQU 0108EC5C0h
+PUBLIC _LdestE
+_LdestE EQU 0108EC900h
+PUBLIC _LdestJ
+_LdestJ EQU 0108ECD90h
+PUBLIC _LdishE
+_LdishE EQU 0108ED1F0h
+PUBLIC _LdishJ
+_LdishJ EQU 0108ED200h
+PUBLIC _LearE
+_LearE EQU 0108ED210h
+PUBLIC _LearJ
+_LearJ EQU 0108ED220h
+PUBLIC _LeldE
+_LeldE EQU 0108ED230h
+PUBLIC _LeldJ
+_LeldJ EQU 0108ED240h
+PUBLIC _LgunE
+_LgunE EQU 0108ED250h
+PUBLIC _LgunJ
+_LgunJ EQU 0108ED970h
+PUBLIC _LimpE
+_LimpE EQU 0108EE0C0h
+PUBLIC _LimpJ
+_LimpJ EQU 0108EE0D0h
+PUBLIC _LjunE
+_LjunE EQU 0108EE0E0h
+PUBLIC _LjunJ
+_LjunJ EQU 0108EE600h
+PUBLIC _LleeE
+_LleeE EQU 0108EEB40h
+PUBLIC _LleeJ
+_LleeJ EQU 0108EEB50h
+PUBLIC _LlenE
+_LlenE EQU 0108EEB60h
+PUBLIC _LlenJ
+_LlenJ EQU 0108EF1A0h
+PUBLIC _LlipE
+_LlipE EQU 0108EF450h
+PUBLIC _LlipJ
+_LlipJ EQU 0108EF460h
+PUBLIC _LlueE
+_LlueE EQU 0108EF470h
+PUBLIC _LlueJ
+_LlueJ EQU 0108EF480h
+PUBLIC _LmiscE
+_LmiscE EQU 0108EF490h
+PUBLIC _LmiscJ
+_LmiscJ EQU 0108EF730h
+PUBLIC _LmpmenuE
+_LmpmenuE EQU 0108EFA10h
+PUBLIC _LmpmenuJ
+_LmpmenuJ EQU 0108EFBB0h
+PUBLIC _LmpweaponsE
+_LmpweaponsE EQU 0108EFD40h
+PUBLIC _LmpweaponsJ
+_LmpweaponsJ EQU 0108EFE00h
+PUBLIC _LoatE
+_LoatE EQU 0108EFEE0h
+PUBLIC _LoatJ
+_LoatJ EQU 0108EFEF0h
+PUBLIC _LoptionsE
+_LoptionsE EQU 0108EFF00h
+PUBLIC _LoptionsJ
+_LoptionsJ EQU 0108F0130h
+PUBLIC _LpamE
+_LpamE EQU 0108F0380h
+PUBLIC _LpamJ
+_LpamJ EQU 0108F0390h
+PUBLIC _LpeteE
+_LpeteE EQU 0108F03A0h
+PUBLIC _LpeteJ
+_LpeteJ EQU 0108F0820h
+PUBLIC _LpropobjE
+_LpropobjE EQU 0108F0C90h
+PUBLIC _LpropobjJ
+_LpropobjJ EQU 0108F0F30h
+PUBLIC _LrefE
+_LrefE EQU 0108F11F0h
+PUBLIC _LrefJ
+_LrefJ EQU 0108F1200h
+PUBLIC _LritE
+_LritE EQU 0108F1210h
+PUBLIC _LritJ
+_LritJ EQU 0108F1220h
+PUBLIC _LrunE
+_LrunE EQU 0108F1230h
+PUBLIC _LrunJ
+_LrunJ EQU 0108F14A0h
+PUBLIC _LsevE
+_LsevE EQU 0108F1730h
+PUBLIC _LsevJ
+_LsevJ EQU 0108F1C90h
+PUBLIC _LsevbE
+_LsevbE EQU 0108F21A0h
+PUBLIC _LsevbJ
+_LsevbJ EQU 0108F28F0h
+PUBLIC _LsevxE
+_LsevxE EQU 0108F30E0h
+PUBLIC _LsevxJ
+_LsevxJ EQU 0108F3540h
+PUBLIC _LsevxbE
+_LsevxbE EQU 0108F3900h
+PUBLIC _LsevxbJ
+_LsevxbJ EQU 0108F3D90h
+PUBLIC _LshoE
+_LshoE EQU 0108F41E0h
+PUBLIC _LshoJ
+_LshoJ EQU 0108F41F0h
+PUBLIC _LsiloE
+_LsiloE EQU 0108F4200h
+PUBLIC _LsiloJ
+_LsiloJ EQU 0108F47B0h
+PUBLIC _LstatE
+_LstatE EQU 0108F4D90h
+PUBLIC _LstatJ
+_LstatJ EQU 0108F56B0h
+PUBLIC _LtitleE
+_LtitleE EQU 0108F5F20h
+PUBLIC _LtitleJ
+_LtitleJ EQU 0108F69E0h
+PUBLIC _LtraE
+_LtraE EQU 0108F7570h
+PUBLIC _LtraJ
+_LtraJ EQU 0108F79A0h
+PUBLIC _LwaxE
+_LwaxE EQU 0108F7DC0h
+PUBLIC _LwaxJ
+_LwaxJ EQU 0108F7DD0h
+PUBLIC _Marchives
+_Marchives EQU 010420B2Ch
+PUBLIC _Marchivesx
+_Marchivesx EQU 01042E416h
+PUBLIC _Maztec
+_Maztec EQU 010428700h
+PUBLIC _Maztecx
+_Maztecx EQU 010431BB8h
+PUBLIC _Mbunker1
+_Mbunker1 EQU 010423F5Eh
+PUBLIC _Mbunker1x
+_Mbunker1x EQU 01042FAC4h
+PUBLIC _Mbunker2
+_Mbunker2 EQU 0104245D0h
+PUBLIC _Mbunker2x
+_Mbunker2x EQU 01043026Ah
+PUBLIC _Mcitadel
+_Mcitadel EQU 01041CB5Ch
+PUBLIC _Mcontrol
+_Mcontrol EQU 01041E3EAh
+PUBLIC _Mcontrolx
+_Mcontrolx EQU 01042CC98h
+PUBLIC _Mcradle
+_Mcradle EQU 010425FC2h
+PUBLIC _Mcradlex
+_Mcradlex EQU 010432D3Eh
+PUBLIC _Mcuba
+_Mcuba EQU 010433408h
+PUBLIC _Mdam
+_Mdam EQU 01041EF48h
+PUBLIC _Mdamx
+_Mdamx EQU 01042D934h
+PUBLIC _Mdeathsolo
+_Mdeathsolo EQU 01042A19Eh
+PUBLIC _Mdepot
+_Mdepot EQU 01041B024h
+PUBLIC _Mdepotx
+_Mdepotx EQU 01042C4DCh
+PUBLIC _Megyptian
+_Megyptian EQU 010427392h
+PUBLIC _Megyptianx
+_Megyptianx EQU 01043248Eh
+PUBLIC _Melevator_control
+_Melevator_control EQU 0104255E8h
+PUBLIC _Melevator_wc
+_Melevator_wc EQU 010426D4Ch
+PUBLIC _Mfacility
+_Mfacility EQU 01041D91Ch
+PUBLIC _Mfacilityx
+_Mfacilityx EQU 01042BB84h
+PUBLIC _Mfolders
+_Mfolders EQU 01042812Ch
+PUBLIC _Mfrigate
+_Mfrigate EQU 01041FD4Ch
+PUBLIC _Mfrigate_outro
+_Mfrigate_outro EQU 0104383A4h
+PUBLIC _Mfrigatex
+_Mfrigatex EQU 01042DE54h
+PUBLIC _Mintro_eye
+_Mintro_eye EQU 010419B8Ch
+PUBLIC _Mjungle
+_Mjungle EQU 010435AA0h
+PUBLIC _Mjungle_perimeter_unused
+_Mjungle_perimeter_unused EQU 0104222F0h
+PUBLIC _Mjungle_unused
+_Mjungle_unused EQU 01041BDC4h
+PUBLIC _Mjunglex
+_Mjunglex EQU 0104308B8h
+PUBLIC _Mmultideath_alt
+_Mmultideath_alt EQU 010435894h
+PUBLIC _Mmultiplayerdeath
+_Mmultiplayerdeath EQU 0104375B2h
+PUBLIC _Mnint_rare_logo
+_Mnint_rare_logo EQU 0104310CEh
+PUBLIC _Mno_music
+_Mno_music EQU 01041998Ch
+PUBLIC _Mnull1
+_Mnull1 EQU 010426D22h
+PUBLIC _Mnull2
+_Mnull2 EQU 01042BB5Ah
+PUBLIC _Mnull3
+_Mnull3 EQU 01042F42Eh
+PUBLIC _Mrunway
+_Mrunway EQU 010433C52h
+PUBLIC _Mrunway_plane
+_Mrunway_plane EQU 010434970h
+PUBLIC _Mrunwayx
+_Mrunwayx EQU 010436228h
+PUBLIC _Msilo
+_Msilo EQU 010421480h
+PUBLIC _Msilox
+_Msilox EQU 01042EB3Ah
+PUBLIC _Msolo_death_abrev
+_Msolo_death_abrev EQU 0104199B6h
+PUBLIC _Mstatue
+_Mstatue EQU 010424C50h
+PUBLIC _Mstatue_ending
+_Mstatue_ending EQU 01043823Eh
+PUBLIC _Mstatuex
+_Mstatuex EQU 010431500h
+PUBLIC _Mstreets
+_Mstreets EQU 01042325Ch
+PUBLIC _Mstreetsx
+_Mstreetsx EQU 01042F458h
+PUBLIC _Msurface1
+_Msurface1 EQU 01043684Ah
+PUBLIC _Msurface1x
+_Msurface1x EQU 01043787Ah
+PUBLIC _Msurface2
+_Msurface2 EQU 01042A504h
+PUBLIC _Msurface2_ending
+_Msurface2_ending EQU 010437FA2h
+PUBLIC _Msurface2x
+_Msurface2x EQU 010434C4Ah
+PUBLIC _Mtrain
+_Mtrain EQU 01041A43Ah
+PUBLIC _Mtrainx
+_Mtrainx EQU 01042B2BAh
+PUBLIC _Mwatchmusic
+_Mwatchmusic EQU 01042850Eh
+PUBLIC _Mwatercaverns
+_Mwatercaverns EQU 010429372h
+PUBLIC _Mwatercavernsx
+_Mwatercavernsx EQU 01042D1E0h
+PUBLIC _Mwindblowing
+_Mwindblowing EQU 010435372h
+PUBLIC _PICBMZ
+_PICBMZ EQU 0107AACD0h
+PUBLIC _PICBM_noseZ
+_PICBM_noseZ EQU 0107AD250h
+PUBLIC _Pak47magZ
+_Pak47magZ EQU 0107ADA00h
+PUBLIC _Palarm1Z
+_Palarm1Z EQU 0107ADBE0h
+PUBLIC _Palarm2Z
+_Palarm2Z EQU 0107ADD40h
+PUBLIC _Pammo_crate1Z
+_Pammo_crate1Z EQU 0107ADEE0h
+PUBLIC _Pammo_crate2Z
+_Pammo_crate2Z EQU 0107AE120h
+PUBLIC _Pammo_crate3Z
+_Pammo_crate3Z EQU 0107AE360h
+PUBLIC _Pammo_crate4Z
+_Pammo_crate4Z EQU 0107AE5B0h
+PUBLIC _Pammo_crate5Z
+_Pammo_crate5Z EQU 0107AE820h
+PUBLIC _PapcZ
+_PapcZ EQU 0107AEAE0h
+PUBLIC _Parchsecdoor1Z
+_Parchsecdoor1Z EQU 0107B0740h
+PUBLIC _Parchsecdoor2Z
+_Parchsecdoor2Z EQU 0107B0920h
+PUBLIC _ParticZ
+_ParticZ EQU 0107B0AF0h
+PUBLIC _PartictrailerZ
+_PartictrailerZ EQU 0107B18F0h
+PUBLIC _PbarricadeZ
+_PbarricadeZ EQU 0107B2200h
+PUBLIC _Pbin1Z
+_Pbin1Z EQU 0107B2440h
+PUBLIC _Pblotter1Z
+_Pblotter1Z EQU 0107B2790h
+PUBLIC _PbodyarmourZ
+_PbodyarmourZ EQU 0107B2870h
+PUBLIC _PbodyarmourvestZ
+_PbodyarmourvestZ EQU 0107B2D10h
+PUBLIC _PbollardZ
+_PbollardZ EQU 0107B3130h
+PUBLIC _PbombZ
+_PbombZ EQU 0107B3330h
+PUBLIC _Pbook1Z
+_Pbook1Z EQU 0107B34A0h
+PUBLIC _Pbookshelf1Z
+_Pbookshelf1Z EQU 0107B3630h
+PUBLIC _Pborg_crateZ
+_Pborg_crateZ EQU 0107B3D20h
+PUBLIC _PboxcartridgesZ
+_PboxcartridgesZ EQU 0107B3E90h
+PUBLIC _Pboxes2x4Z
+_Pboxes2x4Z EQU 0107B4090h
+PUBLIC _Pboxes3x4Z
+_Pboxes3x4Z EQU 0107B44C0h
+PUBLIC _Pboxes4x4Z
+_Pboxes4x4Z EQU 0107B4900h
+PUBLIC _PbrakeunitZ
+_PbrakeunitZ EQU 0107B4F60h
+PUBLIC _Pbridge_console1aZ
+_Pbridge_console1aZ EQU 0107B52D0h
+PUBLIC _Pbridge_console1bZ
+_Pbridge_console1bZ EQU 0107B5850h
+PUBLIC _Pbridge_console2aZ
+_Pbridge_console2aZ EQU 0107B5DB0h
+PUBLIC _Pbridge_console2bZ
+_Pbridge_console2bZ EQU 0107B6330h
+PUBLIC _Pbridge_console3aZ
+_Pbridge_console3aZ EQU 0107B6820h
+PUBLIC _Pbridge_console3bZ
+_Pbridge_console3bZ EQU 0107B6D70h
+PUBLIC _PcarbmwZ
+_PcarbmwZ EQU 0107B7300h
+PUBLIC _Pcard_box1Z
+_Pcard_box1Z EQU 0107B7FE0h
+PUBLIC _Pcard_box2Z
+_Pcard_box2Z EQU 0107B81E0h
+PUBLIC _Pcard_box3Z
+_Pcard_box3Z EQU 0107B8420h
+PUBLIC _Pcard_box4_lgZ
+_Pcard_box4_lgZ EQU 0107B8610h
+PUBLIC _Pcard_box5_lgZ
+_Pcard_box5_lgZ EQU 0107B87C0h
+PUBLIC _Pcard_box6_lgZ
+_Pcard_box6_lgZ EQU 0107B89C0h
+PUBLIC _PcarescortZ
+_PcarescortZ EQU 0107B8BB0h
+PUBLIC _PcargolfZ
+_PcargolfZ EQU 0107B97B0h
+PUBLIC _PcarweirdZ
+_PcarweirdZ EQU 0107BA3E0h
+PUBLIC _PcarzilZ
+_PcarzilZ EQU 0107BB520h
+PUBLIC _PcctvZ
+_PcctvZ EQU 0107BCB20h
+PUBLIC _PchraudiotapeZ
+_PchraudiotapeZ EQU 0107BCEA0h
+PUBLIC _PchrautoshotZ
+_PchrautoshotZ EQU 0107BD400h
+PUBLIC _PchrblackboxZ
+_PchrblackboxZ EQU 0107BD760h
+PUBLIC _PchrblueprintsZ
+_PchrblueprintsZ EQU 0107BDFE0h
+PUBLIC _PchrbombcaseZ
+_PchrbombcaseZ EQU 0107BE130h
+PUBLIC _PchrbombdefuserZ
+_PchrbombdefuserZ EQU 0107BE320h
+PUBLIC _PchrbriefcaseZ
+_PchrbriefcaseZ EQU 0107BEC00h
+PUBLIC _PchrbugZ
+_PchrbugZ EQU 0107BED90h
+PUBLIC _PchrbugdetectorZ
+_PchrbugdetectorZ EQU 0107BFB40h
+PUBLIC _PchrbungeeZ
+_PchrbungeeZ EQU 0107BFCB0h
+PUBLIC _PchrcameraZ
+_PchrcameraZ EQU 0107BFE20h
+PUBLIC _PchrcircuitboardZ
+_PchrcircuitboardZ EQU 0107C04B0h
+PUBLIC _PchrclipboardZ
+_PchrclipboardZ EQU 0107C0650h
+PUBLIC _PchrcreditcardZ
+_PchrcreditcardZ EQU 0107C08D0h
+PUBLIC _PchrdarkglassesZ
+_PchrdarkglassesZ EQU 0107C0A40h
+PUBLIC _PchrdatathiefZ
+_PchrdatathiefZ EQU 0107C0BB0h
+PUBLIC _PchrdattapeZ
+_PchrdattapeZ EQU 0107C0D50h
+PUBLIC _PchrdoordecoderZ
+_PchrdoordecoderZ EQU 0107C0F40h
+PUBLIC _PchrdoorexploderZ
+_PchrdoorexploderZ EQU 0107C17A0h
+PUBLIC _PchrdossierredZ
+_PchrdossierredZ EQU 0107C1910h
+PUBLIC _PchrdynamiteZ
+_PchrdynamiteZ EQU 0107C1DE0h
+PUBLIC _PchrexplosivepenZ
+_PchrexplosivepenZ EQU 0107C1F50h
+PUBLIC _PchrextinguisherZ
+_PchrextinguisherZ EQU 0107C20C0h
+PUBLIC _PchrfingergunZ
+_PchrfingergunZ EQU 0107C25C0h
+PUBLIC _PchrflarepistolZ
+_PchrflarepistolZ EQU 0107C2730h
+PUBLIC _Pchrfnp90Z
+_Pchrfnp90Z EQU 0107C28A0h
+PUBLIC _PchrgaskeyringZ
+_PchrgaskeyringZ EQU 0107C2D00h
+PUBLIC _PchrgoldbarZ
+_PchrgoldbarZ EQU 0107C3C10h
+PUBLIC _PchrgoldenZ
+_PchrgoldenZ EQU 0107C3D80h
+PUBLIC _PchrgoldeneyekeyZ
+_PchrgoldeneyekeyZ EQU 0107C3FF0h
+PUBLIC _PchrgoldwppkZ
+_PchrgoldwppkZ EQU 0107C4E90h
+PUBLIC _PchrgrenadeZ
+_PchrgrenadeZ EQU 0107C5000h
+PUBLIC _PchrgrenadelaunchZ
+_PchrgrenadelaunchZ EQU 0107C5370h
+PUBLIC _PchrgrenaderoundZ
+_PchrgrenaderoundZ EQU 0107C5700h
+PUBLIC _PchrheroinZ
+_PchrheroinZ EQU 0107C5970h
+PUBLIC _PchrkalashZ
+_PchrkalashZ EQU 0107C5AE0h
+PUBLIC _PchrkeyanalysercaseZ
+_PchrkeyanalysercaseZ EQU 0107C5ED0h
+PUBLIC _PchrkeyboltZ
+_PchrkeyboltZ EQU 0107C60C0h
+PUBLIC _PchrkeyyaleZ
+_PchrkeyyaleZ EQU 0107C6F60h
+PUBLIC _PchrknifeZ
+_PchrknifeZ EQU 0107C83C0h
+PUBLIC _PchrlaserZ
+_PchrlaserZ EQU 0107C85C0h
+PUBLIC _PchrlectreZ
+_PchrlectreZ EQU 0107C8980h
+PUBLIC _PchrlockexploderZ
+_PchrlockexploderZ EQU 0107C8AF0h
+PUBLIC _Pchrm16Z
+_Pchrm16Z EQU 0107C8C60h
+PUBLIC _PchrmapZ
+_PchrmapZ EQU 0107C9030h
+PUBLIC _PchrmicrocameraZ
+_PchrmicrocameraZ EQU 0107C9180h
+PUBLIC _PchrmicrocodeZ
+_PchrmicrocodeZ EQU 0107C9A70h
+PUBLIC _PchrmicrofilmZ
+_PchrmicrofilmZ EQU 0107C9BE0h
+PUBLIC _PchrmoneyZ
+_PchrmoneyZ EQU 0107C9D50h
+PUBLIC _Pchrmp5kZ
+_Pchrmp5kZ EQU 0107C9EC0h
+PUBLIC _Pchrmp5ksilZ
+_Pchrmp5ksilZ EQU 0107CA240h
+PUBLIC _PchrpitongunZ
+_PchrpitongunZ EQU 0107CA650h
+PUBLIC _PchrplansZ
+_PchrplansZ EQU 0107CA7C0h
+PUBLIC _PchrplastiqueZ
+_PchrplastiqueZ EQU 0107CAA50h
+PUBLIC _PchrpolarizedglassesZ
+_PchrpolarizedglassesZ EQU 0107CAEB0h
+PUBLIC _PchrproximitymineZ
+_PchrproximitymineZ EQU 0107CB770h
+PUBLIC _PchrremotemineZ
+_PchrremotemineZ EQU 0107CBBD0h
+PUBLIC _PchrrocketZ
+_PchrrocketZ EQU 0107CC030h
+PUBLIC _PchrrocketlaunchZ
+_PchrrocketlaunchZ EQU 0107CC5E0h
+PUBLIC _PchrrugerZ
+_PchrrugerZ EQU 0107CC9C0h
+PUBLIC _PchrsafecrackercaseZ
+_PchrsafecrackercaseZ EQU 0107CCDA0h
+PUBLIC _PchrshotgunZ
+_PchrshotgunZ EQU 0107CCF90h
+PUBLIC _PchrsilverwppkZ
+_PchrsilverwppkZ EQU 0107CD2E0h
+PUBLIC _PchrskorpionZ
+_PchrskorpionZ EQU 0107CD450h
+PUBLIC _PchrsniperrifleZ
+_PchrsniperrifleZ EQU 0107CD7D0h
+PUBLIC _PchrspectreZ
+_PchrspectreZ EQU 0107CDB60h
+PUBLIC _PchrspooltapeZ
+_PchrspooltapeZ EQU 0107CDED0h
+PUBLIC _PchrspyfileZ
+_PchrspyfileZ EQU 0107CE040h
+PUBLIC _PchrstafflistZ
+_PchrstafflistZ EQU 0107CE1B0h
+PUBLIC _PchrtesttubeZ
+_PchrtesttubeZ EQU 0107CE3D0h
+PUBLIC _PchrthrowknifeZ
+_PchrthrowknifeZ EQU 0107CE590h
+PUBLIC _PchrtimedmineZ
+_PchrtimedmineZ EQU 0107CE7B0h
+PUBLIC _Pchrtt33Z
+_Pchrtt33Z EQU 0107CECE0h
+PUBLIC _PchruziZ
+_PchruziZ EQU 0107CEF70h
+PUBLIC _PchrvideotapeZ
+_PchrvideotapeZ EQU 0107CF240h
+PUBLIC _PchrweaponcaseZ
+_PchrweaponcaseZ EQU 0107CF510h
+PUBLIC _PchrwppkZ
+_PchrwppkZ EQU 0107CF710h
+PUBLIC _PchrwppksilZ
+_PchrwppksilZ EQU 0107CF950h
+PUBLIC _PchrwristdartZ
+_PchrwristdartZ EQU 0107CFC30h
+PUBLIC _Pconsole1Z
+_Pconsole1Z EQU 0107CFDA0h
+PUBLIC _Pconsole2Z
+_Pconsole2Z EQU 0107D0420h
+PUBLIC _Pconsole3Z
+_Pconsole3Z EQU 0107D0AA0h
+PUBLIC _Pconsole_sev2aZ
+_Pconsole_sev2aZ EQU 0107D1130h
+PUBLIC _Pconsole_sev2bZ
+_Pconsole_sev2bZ EQU 0107D1550h
+PUBLIC _Pconsole_sev2cZ
+_Pconsole_sev2cZ EQU 0107D1A10h
+PUBLIC _Pconsole_sev2dZ
+_Pconsole_sev2dZ EQU 0107D1E50h
+PUBLIC _Pconsole_sev_GEaZ
+_Pconsole_sev_GEaZ EQU 0107D2280h
+PUBLIC _Pconsole_sev_GEbZ
+_Pconsole_sev_GEbZ EQU 0107D26B0h
+PUBLIC _Pconsole_sevaZ
+_Pconsole_sevaZ EQU 0107D2AE0h
+PUBLIC _Pconsole_sevbZ
+_Pconsole_sevbZ EQU 0107D2F60h
+PUBLIC _Pconsole_sevcZ
+_Pconsole_sevcZ EQU 0107D33D0h
+PUBLIC _Pconsole_sevdZ
+_Pconsole_sevdZ EQU 0107D3800h
+PUBLIC _Pcryptdoor1aZ
+_Pcryptdoor1aZ EQU 0107D3C30h
+PUBLIC _Pcryptdoor1bZ
+_Pcryptdoor1bZ EQU 0107D3DC0h
+PUBLIC _Pcryptdoor2aZ
+_Pcryptdoor2aZ EQU 0107D3F50h
+PUBLIC _Pcryptdoor2bZ
+_Pcryptdoor2bZ EQU 0107D40E0h
+PUBLIC _Pcryptdoor3Z
+_Pcryptdoor3Z EQU 0107D4270h
+PUBLIC _Pcryptdoor4Z
+_Pcryptdoor4Z EQU 0107D44E0h
+PUBLIC _PdamchaindoorZ
+_PdamchaindoorZ EQU 0107D4660h
+PUBLIC _PdamgatedoorZ
+_PdamgatedoorZ EQU 0107D48E0h
+PUBLIC _PdamtundoorZ
+_PdamtundoorZ EQU 0107D4B00h
+PUBLIC _Pdepot_door_steelZ
+_Pdepot_door_steelZ EQU 0107D4E70h
+PUBLIC _Pdepot_gate_entryZ
+_Pdepot_gate_entryZ EQU 0107D5010h
+PUBLIC _Pdesk1Z
+_Pdesk1Z EQU 0107D5250h
+PUBLIC _Pdesk2Z
+_Pdesk2Z EQU 0107D53D0h
+PUBLIC _Pdesk_arecibo1Z
+_Pdesk_arecibo1Z EQU 0107D5550h
+PUBLIC _Pdesk_lamp2Z
+_Pdesk_lamp2Z EQU 0107D5790h
+PUBLIC _Pdest_engineZ
+_Pdest_engineZ EQU 0107D5A90h
+PUBLIC _Pdest_exocetZ
+_Pdest_exocetZ EQU 0107D7380h
+PUBLIC _Pdest_gunZ
+_Pdest_gunZ EQU 0107D79E0h
+PUBLIC _Pdest_harpoonZ
+_Pdest_harpoonZ EQU 0107D8050h
+PUBLIC _Pdest_seawolfZ
+_Pdest_seawolfZ EQU 0107D88F0h
+PUBLIC _Pdisc_readerZ
+_Pdisc_readerZ EQU 0107D98A0h
+PUBLIC _Pdisk_drive1Z
+_Pdisk_drive1Z EQU 0107D9A60h
+PUBLIC _Pdoor_azt_chairZ
+_Pdoor_azt_chairZ EQU 0107D9BF0h
+PUBLIC _Pdoor_azt_deskZ
+_Pdoor_azt_deskZ EQU 0107D9D70h
+PUBLIC _Pdoor_azt_desk_topZ
+_Pdoor_azt_desk_topZ EQU 0107DA1B0h
+PUBLIC _Pdoor_aztecZ
+_Pdoor_aztecZ EQU 0107DA540h
+PUBLIC _Pdoor_dest1Z
+_Pdoor_dest1Z EQU 0107DA770h
+PUBLIC _Pdoor_dest2Z
+_Pdoor_dest2Z EQU 0107DAA70h
+PUBLIC _Pdoor_eyelidZ
+_Pdoor_eyelidZ EQU 0107DAE30h
+PUBLIC _Pdoor_irisZ
+_Pdoor_irisZ EQU 0107DB390h
+PUBLIC _Pdoor_mfZ
+_Pdoor_mfZ EQU 0107DBDE0h
+PUBLIC _Pdoor_roller1Z
+_Pdoor_roller1Z EQU 0107DC0D0h
+PUBLIC _Pdoor_roller2Z
+_Pdoor_roller2Z EQU 0107DC440h
+PUBLIC _Pdoor_roller3Z
+_Pdoor_roller3Z EQU 0107DC680h
+PUBLIC _Pdoor_roller4Z
+_Pdoor_roller4Z EQU 0107DC8C0h
+PUBLIC _Pdoor_rollertrainZ
+_Pdoor_rollertrainZ EQU 0107DCB20h
+PUBLIC _Pdoor_st_arec1Z
+_Pdoor_st_arec1Z EQU 0107DCC50h
+PUBLIC _Pdoor_st_arec2Z
+_Pdoor_st_arec2Z EQU 0107DCEB0h
+PUBLIC _Pdoor_winZ
+_Pdoor_winZ EQU 0107DD190h
+PUBLIC _PdoorconsoleZ
+_PdoorconsoleZ EQU 0107DD330h
+PUBLIC _PdoorpanelZ
+_PdoorpanelZ EQU 0107DD7A0h
+PUBLIC _Pdoorprison1Z
+_Pdoorprison1Z EQU 0107DDB10h
+PUBLIC _PdoorstatgateZ
+_PdoorstatgateZ EQU 0107DDC60h
+PUBLIC _PexplosionbitZ
+_PexplosionbitZ EQU 0107DDE60h
+PUBLIC _Pfiling_cabinet1Z
+_Pfiling_cabinet1Z EQU 0107DDF80h
+PUBLIC _PflagZ
+_PflagZ EQU 0107DE100h
+PUBLIC _PfloppyZ
+_PfloppyZ EQU 0107DE230h
+PUBLIC _Pfnp90magZ
+_Pfnp90magZ EQU 0107DE550h
+PUBLIC _Pgas_plant_met1_do1Z
+_Pgas_plant_met1_do1Z EQU 0107DE6F0h
+PUBLIC _Pgas_plant_sw2_do1Z
+_Pgas_plant_sw2_do1Z EQU 0107DEA70h
+PUBLIC _Pgas_plant_sw3_do1Z
+_Pgas_plant_sw3_do1Z EQU 0107DEC50h
+PUBLIC _Pgas_plant_sw4_do1Z
+_Pgas_plant_sw4_do1Z EQU 0107DEE50h
+PUBLIC _Pgas_plant_sw_do1Z
+_Pgas_plant_sw_do1Z EQU 0107DEFB0h
+PUBLIC _Pgas_plant_wc_cub1Z
+_Pgas_plant_wc_cub1Z EQU 0107DF240h
+PUBLIC _PgasbarrelZ
+_PgasbarrelZ EQU 0107DF450h
+PUBLIC _PgasbarrelsZ
+_PgasbarrelsZ EQU 0107DF660h
+PUBLIC _Pgasplant_clear_doorZ
+_Pgasplant_clear_doorZ EQU 0107DFBA0h
+PUBLIC _PgastankZ
+_PgastankZ EQU 0107E0100h
+PUBLIC _Pglassware1Z
+_Pglassware1Z EQU 0107E06B0h
+PUBLIC _Pglassware2Z
+_Pglassware2Z EQU 0107E0810h
+PUBLIC _Pglassware3Z
+_Pglassware3Z EQU 0107E0AA0h
+PUBLIC _Pglassware4Z
+_Pglassware4Z EQU 0107E0CB0h
+PUBLIC _PgoldeneyelogoZ
+_PgoldeneyelogoZ EQU 0107E1230h
+PUBLIC _PgoldenshellsZ
+_PgoldenshellsZ EQU 0107E20E0h
+PUBLIC _PgroundgunZ
+_PgroundgunZ EQU 0107E22E0h
+PUBLIC _Pgun_runway1Z
+_Pgun_runway1Z EQU 0107E2AB0h
+PUBLIC _PhatberetZ
+_PhatberetZ EQU 0107E31F0h
+PUBLIC _PhatberetblueZ
+_PhatberetblueZ EQU 0107E3490h
+PUBLIC _PhatberetredZ
+_PhatberetredZ EQU 0107E3760h
+PUBLIC _PhatchboltZ
+_PhatchboltZ EQU 0107E3A40h
+PUBLIC _PhatchdoorZ
+_PhatchdoorZ EQU 0107E3B10h
+PUBLIC _PhatchsevxZ
+_PhatchsevxZ EQU 0107E3D30h
+PUBLIC _PhatfurryZ
+_PhatfurryZ EQU 0107E3EA0h
+PUBLIC _PhatfurryblackZ
+_PhatfurryblackZ EQU 0107E40D0h
+PUBLIC _PhatfurrybrownZ
+_PhatfurrybrownZ EQU 0107E42F0h
+PUBLIC _PhathelmetZ
+_PhathelmetZ EQU 0107E4500h
+PUBLIC _PhathelmetgreyZ
+_PhathelmetgreyZ EQU 0107E4730h
+PUBLIC _PhatmoonZ
+_PhatmoonZ EQU 0107E4960h
+PUBLIC _PhatpeakedZ
+_PhatpeakedZ EQU 0107E4D40h
+PUBLIC _PhattbirdZ
+_PhattbirdZ EQU 0107E5050h
+PUBLIC _PhattbirdbrownZ
+_PhattbirdbrownZ EQU 0107E52A0h
+PUBLIC _PhelicopterZ
+_PhelicopterZ EQU 0107E5510h
+PUBLIC _PhindZ
+_PhindZ EQU 0107E9730h
+PUBLIC _PjeepZ
+_PjeepZ EQU 0107EAEA0h
+PUBLIC _Pjerry_can1Z
+_Pjerry_can1Z EQU 0107EC000h
+PUBLIC _Pjungle3_treeZ
+_Pjungle3_treeZ EQU 0107EC260h
+PUBLIC _Pjungle5_treeZ
+_Pjungle5_treeZ EQU 0107EC9E0h
+PUBLIC _Pkey_holderZ
+_Pkey_holderZ EQU 0107ECF10h
+PUBLIC _Pkeyboard1Z
+_Pkeyboard1Z EQU 0107ED260h
+PUBLIC _Pkit_units1Z
+_Pkit_units1Z EQU 0107ED3D0h
+PUBLIC _PlabbenchZ
+_PlabbenchZ EQU 0107ED670h
+PUBLIC _PlandmineZ
+_PlandmineZ EQU 0107EDA40h
+PUBLIC _PlegalpageZ
+_PlegalpageZ EQU 0107EDCB0h
+PUBLIC _Pletter_tray1Z
+_Pletter_tray1Z EQU 0107EEC70h
+PUBLIC _Plocker3Z
+_Plocker3Z EQU 0107EEDD0h
+PUBLIC _Plocker4Z
+_Plocker4Z EQU 0107EEF60h
+PUBLIC _Pm16magZ
+_Pm16magZ EQU 0107EF0F0h
+PUBLIC _PmagnumshellsZ
+_PmagnumshellsZ EQU 0107EF230h
+PUBLIC _Pmainframe1Z
+_Pmainframe1Z EQU 0107EF430h
+PUBLIC _Pmainframe2Z
+_Pmainframe2Z EQU 0107EF730h
+PUBLIC _Pmetal_chair1Z
+_Pmetal_chair1Z EQU 0107EFA00h
+PUBLIC _Pmetal_crate1Z
+_Pmetal_crate1Z EQU 0107EFD40h
+PUBLIC _Pmetal_crate2Z
+_Pmetal_crate2Z EQU 0107EFF00h
+PUBLIC _Pmetal_crate3Z
+_Pmetal_crate3Z EQU 0107F00C0h
+PUBLIC _Pmetal_crate4Z
+_Pmetal_crate4Z EQU 0107F0280h
+PUBLIC _PmilcopterZ
+_PmilcopterZ EQU 0107F0440h
+PUBLIC _PmiltruckZ
+_PmiltruckZ EQU 0107F1D20h
+PUBLIC _Pmissile_rack2Z
+_Pmissile_rack2Z EQU 0107F4020h
+PUBLIC _Pmissile_rackZ
+_Pmissile_rackZ EQU 0107F4A30h
+PUBLIC _PmodemboxZ
+_PmodemboxZ EQU 0107F4E10h
+PUBLIC _PmotorbikeZ
+_PmotorbikeZ EQU 0107F5150h
+PUBLIC _Pmp5kmagZ
+_Pmp5kmagZ EQU 0107F6010h
+PUBLIC _PnintendologoZ
+_PnintendologoZ EQU 0107F6160h
+PUBLIC _Poil_drum1Z
+_Poil_drum1Z EQU 0107F8C40h
+PUBLIC _Poil_drum2Z
+_Poil_drum2Z EQU 0107F8EB0h
+PUBLIC _Poil_drum3Z
+_Poil_drum3Z EQU 0107F91A0h
+PUBLIC _Poil_drum5Z
+_Poil_drum5Z EQU 0107F9490h
+PUBLIC _Poil_drum6Z
+_Poil_drum6Z EQU 0107F9780h
+PUBLIC _Poil_drum7Z
+_Poil_drum7Z EQU 0107F9A90h
+PUBLIC _PpadlockZ
+_PpadlockZ EQU 0107F9D90h
+PUBLIC _PpalmZ
+_PpalmZ EQU 0107FA7E0h
+PUBLIC _PpalmtreeZ
+_PpalmtreeZ EQU 0107FAC30h
+PUBLIC _Pphone1Z
+_Pphone1Z EQU 0107FB100h
+PUBLIC _PplaneZ
+_PplaneZ EQU 0107FB240h
+PUBLIC _Pplant11Z
+_Pplant11Z EQU 0107FD820h
+PUBLIC _Pplant1Z
+_Pplant1Z EQU 0107FDBE0h
+PUBLIC _Pplant2Z
+_Pplant2Z EQU 0107FDF70h
+PUBLIC _Pplant2bZ
+_Pplant2bZ EQU 0107FE2D0h
+PUBLIC _Pplant3Z
+_Pplant3Z EQU 0107FE6E0h
+PUBLIC _Pradio_unit1Z
+_Pradio_unit1Z EQU 0107FEB30h
+PUBLIC _Pradio_unit2Z
+_Pradio_unit2Z EQU 0107FECE0h
+PUBLIC _Pradio_unit3Z
+_Pradio_unit3Z EQU 0107FEEA0h
+PUBLIC _Pradio_unit4Z
+_Pradio_unit4Z EQU 0107FF060h
+PUBLIC _ProofgunZ
+_ProofgunZ EQU 0107FF220h
+PUBLIC _PsafeZ
+_PsafeZ EQU 0107FF880h
+PUBLIC _PsafedoorZ
+_PsafedoorZ EQU 0107FFBD0h
+PUBLIC _Psat1_reflectZ
+_Psat1_reflectZ EQU 0108000C0h
+PUBLIC _PsatboxZ
+_PsatboxZ EQU 010801630h
+PUBLIC _PsatdishZ
+_PsatdishZ EQU 010801750h
+PUBLIC _Psec_panelZ
+_Psec_panelZ EQU 010801BB0h
+PUBLIC _Psev_door3Z
+_Psev_door3Z EQU 010801D50h
+PUBLIC _Psev_door3_windZ
+_Psev_door3_windZ EQU 010801FE0h
+PUBLIC _Psev_door4_windZ
+_Psev_door4_windZ EQU 010802370h
+PUBLIC _Psev_doorZ
+_Psev_doorZ EQU 010802750h
+PUBLIC _Psev_door_v1Z
+_Psev_door_v1Z EQU 010802AA0h
+PUBLIC _Psev_trislideZ
+_Psev_trislideZ EQU 010802DD0h
+PUBLIC _PsevdishZ
+_PsevdishZ EQU 010803180h
+PUBLIC _PsevdoormetslideZ
+_PsevdoormetslideZ EQU 0108040A0h
+PUBLIC _PsevdoornowindZ
+_PsevdoornowindZ EQU 010804380h
+PUBLIC _PsevdoorwindZ
+_PsevdoorwindZ EQU 0108044F0h
+PUBLIC _PsevdoorwoodZ
+_PsevdoorwoodZ EQU 010804920h
+PUBLIC _PshuttleZ
+_PshuttleZ EQU 010804CD0h
+PUBLIC _Pshuttle_door_lZ
+_Pshuttle_door_lZ EQU 0108076D0h
+PUBLIC _Pshuttle_door_rZ
+_Pshuttle_door_rZ EQU 010808300h
+PUBLIC _PsilencerZ
+_PsilencerZ EQU 010809000h
+PUBLIC _Psilo_lift_doorZ
+_Psilo_lift_doorZ EQU 0108091A0h
+PUBLIC _PsilotopdoorZ
+_PsilotopdoorZ EQU 0108093E0h
+PUBLIC _PskorpionmagZ
+_PskorpionmagZ EQU 0108096D0h
+PUBLIC _PspectremagZ
+_PspectremagZ EQU 010809830h
+PUBLIC _PspeedboatZ
+_PspeedboatZ EQU 0108099A0h
+PUBLIC _Pst_pete_room_1iZ
+_Pst_pete_room_1iZ EQU 01080A6E0h
+PUBLIC _Pst_pete_room_2iZ
+_Pst_pete_room_2iZ EQU 01080D820h
+PUBLIC _Pst_pete_room_3tZ
+_Pst_pete_room_3tZ EQU 010810A00h
+PUBLIC _Pst_pete_room_5cZ
+_Pst_pete_room_5cZ EQU 010813940h
+PUBLIC _Pst_pete_room_6cZ
+_Pst_pete_room_6cZ EQU 010816ED0h
+PUBLIC _Psteel_door1Z
+_Psteel_door1Z EQU 01081A2E0h
+PUBLIC _Psteel_door2Z
+_Psteel_door2Z EQU 01081A550h
+PUBLIC _Psteel_door2bZ
+_Psteel_door2bZ EQU 01081A800h
+PUBLIC _Psteel_door3Z
+_Psteel_door3Z EQU 01081AAD0h
+PUBLIC _Pstool1Z
+_Pstool1Z EQU 01081ADA0h
+PUBLIC _Pswipe_card2Z
+_Pswipe_card2Z EQU 01081B060h
+PUBLIC _Pswivel_chair1Z
+_Pswivel_chair1Z EQU 01081B1F0h
+PUBLIC _PtankZ
+_PtankZ EQU 01081B480h
+PUBLIC _PtigerZ
+_PtigerZ EQU 01081CF20h
+PUBLIC _Ptorpedo_rackZ
+_Ptorpedo_rackZ EQU 01081EDB0h
+PUBLIC _Ptrain_door2Z
+_Ptrain_door2Z EQU 01081F630h
+PUBLIC _Ptrain_door3Z
+_Ptrain_door3Z EQU 01081FA00h
+PUBLIC _Ptrain_doorZ
+_Ptrain_doorZ EQU 01081FE20h
+PUBLIC _PtrainextdoorZ
+_PtrainextdoorZ EQU 010820090h
+PUBLIC _Ptt33magZ
+_Ptt33magZ EQU 0108203D0h
+PUBLIC _Ptuning_console1Z
+_Ptuning_console1Z EQU 010820510h
+PUBLIC _Ptv1Z
+_Ptv1Z EQU 010820A30h
+PUBLIC _Ptv4screenZ
+_Ptv4screenZ EQU 010820C00h
+PUBLIC _Ptv_holderZ
+_Ptv_holderZ EQU 010820DA0h
+PUBLIC _PtvscreenZ
+_PtvscreenZ EQU 010821470h
+PUBLIC _PuzimagZ
+_PuzimagZ EQU 010821540h
+PUBLIC _PvertdoorZ
+_PvertdoorZ EQU 010821680h
+PUBLIC _PwalletbondZ
+_PwalletbondZ EQU 010821C90h
+PUBLIC _PwindowZ
+_PwindowZ EQU 010823240h
+PUBLIC _Pwindow_cor11Z
+_Pwindow_cor11Z EQU 010823330h
+PUBLIC _Pwindow_lib_lg1Z
+_Pwindow_lib_lg1Z EQU 010823410h
+PUBLIC _Pwindow_lib_sm1Z
+_Pwindow_lib_sm1Z EQU 0108234F0h
+PUBLIC _Pwood_lg_crate1Z
+_Pwood_lg_crate1Z EQU 0108235E0h
+PUBLIC _Pwood_lg_crate2Z
+_Pwood_lg_crate2Z EQU 010823860h
+PUBLIC _Pwood_md_crate3Z
+_Pwood_md_crate3Z EQU 010823A80h
+PUBLIC _Pwood_sm_crate4Z
+_Pwood_sm_crate4Z EQU 010823CA0h
+PUBLIC _Pwood_sm_crate5Z
+_Pwood_sm_crate5Z EQU 010823F00h
+PUBLIC _Pwood_sm_crate6Z
+_Pwood_sm_crate6Z EQU 010824160h
+PUBLIC _Pwooden_table1Z
+_Pwooden_table1Z EQU 010824380h
+PUBLIC _PwppkmagZ
+_PwppkmagZ EQU 0108246F0h
+PUBLIC _Tbg_ame_all_p_stanZ
+_Tbg_ame_all_p_stanZ EQU 010824830h
+PUBLIC _Tbg_arch_all_p_stanZ
+_Tbg_arch_all_p_stanZ EQU 010826160h
+PUBLIC _Tbg_arec_all_p_stanZ
+_Tbg_arec_all_p_stanZ EQU 01082BE50h
+PUBLIC _Tbg_ark_all_p_stanZ
+_Tbg_ark_all_p_stanZ EQU 0108341A0h
+PUBLIC _Tbg_ash_all_p_stanZ
+_Tbg_ash_all_p_stanZ EQU 01083D160h
+PUBLIC _Tbg_azt_all_p_stanZ
+_Tbg_azt_all_p_stanZ EQU 01083EA90h
+PUBLIC _Tbg_cat_all_p_stanZ
+_Tbg_cat_all_p_stanZ EQU 010844010h
+PUBLIC _Tbg_cave_all_p_stanZ
+_Tbg_cave_all_p_stanZ EQU 010846740h
+PUBLIC _Tbg_crad_all_p_stanZ
+_Tbg_crad_all_p_stanZ EQU 01084B630h
+PUBLIC _Tbg_cryp_all_p_stanZ
+_Tbg_cryp_all_p_stanZ EQU 01084DF40h
+PUBLIC _Tbg_dam_all_p_stanZ
+_Tbg_dam_all_p_stanZ EQU 010850FB0h
+PUBLIC _Tbg_depo_all_p_stanZ
+_Tbg_depo_all_p_stanZ EQU 01085B390h
+PUBLIC _Tbg_dest_all_p_stanZ
+_Tbg_dest_all_p_stanZ EQU 0108622D0h
+PUBLIC _Tbg_dish_all_p_stanZ
+_Tbg_dish_all_p_stanZ EQU 010868BC0h
+PUBLIC _Tbg_imp_all_p_stanZ
+_Tbg_imp_all_p_stanZ EQU 0108696D0h
+PUBLIC _Tbg_jun_all_p_stanZ
+_Tbg_jun_all_p_stanZ EQU 01086B000h
+PUBLIC _Tbg_len_all_p_stanZ
+_Tbg_len_all_p_stanZ EQU 010872150h
+PUBLIC _Tbg_oat_all_p_stanZ
+_Tbg_oat_all_p_stanZ EQU 010872C10h
+PUBLIC _Tbg_pete_all_p_stanZ
+_Tbg_pete_all_p_stanZ EQU 010874510h
+PUBLIC _Tbg_ref_all_p_stanZ
+_Tbg_ref_all_p_stanZ EQU 010878BA0h
+PUBLIC _Tbg_run_all_p_stanZ
+_Tbg_run_all_p_stanZ EQU 01087A970h
+PUBLIC _Tbg_sev_all_p_stanZ
+_Tbg_sev_all_p_stanZ EQU 01087C3F0h
+PUBLIC _Tbg_sevb_all_p_stanZ
+_Tbg_sevb_all_p_stanZ EQU 0108801C0h
+PUBLIC _Tbg_sevx_all_p_stanZ
+_Tbg_sevx_all_p_stanZ EQU 010885100h
+PUBLIC _Tbg_silo_all_p_stanZ
+_Tbg_silo_all_p_stanZ EQU 01088E430h
+PUBLIC _Tbg_stat_all_p_stanZ
+_Tbg_stat_all_p_stanZ EQU 0108974D0h
+PUBLIC _Tbg_tra_all_p_stanZ
+_Tbg_tra_all_p_stanZ EQU 01089C390h
+PUBLIC _UbriefarchZ
+_UbriefarchZ EQU 01089E760h
+PUBLIC _UbriefarkZ
+_UbriefarkZ EQU 01089E780h
+PUBLIC _UbriefaztZ
+_UbriefaztZ EQU 01089E7A0h
+PUBLIC _UbriefcaveZ
+_UbriefcaveZ EQU 01089E7C0h
+PUBLIC _UbriefcontrolZ
+_UbriefcontrolZ EQU 01089E7E0h
+PUBLIC _UbriefcradZ
+_UbriefcradZ EQU 01089E800h
+PUBLIC _UbriefcrypZ
+_UbriefcrypZ EQU 01089E820h
+PUBLIC _UbriefdamZ
+_UbriefdamZ EQU 01089E840h
+PUBLIC _UbriefdepoZ
+_UbriefdepoZ EQU 01089E860h
+PUBLIC _UbriefdestZ
+_UbriefdestZ EQU 01089E880h
+PUBLIC _UbriefjunZ
+_UbriefjunZ EQU 01089E8A0h
+PUBLIC _UbriefpeteZ
+_UbriefpeteZ EQU 01089E8C0h
+PUBLIC _UbriefrunZ
+_UbriefrunZ EQU 01089E8E0h
+PUBLIC _UbriefsevbZ
+_UbriefsevbZ EQU 01089E900h
+PUBLIC _UbriefsevbunkerZ
+_UbriefsevbunkerZ EQU 01089E920h
+PUBLIC _UbriefsevxZ
+_UbriefsevxZ EQU 01089E940h
+PUBLIC _UbriefsevxbZ
+_UbriefsevxbZ EQU 01089E960h
+PUBLIC _UbriefsiloZ
+_UbriefsiloZ EQU 01089E980h
+PUBLIC _UbriefstatueZ
+_UbriefstatueZ EQU 01089E9A0h
+PUBLIC _UbrieftraZ
+_UbrieftraZ EQU 01089E9C0h
+PUBLIC _Ump_setupameZ
+_Ump_setupameZ EQU 01089E9E0h
+PUBLIC _Ump_setuparchZ
+_Ump_setuparchZ EQU 01089F100h
+PUBLIC _Ump_setuparkZ
+_Ump_setuparkZ EQU 0108A1EA0h
+PUBLIC _Ump_setupashZ
+_Ump_setupashZ EQU 0108A3BE0h
+PUBLIC _Ump_setupcaveZ
+_Ump_setupcaveZ EQU 0108A42D0h
+PUBLIC _Ump_setupcradZ
+_Ump_setupcradZ EQU 0108A6830h
+PUBLIC _Ump_setupcrypZ
+_Ump_setupcrypZ EQU 0108A7190h
+PUBLIC _Ump_setupdishZ
+_Ump_setupdishZ EQU 0108A7EF0h
+PUBLIC _Ump_setupimpZ
+_Ump_setupimpZ EQU 0108A82E0h
+PUBLIC _Ump_setupoatZ
+_Ump_setupoatZ EQU 0108A8920h
+PUBLIC _Ump_setuprefZ
+_Ump_setuprefZ EQU 0108A8C70h
+PUBLIC _Ump_setupsevbZ
+_Ump_setupsevbZ EQU 0108A9080h
+PUBLIC _Ump_setupstatueZ
+_Ump_setupstatueZ EQU 0108AA390h
+PUBLIC _UsetuparchZ
+_UsetuparchZ EQU 0108AB210h
+PUBLIC _UsetuparkZ
+_UsetuparkZ EQU 0108AF820h
+PUBLIC _UsetupaztZ
+_UsetupaztZ EQU 0108B33B0h
+PUBLIC _UsetupcaveZ
+_UsetupcaveZ EQU 0108B5CB0h
+PUBLIC _UsetupcontrolZ
+_UsetupcontrolZ EQU 0108B9B10h
+PUBLIC _UsetupcradZ
+_UsetupcradZ EQU 0108BD610h
+PUBLIC _UsetupcrypZ
+_UsetupcrypZ EQU 0108BF240h
+PUBLIC _UsetupdamZ
+_UsetupdamZ EQU 0108C10D0h
+PUBLIC _UsetupdepoZ
+_UsetupdepoZ EQU 0108C53A0h
+PUBLIC _UsetupdestZ
+_UsetupdestZ EQU 0108C8330h
+PUBLIC _UsetupjunZ
+_UsetupjunZ EQU 0108CA680h
+PUBLIC _UsetuplenZ
+_UsetuplenZ EQU 0108CDD80h
+PUBLIC _UsetuppeteZ
+_UsetuppeteZ EQU 0108CE350h
+PUBLIC _UsetuprunZ
+_UsetuprunZ EQU 0108D12D0h
+PUBLIC _UsetupsevbZ
+_UsetupsevbZ EQU 0108D2B30h
+PUBLIC _UsetupsevbunkerZ
+_UsetupsevbunkerZ EQU 0108D5190h
+PUBLIC _UsetupsevxZ
+_UsetupsevxZ EQU 0108D6BC0h
+PUBLIC _UsetupsevxbZ
+_UsetupsevxbZ EQU 0108DAED0h
+PUBLIC _UsetupsiloZ
+_UsetupsiloZ EQU 0108DEFC0h
+PUBLIC _UsetupstatueZ
+_UsetupstatueZ EQU 0108E1A10h
+PUBLIC _UsetuptraZ
+_UsetuptraZ EQU 0108E41E0h
+PUBLIC __GlobalimagetableSegmentEnd
+__GlobalimagetableSegmentEnd EQU 01029E558h
+PUBLIC __GlobalimagetableSegmentRomEnd
+__GlobalimagetableSegmentRomEnd EQU 01029E558h
+PUBLIC __GlobalimagetableSegmentRomStart
+__GlobalimagetableSegmentRomStart EQU 01029D160h
+PUBLIC __GlobalimagetableSegmentStart
+__GlobalimagetableSegmentStart EQU 01029D160h
+PUBLIC __alt_startSegmentRomStart
+__alt_startSegmentRomStart EQU 010101000h
+PUBLIC __alt_startSegmentStart
+__alt_startSegmentStart EQU 010101000h
+PUBLIC __animation_dataSegmentEnd
+__animation_dataSegmentEnd EQU 01029D160h
+PUBLIC __animation_dataSegmentRomEnd
+__animation_dataSegmentRomEnd EQU 01029D160h
+PUBLIC __animation_dataSegmentRomStart
+__animation_dataSegmentRomStart EQU 01028E980h
+PUBLIC __animation_dataSegmentStart
+__animation_dataSegmentStart EQU 01028E980h
+PUBLIC __animation_entriesSegmentEnd
+__animation_entriesSegmentEnd EQU 01028E980h
+PUBLIC __animation_entriesSegmentRomEnd
+__animation_entriesSegmentRomEnd EQU 01028E980h
+PUBLIC __animation_entriesSegmentRomStart
+__animation_entriesSegmentRomStart EQU 010124AC0h
+PUBLIC __animation_entriesSegmentStart
+__animation_entriesSegmentStart EQU 010124AC0h
+PUBLIC __bootSegmentEnd
+__bootSegmentEnd EQU 010001000h
+PUBLIC __bootSegmentRomEnd
+__bootSegmentRomEnd EQU 010001000h
+PUBLIC __bootSegmentRomStart
+__bootSegmentRomStart EQU 010000040h
+PUBLIC __bootSegmentStart
+__bootSegmentStart EQU 010000040h
+PUBLIC __cdataSegmentEnd
+__cdataSegmentEnd EQU 010032172h
+PUBLIC __cdataSegmentRomEnd
+__cdataSegmentRomEnd EQU 010032172h
+PUBLIC __cdataSegmentRomStart
+__cdataSegmentRomStart EQU 010021990h
+PUBLIC __cdataSegmentStart
+__cdataSegmentStart EQU 010021990h
+PUBLIC __codeSegmentEnd
+__codeSegmentEnd EQU 010021990h
+PUBLIC __codeSegmentRomEnd
+__codeSegmentRomEnd EQU 010021990h
+PUBLIC __codeSegmentRomStart
+__codeSegmentRomStart EQU 010001050h
+PUBLIC __codeSegmentStart
+__codeSegmentStart EQU 010001050h
+PUBLIC __efontchardataSegmentEnd
+__efontchardataSegmentEnd EQU 010124AC0h
+PUBLIC __efontchardataSegmentRomEnd
+__efontchardataSegmentRomEnd EQU 010124AC0h
+PUBLIC __efontchardataSegmentRomStart
+__efontchardataSegmentRomStart EQU 010123040h
+PUBLIC __efontchardataSegmentStart
+__efontchardataSegmentStart EQU 010123040h
+PUBLIC __fontbankgothicSegmentEnd
+__fontbankgothicSegmentEnd EQU 0102E88A0h
+PUBLIC __fontbankgothicSegmentRomEnd
+__fontbankgothicSegmentRomEnd EQU 0102E88A0h
+PUBLIC __fontbankgothicSegmentRomStart
+__fontbankgothicSegmentRomStart EQU 0102E63F0h
+PUBLIC __fontbankgothicSegmentStart
+__fontbankgothicSegmentStart EQU 0102E63F0h
+PUBLIC __fontdlSegmentEnd
+__fontdlSegmentEnd EQU 010117940h
+PUBLIC __fontdlSegmentRomEnd
+__fontdlSegmentRomEnd EQU 010117940h
+PUBLIC __fontdlSegmentRomStart
+__fontdlSegmentRomStart EQU 010117880h
+PUBLIC __fontdlSegmentStart
+__fontdlSegmentStart EQU 010117880h
+PUBLIC __fontzurichboldSegmentEnd
+__fontzurichboldSegmentEnd EQU 0102EBDE0h
+PUBLIC __fontzurichboldSegmentRomEnd
+__fontzurichboldSegmentRomEnd EQU 0102EBDE0h
+PUBLIC __fontzurichboldSegmentRomStart
+__fontzurichboldSegmentRomStart EQU 0102E88A0h
+PUBLIC __fontzurichboldSegmentStart
+__fontzurichboldSegmentStart EQU 0102E88A0h
+PUBLIC __gameSegmentEnd
+__gameSegmentEnd EQU 010117880h
+PUBLIC __gameSegmentRomEnd
+__gameSegmentRomEnd EQU 010117880h
+PUBLIC __gameSegmentRomStart
+__gameSegmentRomStart EQU 010034B2Fh
+PUBLIC __gameSegmentStart
+__gameSegmentStart EQU 010034B2Fh
+PUBLIC __headerSegmentEnd
+__headerSegmentEnd EQU 010000040h
+PUBLIC __headerSegmentRomEnd
+__headerSegmentRomEnd EQU 010000040h
+PUBLIC __headerSegmentRomStart
+__headerSegmentRomStart EQU 010000000h
+PUBLIC __headerSegmentStart
+__headerSegmentStart EQU 010000000h
+PUBLIC __imagesSegmentEnd
+__imagesSegmentEnd EQU 010C00000h
+PUBLIC __imagesSegmentRomEnd
+__imagesSegmentRomEnd EQU 010C00000h
+PUBLIC __imagesSegmentRomStart
+__imagesSegmentRomStart EQU 0108F7DF0h
+PUBLIC __imagesSegmentStart
+__imagesSegmentStart EQU 0108F7DF0h
+PUBLIC __inflateSegmentEnd
+__inflateSegmentEnd EQU 010034B2Fh
+PUBLIC __inflateSegmentRomEnd
+__inflateSegmentRomEnd EQU 010034B2Fh
+PUBLIC __inflateSegmentRomStart
+__inflateSegmentRomStart EQU 010032172h
+PUBLIC __inflateSegmentStart
+__inflateSegmentStart EQU 010032172h
+PUBLIC __instrumentsctlSegmentRomEnd
+__instrumentsctlSegmentRomEnd EQU 0103B87F0h
+PUBLIC __instrumentsctlSegmentRomStart
+__instrumentsctlSegmentRomStart EQU 0103B4450h
+PUBLIC __instrumentstblSegmentRomEnd
+__instrumentstblSegmentRomEnd EQU 010419790h
+PUBLIC __instrumentstblSegmentRomStart
+__instrumentstblSegmentRomStart EQU 0103B87F0h
+PUBLIC __jfontchardataSegmentEnd
+__jfontchardataSegmentEnd EQU 010123040h
+PUBLIC __jfontchardataSegmentRomEnd
+__jfontchardataSegmentRomEnd EQU 010123040h
+PUBLIC __jfontchardataSegmentRomStart
+__jfontchardataSegmentRomStart EQU 010117940h
+PUBLIC __jfontchardataSegmentStart
+__jfontchardataSegmentStart EQU 010117940h
+PUBLIC __musicfilesSegmentEnd
+__musicfilesSegmentEnd EQU 010438660h
+PUBLIC __musicfilesSegmentRomEnd
+__musicfilesSegmentRomEnd EQU 010438660h
+PUBLIC __musicfilesSegmentRomStart
+__musicfilesSegmentRomStart EQU 0102EBDE0h
+PUBLIC __musicfilesSegmentStart
+__musicfilesSegmentStart EQU 0102EBDE0h
+PUBLIC __musicsampletblSegmentRomEnd
+__musicsampletblSegmentRomEnd EQU 01041998Ch
+PUBLIC __musicsampletblSegmentRomStart
+__musicsampletblSegmentRomStart EQU 010419790h
+PUBLIC __obsegSegmentEnd
+__obsegSegmentEnd EQU 0108F7DF0h
+PUBLIC __obsegSegmentRomEnd
+__obsegSegmentRomEnd EQU 0108F7DF0h
+PUBLIC __obsegSegmentRomStart
+__obsegSegmentRomStart EQU 010438660h
+PUBLIC __obsegSegmentStart
+__obsegSegmentStart EQU 010438660h
+PUBLIC __ramromDam1SegmentRomStart
+__ramromDam1SegmentRomStart EQU 0102BF2D0h
+PUBLIC __ramromfilesSegmentEnd
+__ramromfilesSegmentEnd EQU 0102E63F0h
+PUBLIC __ramromfilesSegmentRomEnd
+__ramromfilesSegmentRomEnd EQU 0102E63F0h
+PUBLIC __ramromfilesSegmentRomStart
+__ramromfilesSegmentRomStart EQU 0102BF2D0h
+PUBLIC __ramromfilesSegmentStart
+__ramromfilesSegmentStart EQU 0102BF2D0h
+PUBLIC __rarewarelogoSegmentEnd
+__rarewarelogoSegmentEnd EQU 0102A4D50h
+PUBLIC __rarewarelogoSegmentRomEnd
+__rarewarelogoSegmentRomEnd EQU 0102A4D50h
+PUBLIC __rarewarelogoSegmentRomStart
+__rarewarelogoSegmentRomStart EQU 01029E560h
+PUBLIC __rarewarelogoSegmentStart
+__rarewarelogoSegmentStart EQU 01029E560h
+PUBLIC __romfiles2SegmentEnd
+__romfiles2SegmentEnd EQU 0102BF2D0h
+PUBLIC __romfiles2SegmentRomEnd
+__romfiles2SegmentRomEnd EQU 0102BF2D0h
+PUBLIC __romfiles2SegmentRomStart
+__romfiles2SegmentRomStart EQU 0102A4D50h
+PUBLIC __romfiles2SegmentStart
+__romfiles2SegmentStart EQU 0102A4D50h
+PUBLIC __sfxctlSegmentRomEnd
+__sfxctlSegmentRomEnd EQU 0102F19A0h
+PUBLIC __sfxctlSegmentRomStart
+__sfxctlSegmentRomStart EQU 0102EBDE0h
+PUBLIC __sfxtblSegmentRomEnd
+__sfxtblSegmentRomEnd EQU 0103B4450h
+PUBLIC __sfxtblSegmentRomStart
+__sfxtblSegmentRomStart EQU 0102F19A0h
+PUBLIC __startSegmentEnd
+__startSegmentEnd EQU 010001050h
+PUBLIC __startSegmentRomEnd
+__startSegmentRomEnd EQU 010001050h
+PUBLIC __startSegmentRomStart
+__startSegmentRomStart EQU 010001000h
+PUBLIC __startSegmentStart
+__startSegmentStart EQU 010001000h
+PUBLIC _bg_arch_all_p_seg
+_bg_arch_all_p_seg EQU 0104EA7E0h
+PUBLIC _bg_arec_all_p_seg
+_bg_arec_all_p_seg EQU 0104BC460h
+PUBLIC _bg_ark_all_p_seg
+_bg_ark_all_p_seg EQU 01062FDF0h
+PUBLIC _bg_azt_all_p_seg
+_bg_azt_all_p_seg EQU 010578FA0h
+PUBLIC _bg_cat_all_p_seg
+_bg_cat_all_p_seg EQU 0106C55C0h
+PUBLIC _bg_cave_all_p_seg
+_bg_cave_all_p_seg EQU 0106A10D0h
+PUBLIC _bg_crad_all_p_seg
+_bg_crad_all_p_seg EQU 0106CAAF0h
+PUBLIC _bg_cryp_all_p_seg
+_bg_cryp_all_p_seg EQU 0105EA5A0h
+PUBLIC _bg_dam_all_p_seg
+_bg_dam_all_p_seg EQU 0105FFC50h
+PUBLIC _bg_depo_all_p_seg
+_bg_depo_all_p_seg EQU 0105B4620h
+PUBLIC _bg_dest_all_p_seg
+_bg_dest_all_p_seg EQU 010530840h
+PUBLIC _bg_dish_all_p_seg
+_bg_dish_all_p_seg EQU 01069C860h
+PUBLIC _bg_ear_all_p_seg
+_bg_ear_all_p_seg EQU 0106EBBF0h
+PUBLIC _bg_imp_all_p_seg
+_bg_imp_all_p_seg EQU 0106DAE40h
+PUBLIC _bg_jun_all_p_seg
+_bg_jun_all_p_seg EQU 010687710h
+PUBLIC _bg_lee_all_p_seg
+_bg_lee_all_p_seg EQU 0106EBBF0h
+PUBLIC _bg_len_all_p_seg
+_bg_len_all_p_seg EQU 0106EBBF0h
+PUBLIC _bg_lip_all_p_seg
+_bg_lip_all_p_seg EQU 0106EBBF0h
+PUBLIC _bg_oat_all_p_seg
+_bg_oat_all_p_seg EQU 0106E4DA0h
+PUBLIC _bg_pam_all_p_seg
+_bg_pam_all_p_seg EQU 0106ECB90h
+PUBLIC _bg_pete_all_p_seg
+_bg_pete_all_p_seg EQU 01059A9F0h
+PUBLIC _bg_ref_all_p_seg
+_bg_ref_all_p_seg EQU 0105E0F90h
+PUBLIC _bg_rit_all_p_seg
+_bg_rit_all_p_seg EQU 0106E4DA0h
+PUBLIC _bg_run_all_p_seg
+_bg_run_all_p_seg EQU 010660D70h
+PUBLIC _bg_sev_all_p_seg
+_bg_sev_all_p_seg EQU 010438660h
+PUBLIC _bg_sevb_all_p_seg
+_bg_sevb_all_p_seg EQU 01055E200h
+PUBLIC _bg_sevx_all_p_seg
+_bg_sevx_all_p_seg EQU 01066B140h
+PUBLIC _bg_sho_all_p_seg
+_bg_sho_all_p_seg EQU 0106DAE40h
+PUBLIC _bg_silo_all_p_seg
+_bg_silo_all_p_seg EQU 010449450h
+PUBLIC _bg_stat_all_p_seg
+_bg_stat_all_p_seg EQU 01049A390h
+PUBLIC _bg_tra_all_p_seg
+_bg_tra_all_p_seg EQU 0105102D0h
+PUBLIC _bg_wax_all_p_seg
+_bg_wax_all_p_seg EQU 0106ECB90h
+PUBLIC _end_CarmourguardZ
+_end_CarmourguardZ EQU 0106EF010h
+PUBLIC _end_CbaronsamediZ
+_end_CbaronsamediZ EQU 0106F2700h
+PUBLIC _end_CbluecamguardZ
+_end_CbluecamguardZ EQU 0106F4DF0h
+PUBLIC _end_CbluemanZ
+_end_CbluemanZ EQU 0106F6C00h
+PUBLIC _end_CbluewomanZ
+_end_CbluewomanZ EQU 0106F8AC0h
+PUBLIC _end_CboilerbondZ
+_end_CboilerbondZ EQU 0106FB6D0h
+PUBLIC _end_CboilertrevZ
+_end_CboilertrevZ EQU 0106FED50h
+PUBLIC _end_CborisZ
+_end_CborisZ EQU 010701E70h
+PUBLIC _end_CcamguardZ
+_end_CcamguardZ EQU 010704550h
+PUBLIC _end_CcardimanZ
+_end_CcardimanZ EQU 010706350h
+PUBLIC _end_CcheckmanZ
+_end_CcheckmanZ EQU 0107081D0h
+PUBLIC _end_CcommguardZ
+_end_CcommguardZ EQU 01070A7D0h
+PUBLIC _end_CdjbondZ
+_end_CdjbondZ EQU 01070D660h
+PUBLIC _end_CfattechwomanZ
+_end_CfattechwomanZ EQU 01070F580h
+PUBLIC _end_Cgreatguard2Z
+_end_Cgreatguard2Z EQU 010711CA0h
+PUBLIC _end_CgreatguardZ
+_end_CgreatguardZ EQU 010714320h
+PUBLIC _end_CgreyguardZ
+_end_CgreyguardZ EQU 0107169F0h
+PUBLIC _end_CgreymanZ
+_end_CgreymanZ EQU 0107187B0h
+PUBLIC _end_CheadalanZ
+_end_CheadalanZ EQU 010718D80h
+PUBLIC _end_CheadbZ
+_end_CheadbZ EQU 0107192F0h
+PUBLIC _end_CheadbalaclavaZ
+_end_CheadbalaclavaZ EQU 0107196C0h
+PUBLIC _end_CheadbikeZ
+_end_CheadbikeZ EQU 010719D60h
+PUBLIC _end_CheadbrosnanZ
+_end_CheadbrosnanZ EQU 01071AAB0h
+PUBLIC _end_CheadbrosnanboilerZ
+_end_CheadbrosnanboilerZ EQU 01071B650h
+PUBLIC _end_CheadbrosnansnowZ
+_end_CheadbrosnansnowZ EQU 01071C4D0h
+PUBLIC _end_CheadbrosnansuitZ
+_end_CheadbrosnansuitZ EQU 01071D250h
+PUBLIC _end_CheadbrosnantimberZ
+_end_CheadbrosnantimberZ EQU 01071DE10h
+PUBLIC _end_CheadchrisZ
+_end_CheadchrisZ EQU 01071E350h
+PUBLIC _end_CheaddaveZ
+_end_CheaddaveZ EQU 01071E8D0h
+PUBLIC _end_CheaddesZ
+_end_CheaddesZ EQU 01071EE00h
+PUBLIC _end_CheadduncanZ
+_end_CheadduncanZ EQU 01071F320h
+PUBLIC _end_CheaddwayneZ
+_end_CheaddwayneZ EQU 01071F8A0h
+PUBLIC _end_CheadgrahamZ
+_end_CheadgrahamZ EQU 01071FE10h
+PUBLIC _end_CheadgrantZ
+_end_CheadgrantZ EQU 010720340h
+PUBLIC _end_CheadjimZ
+_end_CheadjimZ EQU 010720870h
+PUBLIC _end_Cheadjoe2Z
+_end_Cheadjoe2Z EQU 010720C90h
+PUBLIC _end_CheadjoeZ
+_end_CheadjoeZ EQU 010721200h
+PUBLIC _end_CheadjoelZ
+_end_CheadjoelZ EQU 010721710h
+PUBLIC _end_CheadkarlZ
+_end_CheadkarlZ EQU 010721C70h
+PUBLIC _end_CheadkenZ
+_end_CheadkenZ EQU 0107221C0h
+PUBLIC _end_CheadleeZ
+_end_CheadleeZ EQU 010722740h
+PUBLIC _end_CheadmandyZ
+_end_CheadmandyZ EQU 010722B30h
+PUBLIC _end_CheadmarionZ
+_end_CheadmarionZ EQU 010722F40h
+PUBLIC _end_CheadmarkZ
+_end_CheadmarkZ EQU 010723470h
+PUBLIC _end_CheadmartinZ
+_end_CheadmartinZ EQU 0107239D0h
+PUBLIC _end_CheadmishkinZ
+_end_CheadmishkinZ EQU 010723F30h
+PUBLIC _end_CheadneilZ
+_end_CheadneilZ EQU 010724450h
+PUBLIC _end_CheadpeteZ
+_end_CheadpeteZ EQU 0107249E0h
+PUBLIC _end_CheadrobinZ
+_end_CheadrobinZ EQU 010724EF0h
+PUBLIC _end_CheadsallyZ
+_end_CheadsallyZ EQU 0107252F0h
+PUBLIC _end_CheadscottZ
+_end_CheadscottZ EQU 010725870h
+PUBLIC _end_CheadshaunZ
+_end_CheadshaunZ EQU 010725E50h
+PUBLIC _end_CheadsteveeZ
+_end_CheadsteveeZ EQU 0107263A0h
+PUBLIC _end_CheadstevehZ
+_end_CheadstevehZ EQU 0107268F0h
+PUBLIC _end_CheadvivienZ
+_end_CheadvivienZ EQU 010726D80h
+PUBLIC _end_CjawsZ
+_end_CjawsZ EQU 0107299C0h
+PUBLIC _end_CjeanwomanZ
+_end_CjeanwomanZ EQU 01072B9D0h
+PUBLIC _end_CmaydayZ
+_end_CmaydayZ EQU 01072E570h
+PUBLIC _end_CmoonfemaleZ
+_end_CmoonfemaleZ EQU 0107306C0h
+PUBLIC _end_CmoonguardZ
+_end_CmoonguardZ EQU 010732CB0h
+PUBLIC _end_CnatalyaZ
+_end_CnatalyaZ EQU 010736570h
+PUBLIC _end_CnavyguardZ
+_end_CnavyguardZ EQU 010738C50h
+PUBLIC _end_CoddjobZ
+_end_CoddjobZ EQU 01073BD80h
+PUBLIC _end_ColiveguardZ
+_end_ColiveguardZ EQU 01073E3D0h
+PUBLIC _end_CorumovZ
+_end_CorumovZ EQU 010741800h
+PUBLIC _end_CpilotZ
+_end_CpilotZ EQU 010744880h
+PUBLIC _end_CredmanZ
+_end_CredmanZ EQU 010746FB0h
+PUBLIC _end_CrusguardZ
+_end_CrusguardZ EQU 010748BE0h
+PUBLIC _end_CsnowbondZ
+_end_CsnowbondZ EQU 01074BF10h
+PUBLIC _end_CsnowguardZ
+_end_CsnowguardZ EQU 01074EB90h
+PUBLIC _end_CspicebondZ
+_end_CspicebondZ EQU 0107524B0h
+PUBLIC _end_Csuit_lf_handZ
+_end_Csuit_lf_handZ EQU 0107556D0h
+PUBLIC _end_CsuitbondZ
+_end_CsuitbondZ EQU 010758460h
+PUBLIC _end_CtechmanZ
+_end_CtechmanZ EQU 01075AB10h
+PUBLIC _end_CtechwomanZ
+_end_CtechwomanZ EQU 01075CB00h
+PUBLIC _end_CtimberbondZ
+_end_CtimberbondZ EQU 01075F830h
+PUBLIC _end_CtrevelyanZ
+_end_CtrevelyanZ EQU 010763000h
+PUBLIC _end_CtrevguardZ
+_end_CtrevguardZ EQU 010765610h
+PUBLIC _end_CvalentinZ
+_end_CvalentinZ EQU 010768580h
+PUBLIC _end_CxeniaZ
+_end_CxeniaZ EQU 01076BF70h
+PUBLIC _end_Gak47Z
+_end_Gak47Z EQU 01076C980h
+PUBLIC _end_GaudiotapeZ
+_end_GaudiotapeZ EQU 01076CD10h
+PUBLIC _end_GautoshotZ
+_end_GautoshotZ EQU 01076E520h
+PUBLIC _end_GblackboxZ
+_end_GblackboxZ EQU 01076EB20h
+PUBLIC _end_GblueprintsZ
+_end_GblueprintsZ EQU 01076EC20h
+PUBLIC _end_GbombcaseZ
+_end_GbombcaseZ EQU 01076F3B0h
+PUBLIC _end_GbombdefuserZ
+_end_GbombdefuserZ EQU 01076F9A0h
+PUBLIC _end_GbriefcaseZ
+_end_GbriefcaseZ EQU 010770130h
+PUBLIC _end_GbugZ
+_end_GbugZ EQU 010770AA0h
+PUBLIC _end_GbugdetectorZ
+_end_GbugdetectorZ EQU 010770DF0h
+PUBLIC _end_GbungeeZ
+_end_GbungeeZ EQU 010771140h
+PUBLIC _end_GcameraZ
+_end_GcameraZ EQU 0107715C0h
+PUBLIC _end_GcartblueZ
+_end_GcartblueZ EQU 010771820h
+PUBLIC _end_GcartridgeZ
+_end_GcartridgeZ EQU 010771950h
+PUBLIC _end_GcartrifleZ
+_end_GcartrifleZ EQU 010771B60h
+PUBLIC _end_GcartshellZ
+_end_GcartshellZ EQU 010771D60h
+PUBLIC _end_GcircuitboardZ
+_end_GcircuitboardZ EQU 010771EA0h
+PUBLIC _end_GclipboardZ
+_end_GclipboardZ EQU 010772090h
+PUBLIC _end_GcreditcardZ
+_end_GcreditcardZ EQU 0107723E0h
+PUBLIC _end_GdarkglassesZ
+_end_GdarkglassesZ EQU 010772730h
+PUBLIC _end_GdatathiefZ
+_end_GdatathiefZ EQU 010772870h
+PUBLIC _end_GdattapeZ
+_end_GdattapeZ EQU 0107729E0h
+PUBLIC _end_GdoordecoderZ
+_end_GdoordecoderZ EQU 010772F60h
+PUBLIC _end_GdoorexploderZ
+_end_GdoorexploderZ EQU 0107732B0h
+PUBLIC _end_GdossierredZ
+_end_GdossierredZ EQU 010773610h
+PUBLIC _end_GdynamiteZ
+_end_GdynamiteZ EQU 010773960h
+PUBLIC _end_GexplosivefloppyZ
+_end_GexplosivefloppyZ EQU 010773BB0h
+PUBLIC _end_GexplosivepenZ
+_end_GexplosivepenZ EQU 010773F00h
+PUBLIC _end_GextinguisherZ
+_end_GextinguisherZ EQU 0107746F0h
+PUBLIC _end_GfingergunZ
+_end_GfingergunZ EQU 010774A40h
+PUBLIC _end_GfistZ
+_end_GfistZ EQU 010776140h
+PUBLIC _end_GflarepistolZ
+_end_GflarepistolZ EQU 010776490h
+PUBLIC _end_Gfnp90Z
+_end_Gfnp90Z EQU 010777130h
+PUBLIC _end_GgaskeyringZ
+_end_GgaskeyringZ EQU 010777B60h
+PUBLIC _end_GgoldbarZ
+_end_GgoldbarZ EQU 010777EB0h
+PUBLIC _end_GgoldeneyekeyZ
+_end_GgoldeneyekeyZ EQU 010778860h
+PUBLIC _end_GgoldengunZ
+_end_GgoldengunZ EQU 01077A040h
+PUBLIC _end_GgoldwppkZ
+_end_GgoldwppkZ EQU 01077B9A0h
+PUBLIC _end_GgrenadeZ
+_end_GgrenadeZ EQU 01077C3D0h
+PUBLIC _end_GgrenadelaunchZ
+_end_GgrenadelaunchZ EQU 01077D450h
+PUBLIC _end_GheroinZ
+_end_GheroinZ EQU 01077D7A0h
+PUBLIC _end_GjoypadZ
+_end_GjoypadZ EQU 01077F650h
+PUBLIC _end_GkeyanalysercaseZ
+_end_GkeyanalysercaseZ EQU 01077FDE0h
+PUBLIC _end_GkeyboltZ
+_end_GkeyboltZ EQU 0107807D0h
+PUBLIC _end_GkeycardZ
+_end_GkeycardZ EQU 010780900h
+PUBLIC _end_GkeyyaleZ
+_end_GkeyyaleZ EQU 010781650h
+PUBLIC _end_GknifeZ
+_end_GknifeZ EQU 010783120h
+PUBLIC _end_GlaserZ
+_end_GlaserZ EQU 010783F10h
+PUBLIC _end_GlectreZ
+_end_GlectreZ EQU 010784260h
+PUBLIC _end_GlockexploderZ
+_end_GlockexploderZ EQU 0107845B0h
+PUBLIC _end_Gm16Z
+_end_Gm16Z EQU 010784FD0h
+PUBLIC _end_GmapZ
+_end_GmapZ EQU 0107850C0h
+PUBLIC _end_GmicrocameraZ
+_end_GmicrocameraZ EQU 010785700h
+PUBLIC _end_GmicrocodeZ
+_end_GmicrocodeZ EQU 010785A50h
+PUBLIC _end_GmicrofilmZ
+_end_GmicrofilmZ EQU 010785DA0h
+PUBLIC _end_GmoneyZ
+_end_GmoneyZ EQU 0107860F0h
+PUBLIC _end_Gmp5kZ
+_end_Gmp5kZ EQU 010786CD0h
+PUBLIC _end_Gmp5ksilZ
+_end_Gmp5ksilZ EQU 0107879D0h
+PUBLIC _end_GpitongunZ
+_end_GpitongunZ EQU 010787D20h
+PUBLIC _end_GplansZ
+_end_GplansZ EQU 010787EF0h
+PUBLIC _end_GplastiqueZ
+_end_GplastiqueZ EQU 010788240h
+PUBLIC _end_GpolarizedglassesZ
+_end_GpolarizedglassesZ EQU 0107887A0h
+PUBLIC _end_GproximitymineZ
+_end_GproximitymineZ EQU 010788F90h
+PUBLIC _end_GremotemineZ
+_end_GremotemineZ EQU 010789950h
+PUBLIC _end_GrocketlaunchZ
+_end_GrocketlaunchZ EQU 01078AB70h
+PUBLIC _end_GrugerZ
+_end_GrugerZ EQU 01078C900h
+PUBLIC _end_GsafecrackercaseZ
+_end_GsafecrackercaseZ EQU 01078D090h
+PUBLIC _end_GshotgunZ
+_end_GshotgunZ EQU 01078DF70h
+PUBLIC _end_GsilverwppkZ
+_end_GsilverwppkZ EQU 01078F8D0h
+PUBLIC _end_GskorpionZ
+_end_GskorpionZ EQU 010790AD0h
+PUBLIC _end_GsniperrifleZ
+_end_GsniperrifleZ EQU 010791B40h
+PUBLIC _end_GspectreZ
+_end_GspectreZ EQU 0107927C0h
+PUBLIC _end_GspooltapeZ
+_end_GspooltapeZ EQU 010792B10h
+PUBLIC _end_GspyfileZ
+_end_GspyfileZ EQU 010792E60h
+PUBLIC _end_GstafflistZ
+_end_GstafflistZ EQU 010793000h
+PUBLIC _end_GtaserZ
+_end_GtaserZ EQU 010794E60h
+PUBLIC _end_GthrowknifeZ
+_end_GthrowknifeZ EQU 010796950h
+PUBLIC _end_GtimedmineZ
+_end_GtimedmineZ EQU 010797410h
+PUBLIC _end_GtriggerZ
+_end_GtriggerZ EQU 01079A810h
+PUBLIC _end_Gtt33Z
+_end_Gtt33Z EQU 01079C330h
+PUBLIC _end_GuziZ
+_end_GuziZ EQU 01079CC40h
+PUBLIC _end_GvideotapeZ
+_end_GvideotapeZ EQU 01079CE50h
+PUBLIC _end_GwatchcommunicatorZ
+_end_GwatchcommunicatorZ EQU 01079E2B0h
+PUBLIC _end_GwatchgeigercounterZ
+_end_GwatchgeigercounterZ EQU 01079F710h
+PUBLIC _end_GwatchidentifierZ
+_end_GwatchidentifierZ EQU 0107A0B70h
+PUBLIC _end_GwatchlaserZ
+_end_GwatchlaserZ EQU 0107A3F70h
+PUBLIC _end_GwatchmagnetattractZ
+_end_GwatchmagnetattractZ EQU 0107A53C0h
+PUBLIC _end_GwatchmagnetrepelZ
+_end_GwatchmagnetrepelZ EQU 0107A6820h
+PUBLIC _end_GweaponcaseZ
+_end_GweaponcaseZ EQU 0107A6FB0h
+PUBLIC _end_GwppkZ
+_end_GwppkZ EQU 0107A8C40h
+PUBLIC _end_GwppksilZ
+_end_GwppksilZ EQU 0107AA980h
+PUBLIC _end_GwristdartZ
+_end_GwristdartZ EQU 0107AACD0h
+PUBLIC _end_LameE
+_end_LameE EQU 0108E7420h
+PUBLIC _end_LameJ
+_end_LameJ EQU 0108E7430h
+PUBLIC _end_LarchE
+_end_LarchE EQU 0108E7A60h
+PUBLIC _end_LarchJ
+_end_LarchJ EQU 0108E80C0h
+PUBLIC _end_LarecE
+_end_LarecE EQU 0108E8690h
+PUBLIC _end_LarecJ
+_end_LarecJ EQU 0108E8C20h
+PUBLIC _end_LarkE
+_end_LarkE EQU 0108E92C0h
+PUBLIC _end_LarkJ
+_end_LarkJ EQU 0108E9970h
+PUBLIC _end_LashE
+_end_LashE EQU 0108E9980h
+PUBLIC _end_LashJ
+_end_LashJ EQU 0108E9990h
+PUBLIC _end_LaztE
+_end_LaztE EQU 0108E9DD0h
+PUBLIC _end_LaztJ
+_end_LaztJ EQU 0108EA280h
+PUBLIC _end_LcatE
+_end_LcatE EQU 0108EA290h
+PUBLIC _end_LcatJ
+_end_LcatJ EQU 0108EA2A0h
+PUBLIC _end_LcaveE
+_end_LcaveE EQU 0108EA6A0h
+PUBLIC _end_LcaveJ
+_end_LcaveJ EQU 0108EAB00h
+PUBLIC _end_LcradE
+_end_LcradE EQU 0108EAFD0h
+PUBLIC _end_LcradJ
+_end_LcradJ EQU 0108EB480h
+PUBLIC _end_LcrypE
+_end_LcrypE EQU 0108EB6D0h
+PUBLIC _end_LcrypJ
+_end_LcrypJ EQU 0108EB990h
+PUBLIC _end_LdamE
+_end_LdamE EQU 0108EBDE0h
+PUBLIC _end_LdamJ
+_end_LdamJ EQU 0108EC250h
+PUBLIC _end_LdepoE
+_end_LdepoE EQU 0108EC5C0h
+PUBLIC _end_LdepoJ
+_end_LdepoJ EQU 0108EC900h
+PUBLIC _end_LdestE
+_end_LdestE EQU 0108ECD90h
+PUBLIC _end_LdestJ
+_end_LdestJ EQU 0108ED1F0h
+PUBLIC _end_LdishE
+_end_LdishE EQU 0108ED200h
+PUBLIC _end_LdishJ
+_end_LdishJ EQU 0108ED210h
+PUBLIC _end_LearE
+_end_LearE EQU 0108ED220h
+PUBLIC _end_LearJ
+_end_LearJ EQU 0108ED230h
+PUBLIC _end_LeldE
+_end_LeldE EQU 0108ED240h
+PUBLIC _end_LeldJ
+_end_LeldJ EQU 0108ED250h
+PUBLIC _end_LgunE
+_end_LgunE EQU 0108ED970h
+PUBLIC _end_LgunJ
+_end_LgunJ EQU 0108EE0C0h
+PUBLIC _end_LimpE
+_end_LimpE EQU 0108EE0D0h
+PUBLIC _end_LimpJ
+_end_LimpJ EQU 0108EE0E0h
+PUBLIC _end_LjunE
+_end_LjunE EQU 0108EE600h
+PUBLIC _end_LjunJ
+_end_LjunJ EQU 0108EEB40h
+PUBLIC _end_LleeE
+_end_LleeE EQU 0108EEB50h
+PUBLIC _end_LleeJ
+_end_LleeJ EQU 0108EEB60h
+PUBLIC _end_LlenE
+_end_LlenE EQU 0108EF1A0h
+PUBLIC _end_LlenJ
+_end_LlenJ EQU 0108EF450h
+PUBLIC _end_LlipE
+_end_LlipE EQU 0108EF460h
+PUBLIC _end_LlipJ
+_end_LlipJ EQU 0108EF470h
+PUBLIC _end_LlueE
+_end_LlueE EQU 0108EF480h
+PUBLIC _end_LlueJ
+_end_LlueJ EQU 0108EF490h
+PUBLIC _end_LmiscE
+_end_LmiscE EQU 0108EF730h
+PUBLIC _end_LmiscJ
+_end_LmiscJ EQU 0108EFA10h
+PUBLIC _end_LmpmenuE
+_end_LmpmenuE EQU 0108EFBB0h
+PUBLIC _end_LmpmenuJ
+_end_LmpmenuJ EQU 0108EFD40h
+PUBLIC _end_LmpweaponsE
+_end_LmpweaponsE EQU 0108EFE00h
+PUBLIC _end_LmpweaponsJ
+_end_LmpweaponsJ EQU 0108EFEE0h
+PUBLIC _end_LoatE
+_end_LoatE EQU 0108EFEF0h
+PUBLIC _end_LoatJ
+_end_LoatJ EQU 0108EFF00h
+PUBLIC _end_LoptionsE
+_end_LoptionsE EQU 0108F0130h
+PUBLIC _end_LoptionsJ
+_end_LoptionsJ EQU 0108F0380h
+PUBLIC _end_LpamE
+_end_LpamE EQU 0108F0390h
+PUBLIC _end_LpamJ
+_end_LpamJ EQU 0108F03A0h
+PUBLIC _end_LpeteE
+_end_LpeteE EQU 0108F0820h
+PUBLIC _end_LpeteJ
+_end_LpeteJ EQU 0108F0C90h
+PUBLIC _end_LpropobjE
+_end_LpropobjE EQU 0108F0F30h
+PUBLIC _end_LpropobjJ
+_end_LpropobjJ EQU 0108F11F0h
+PUBLIC _end_LrefE
+_end_LrefE EQU 0108F1200h
+PUBLIC _end_LrefJ
+_end_LrefJ EQU 0108F1210h
+PUBLIC _end_LritE
+_end_LritE EQU 0108F1220h
+PUBLIC _end_LritJ
+_end_LritJ EQU 0108F1230h
+PUBLIC _end_LrunE
+_end_LrunE EQU 0108F14A0h
+PUBLIC _end_LrunJ
+_end_LrunJ EQU 0108F1730h
+PUBLIC _end_LsevE
+_end_LsevE EQU 0108F1C90h
+PUBLIC _end_LsevJ
+_end_LsevJ EQU 0108F21A0h
+PUBLIC _end_LsevbE
+_end_LsevbE EQU 0108F28F0h
+PUBLIC _end_LsevbJ
+_end_LsevbJ EQU 0108F30E0h
+PUBLIC _end_LsevxE
+_end_LsevxE EQU 0108F3540h
+PUBLIC _end_LsevxJ
+_end_LsevxJ EQU 0108F3900h
+PUBLIC _end_LsevxbE
+_end_LsevxbE EQU 0108F3D90h
+PUBLIC _end_LsevxbJ
+_end_LsevxbJ EQU 0108F41E0h
+PUBLIC _end_LshoE
+_end_LshoE EQU 0108F41F0h
+PUBLIC _end_LshoJ
+_end_LshoJ EQU 0108F4200h
+PUBLIC _end_LsiloE
+_end_LsiloE EQU 0108F47B0h
+PUBLIC _end_LsiloJ
+_end_LsiloJ EQU 0108F4D90h
+PUBLIC _end_LstatE
+_end_LstatE EQU 0108F56B0h
+PUBLIC _end_LstatJ
+_end_LstatJ EQU 0108F5F20h
+PUBLIC _end_LtitleE
+_end_LtitleE EQU 0108F69E0h
+PUBLIC _end_LtitleJ
+_end_LtitleJ EQU 0108F7570h
+PUBLIC _end_LtraE
+_end_LtraE EQU 0108F79A0h
+PUBLIC _end_LtraJ
+_end_LtraJ EQU 0108F7DC0h
+PUBLIC _end_LwaxE
+_end_LwaxE EQU 0108F7DD0h
+PUBLIC _end_LwaxJ
+_end_LwaxJ EQU 0108F7DE0h
+PUBLIC _end_Marchives
+_end_Marchives EQU 010421480h
+PUBLIC _end_Marchivesx
+_end_Marchivesx EQU 01042EB3Ah
+PUBLIC _end_Maztec
+_end_Maztec EQU 010429372h
+PUBLIC _end_Maztecx
+_end_Maztecx EQU 01043248Eh
+PUBLIC _end_Mbunker1
+_end_Mbunker1 EQU 0104245D0h
+PUBLIC _end_Mbunker1x
+_end_Mbunker1x EQU 01043026Ah
+PUBLIC _end_Mbunker2
+_end_Mbunker2 EQU 010424C50h
+PUBLIC _end_Mbunker2x
+_end_Mbunker2x EQU 0104308B8h
+PUBLIC _end_Mcitadel
+_end_Mcitadel EQU 01041D91Ch
+PUBLIC _end_Mcontrol
+_end_Mcontrol EQU 01041EF48h
+PUBLIC _end_Mcontrolx
+_end_Mcontrolx EQU 01042D1E0h
+PUBLIC _end_Mcradle
+_end_Mcradle EQU 010426D22h
+PUBLIC _end_Mcradlex
+_end_Mcradlex EQU 010433408h
+PUBLIC _end_Mcuba
+_end_Mcuba EQU 010433C52h
+PUBLIC _end_Mdam
+_end_Mdam EQU 01041FD4Ch
+PUBLIC _end_Mdamx
+_end_Mdamx EQU 01042DE54h
+PUBLIC _end_Mdeathsolo
+_end_Mdeathsolo EQU 01042A504h
+PUBLIC _end_Mdepot
+_end_Mdepot EQU 01041BDC4h
+PUBLIC _end_Mdepotx
+_end_Mdepotx EQU 01042CC98h
+PUBLIC _end_Megyptian
+_end_Megyptian EQU 01042812Ch
+PUBLIC _end_Megyptianx
+_end_Megyptianx EQU 010432D3Eh
+PUBLIC _end_Melevator_control
+_end_Melevator_control EQU 010425FC2h
+PUBLIC _end_Melevator_wc
+_end_Melevator_wc EQU 010427392h
+PUBLIC _end_Mfacility
+_end_Mfacility EQU 01041E3EAh
+PUBLIC _end_Mfacilityx
+_end_Mfacilityx EQU 01042C4DCh
+PUBLIC _end_Mfolders
+_end_Mfolders EQU 01042850Eh
+PUBLIC _end_Mfrigate
+_end_Mfrigate EQU 010420B2Ch
+PUBLIC _end_Mfrigate_outro
+_end_Mfrigate_outro EQU 010438660h
+PUBLIC _end_Mfrigatex
+_end_Mfrigatex EQU 01042E416h
+PUBLIC _end_Mintro_eye
+_end_Mintro_eye EQU 01041A43Ah
+PUBLIC _end_Mjungle
+_end_Mjungle EQU 010436228h
+PUBLIC _end_Mjungle_perimeter_unused
+_end_Mjungle_perimeter_unused EQU 01042325Ch
+PUBLIC _end_Mjungle_unused
+_end_Mjungle_unused EQU 01041CB5Ch
+PUBLIC _end_Mjunglex
+_end_Mjunglex EQU 0104310CEh
+PUBLIC _end_Mmultideath_alt
+_end_Mmultideath_alt EQU 010435AA0h
+PUBLIC _end_Mmultiplayerdeath
+_end_Mmultiplayerdeath EQU 01043787Ah
+PUBLIC _end_Mnint_rare_logo
+_end_Mnint_rare_logo EQU 010431500h
+PUBLIC _end_Mno_music
+_end_Mno_music EQU 0104199B6h
+PUBLIC _end_Mnull1
+_end_Mnull1 EQU 010426D4Ch
+PUBLIC _end_Mnull2
+_end_Mnull2 EQU 01042BB84h
+PUBLIC _end_Mnull3
+_end_Mnull3 EQU 01042F458h
+PUBLIC _end_Mrunway
+_end_Mrunway EQU 010434970h
+PUBLIC _end_Mrunway_plane
+_end_Mrunway_plane EQU 010434C4Ah
+PUBLIC _end_Mrunwayx
+_end_Mrunwayx EQU 01043684Ah
+PUBLIC _end_Msilo
+_end_Msilo EQU 0104222F0h
+PUBLIC _end_Msilox
+_end_Msilox EQU 01042F42Eh
+PUBLIC _end_Msolo_death_abrev
+_end_Msolo_death_abrev EQU 010419B8Ch
+PUBLIC _end_Mstatue
+_end_Mstatue EQU 0104255E8h
+PUBLIC _end_Mstatue_ending
+_end_Mstatue_ending EQU 0104383A4h
+PUBLIC _end_Mstatuex
+_end_Mstatuex EQU 010431BB8h
+PUBLIC _end_Mstreets
+_end_Mstreets EQU 010423F5Eh
+PUBLIC _end_Mstreetsx
+_end_Mstreetsx EQU 01042FAC4h
+PUBLIC _end_Msurface1
+_end_Msurface1 EQU 0104375B2h
+PUBLIC _end_Msurface1x
+_end_Msurface1x EQU 010437FA2h
+PUBLIC _end_Msurface2
+_end_Msurface2 EQU 01042B2BAh
+PUBLIC _end_Msurface2_ending
+_end_Msurface2_ending EQU 01043823Eh
+PUBLIC _end_Msurface2x
+_end_Msurface2x EQU 010435372h
+PUBLIC _end_Mtrain
+_end_Mtrain EQU 01041B024h
+PUBLIC _end_Mtrainx
+_end_Mtrainx EQU 01042BB5Ah
+PUBLIC _end_Mwatchmusic
+_end_Mwatchmusic EQU 010428700h
+PUBLIC _end_Mwatercaverns
+_end_Mwatercaverns EQU 01042A19Eh
+PUBLIC _end_Mwatercavernsx
+_end_Mwatercavernsx EQU 01042D934h
+PUBLIC _end_Mwindblowing
+_end_Mwindblowing EQU 010435894h
+PUBLIC _end_PICBMZ
+_end_PICBMZ EQU 0107AD250h
+PUBLIC _end_PICBM_noseZ
+_end_PICBM_noseZ EQU 0107ADA00h
+PUBLIC _end_Pak47magZ
+_end_Pak47magZ EQU 0107ADBE0h
+PUBLIC _end_Palarm1Z
+_end_Palarm1Z EQU 0107ADD40h
+PUBLIC _end_Palarm2Z
+_end_Palarm2Z EQU 0107ADEE0h
+PUBLIC _end_Pammo_crate1Z
+_end_Pammo_crate1Z EQU 0107AE120h
+PUBLIC _end_Pammo_crate2Z
+_end_Pammo_crate2Z EQU 0107AE360h
+PUBLIC _end_Pammo_crate3Z
+_end_Pammo_crate3Z EQU 0107AE5B0h
+PUBLIC _end_Pammo_crate4Z
+_end_Pammo_crate4Z EQU 0107AE820h
+PUBLIC _end_Pammo_crate5Z
+_end_Pammo_crate5Z EQU 0107AEAE0h
+PUBLIC _end_PapcZ
+_end_PapcZ EQU 0107B0740h
+PUBLIC _end_Parchsecdoor1Z
+_end_Parchsecdoor1Z EQU 0107B0920h
+PUBLIC _end_Parchsecdoor2Z
+_end_Parchsecdoor2Z EQU 0107B0AF0h
+PUBLIC _end_ParticZ
+_end_ParticZ EQU 0107B18F0h
+PUBLIC _end_PartictrailerZ
+_end_PartictrailerZ EQU 0107B2200h
+PUBLIC _end_PbarricadeZ
+_end_PbarricadeZ EQU 0107B2440h
+PUBLIC _end_Pbin1Z
+_end_Pbin1Z EQU 0107B2790h
+PUBLIC _end_Pblotter1Z
+_end_Pblotter1Z EQU 0107B2870h
+PUBLIC _end_PbodyarmourZ
+_end_PbodyarmourZ EQU 0107B2D10h
+PUBLIC _end_PbodyarmourvestZ
+_end_PbodyarmourvestZ EQU 0107B3130h
+PUBLIC _end_PbollardZ
+_end_PbollardZ EQU 0107B3330h
+PUBLIC _end_PbombZ
+_end_PbombZ EQU 0107B34A0h
+PUBLIC _end_Pbook1Z
+_end_Pbook1Z EQU 0107B3630h
+PUBLIC _end_Pbookshelf1Z
+_end_Pbookshelf1Z EQU 0107B3D20h
+PUBLIC _end_Pborg_crateZ
+_end_Pborg_crateZ EQU 0107B3E90h
+PUBLIC _end_PboxcartridgesZ
+_end_PboxcartridgesZ EQU 0107B4090h
+PUBLIC _end_Pboxes2x4Z
+_end_Pboxes2x4Z EQU 0107B44C0h
+PUBLIC _end_Pboxes3x4Z
+_end_Pboxes3x4Z EQU 0107B4900h
+PUBLIC _end_Pboxes4x4Z
+_end_Pboxes4x4Z EQU 0107B4F60h
+PUBLIC _end_PbrakeunitZ
+_end_PbrakeunitZ EQU 0107B52D0h
+PUBLIC _end_Pbridge_console1aZ
+_end_Pbridge_console1aZ EQU 0107B5850h
+PUBLIC _end_Pbridge_console1bZ
+_end_Pbridge_console1bZ EQU 0107B5DB0h
+PUBLIC _end_Pbridge_console2aZ
+_end_Pbridge_console2aZ EQU 0107B6330h
+PUBLIC _end_Pbridge_console2bZ
+_end_Pbridge_console2bZ EQU 0107B6820h
+PUBLIC _end_Pbridge_console3aZ
+_end_Pbridge_console3aZ EQU 0107B6D70h
+PUBLIC _end_Pbridge_console3bZ
+_end_Pbridge_console3bZ EQU 0107B7300h
+PUBLIC _end_PcarbmwZ
+_end_PcarbmwZ EQU 0107B7FE0h
+PUBLIC _end_Pcard_box1Z
+_end_Pcard_box1Z EQU 0107B81E0h
+PUBLIC _end_Pcard_box2Z
+_end_Pcard_box2Z EQU 0107B8420h
+PUBLIC _end_Pcard_box3Z
+_end_Pcard_box3Z EQU 0107B8610h
+PUBLIC _end_Pcard_box4_lgZ
+_end_Pcard_box4_lgZ EQU 0107B87C0h
+PUBLIC _end_Pcard_box5_lgZ
+_end_Pcard_box5_lgZ EQU 0107B89C0h
+PUBLIC _end_Pcard_box6_lgZ
+_end_Pcard_box6_lgZ EQU 0107B8BB0h
+PUBLIC _end_PcarescortZ
+_end_PcarescortZ EQU 0107B97B0h
+PUBLIC _end_PcargolfZ
+_end_PcargolfZ EQU 0107BA3E0h
+PUBLIC _end_PcarweirdZ
+_end_PcarweirdZ EQU 0107BB520h
+PUBLIC _end_PcarzilZ
+_end_PcarzilZ EQU 0107BCB20h
+PUBLIC _end_PcctvZ
+_end_PcctvZ EQU 0107BCEA0h
+PUBLIC _end_PchraudiotapeZ
+_end_PchraudiotapeZ EQU 0107BD400h
+PUBLIC _end_PchrautoshotZ
+_end_PchrautoshotZ EQU 0107BD760h
+PUBLIC _end_PchrblackboxZ
+_end_PchrblackboxZ EQU 0107BDFE0h
+PUBLIC _end_PchrblueprintsZ
+_end_PchrblueprintsZ EQU 0107BE130h
+PUBLIC _end_PchrbombcaseZ
+_end_PchrbombcaseZ EQU 0107BE320h
+PUBLIC _end_PchrbombdefuserZ
+_end_PchrbombdefuserZ EQU 0107BEC00h
+PUBLIC _end_PchrbriefcaseZ
+_end_PchrbriefcaseZ EQU 0107BED90h
+PUBLIC _end_PchrbugZ
+_end_PchrbugZ EQU 0107BFB40h
+PUBLIC _end_PchrbugdetectorZ
+_end_PchrbugdetectorZ EQU 0107BFCB0h
+PUBLIC _end_PchrbungeeZ
+_end_PchrbungeeZ EQU 0107BFE20h
+PUBLIC _end_PchrcameraZ
+_end_PchrcameraZ EQU 0107C04B0h
+PUBLIC _end_PchrcircuitboardZ
+_end_PchrcircuitboardZ EQU 0107C0650h
+PUBLIC _end_PchrclipboardZ
+_end_PchrclipboardZ EQU 0107C08D0h
+PUBLIC _end_PchrcreditcardZ
+_end_PchrcreditcardZ EQU 0107C0A40h
+PUBLIC _end_PchrdarkglassesZ
+_end_PchrdarkglassesZ EQU 0107C0BB0h
+PUBLIC _end_PchrdatathiefZ
+_end_PchrdatathiefZ EQU 0107C0D50h
+PUBLIC _end_PchrdattapeZ
+_end_PchrdattapeZ EQU 0107C0F40h
+PUBLIC _end_PchrdoordecoderZ
+_end_PchrdoordecoderZ EQU 0107C17A0h
+PUBLIC _end_PchrdoorexploderZ
+_end_PchrdoorexploderZ EQU 0107C1910h
+PUBLIC _end_PchrdossierredZ
+_end_PchrdossierredZ EQU 0107C1DE0h
+PUBLIC _end_PchrdynamiteZ
+_end_PchrdynamiteZ EQU 0107C1F50h
+PUBLIC _end_PchrexplosivepenZ
+_end_PchrexplosivepenZ EQU 0107C20C0h
+PUBLIC _end_PchrextinguisherZ
+_end_PchrextinguisherZ EQU 0107C25C0h
+PUBLIC _end_PchrfingergunZ
+_end_PchrfingergunZ EQU 0107C2730h
+PUBLIC _end_PchrflarepistolZ
+_end_PchrflarepistolZ EQU 0107C28A0h
+PUBLIC _end_Pchrfnp90Z
+_end_Pchrfnp90Z EQU 0107C2D00h
+PUBLIC _end_PchrgaskeyringZ
+_end_PchrgaskeyringZ EQU 0107C3C10h
+PUBLIC _end_PchrgoldbarZ
+_end_PchrgoldbarZ EQU 0107C3D80h
+PUBLIC _end_PchrgoldenZ
+_end_PchrgoldenZ EQU 0107C3FF0h
+PUBLIC _end_PchrgoldeneyekeyZ
+_end_PchrgoldeneyekeyZ EQU 0107C4E90h
+PUBLIC _end_PchrgoldwppkZ
+_end_PchrgoldwppkZ EQU 0107C5000h
+PUBLIC _end_PchrgrenadeZ
+_end_PchrgrenadeZ EQU 0107C5370h
+PUBLIC _end_PchrgrenadelaunchZ
+_end_PchrgrenadelaunchZ EQU 0107C5700h
+PUBLIC _end_PchrgrenaderoundZ
+_end_PchrgrenaderoundZ EQU 0107C5970h
+PUBLIC _end_PchrheroinZ
+_end_PchrheroinZ EQU 0107C5AE0h
+PUBLIC _end_PchrkalashZ
+_end_PchrkalashZ EQU 0107C5ED0h
+PUBLIC _end_PchrkeyanalysercaseZ
+_end_PchrkeyanalysercaseZ EQU 0107C60C0h
+PUBLIC _end_PchrkeyboltZ
+_end_PchrkeyboltZ EQU 0107C6F60h
+PUBLIC _end_PchrkeyyaleZ
+_end_PchrkeyyaleZ EQU 0107C83C0h
+PUBLIC _end_PchrknifeZ
+_end_PchrknifeZ EQU 0107C85C0h
+PUBLIC _end_PchrlaserZ
+_end_PchrlaserZ EQU 0107C8980h
+PUBLIC _end_PchrlectreZ
+_end_PchrlectreZ EQU 0107C8AF0h
+PUBLIC _end_PchrlockexploderZ
+_end_PchrlockexploderZ EQU 0107C8C60h
+PUBLIC _end_Pchrm16Z
+_end_Pchrm16Z EQU 0107C9030h
+PUBLIC _end_PchrmapZ
+_end_PchrmapZ EQU 0107C9180h
+PUBLIC _end_PchrmicrocameraZ
+_end_PchrmicrocameraZ EQU 0107C9A70h
+PUBLIC _end_PchrmicrocodeZ
+_end_PchrmicrocodeZ EQU 0107C9BE0h
+PUBLIC _end_PchrmicrofilmZ
+_end_PchrmicrofilmZ EQU 0107C9D50h
+PUBLIC _end_PchrmoneyZ
+_end_PchrmoneyZ EQU 0107C9EC0h
+PUBLIC _end_Pchrmp5kZ
+_end_Pchrmp5kZ EQU 0107CA240h
+PUBLIC _end_Pchrmp5ksilZ
+_end_Pchrmp5ksilZ EQU 0107CA650h
+PUBLIC _end_PchrpitongunZ
+_end_PchrpitongunZ EQU 0107CA7C0h
+PUBLIC _end_PchrplansZ
+_end_PchrplansZ EQU 0107CAA50h
+PUBLIC _end_PchrplastiqueZ
+_end_PchrplastiqueZ EQU 0107CAEB0h
+PUBLIC _end_PchrpolarizedglassesZ
+_end_PchrpolarizedglassesZ EQU 0107CB770h
+PUBLIC _end_PchrproximitymineZ
+_end_PchrproximitymineZ EQU 0107CBBD0h
+PUBLIC _end_PchrremotemineZ
+_end_PchrremotemineZ EQU 0107CC030h
+PUBLIC _end_PchrrocketZ
+_end_PchrrocketZ EQU 0107CC5E0h
+PUBLIC _end_PchrrocketlaunchZ
+_end_PchrrocketlaunchZ EQU 0107CC9C0h
+PUBLIC _end_PchrrugerZ
+_end_PchrrugerZ EQU 0107CCDA0h
+PUBLIC _end_PchrsafecrackercaseZ
+_end_PchrsafecrackercaseZ EQU 0107CCF90h
+PUBLIC _end_PchrshotgunZ
+_end_PchrshotgunZ EQU 0107CD2E0h
+PUBLIC _end_PchrsilverwppkZ
+_end_PchrsilverwppkZ EQU 0107CD450h
+PUBLIC _end_PchrskorpionZ
+_end_PchrskorpionZ EQU 0107CD7D0h
+PUBLIC _end_PchrsniperrifleZ
+_end_PchrsniperrifleZ EQU 0107CDB60h
+PUBLIC _end_PchrspectreZ
+_end_PchrspectreZ EQU 0107CDED0h
+PUBLIC _end_PchrspooltapeZ
+_end_PchrspooltapeZ EQU 0107CE040h
+PUBLIC _end_PchrspyfileZ
+_end_PchrspyfileZ EQU 0107CE1B0h
+PUBLIC _end_PchrstafflistZ
+_end_PchrstafflistZ EQU 0107CE3D0h
+PUBLIC _end_PchrtesttubeZ
+_end_PchrtesttubeZ EQU 0107CE590h
+PUBLIC _end_PchrthrowknifeZ
+_end_PchrthrowknifeZ EQU 0107CE7B0h
+PUBLIC _end_PchrtimedmineZ
+_end_PchrtimedmineZ EQU 0107CECE0h
+PUBLIC _end_Pchrtt33Z
+_end_Pchrtt33Z EQU 0107CEF70h
+PUBLIC _end_PchruziZ
+_end_PchruziZ EQU 0107CF240h
+PUBLIC _end_PchrvideotapeZ
+_end_PchrvideotapeZ EQU 0107CF510h
+PUBLIC _end_PchrweaponcaseZ
+_end_PchrweaponcaseZ EQU 0107CF710h
+PUBLIC _end_PchrwppkZ
+_end_PchrwppkZ EQU 0107CF950h
+PUBLIC _end_PchrwppksilZ
+_end_PchrwppksilZ EQU 0107CFC30h
+PUBLIC _end_PchrwristdartZ
+_end_PchrwristdartZ EQU 0107CFDA0h
+PUBLIC _end_Pconsole1Z
+_end_Pconsole1Z EQU 0107D0420h
+PUBLIC _end_Pconsole2Z
+_end_Pconsole2Z EQU 0107D0AA0h
+PUBLIC _end_Pconsole3Z
+_end_Pconsole3Z EQU 0107D1130h
+PUBLIC _end_Pconsole_sev2aZ
+_end_Pconsole_sev2aZ EQU 0107D1550h
+PUBLIC _end_Pconsole_sev2bZ
+_end_Pconsole_sev2bZ EQU 0107D1A10h
+PUBLIC _end_Pconsole_sev2cZ
+_end_Pconsole_sev2cZ EQU 0107D1E50h
+PUBLIC _end_Pconsole_sev2dZ
+_end_Pconsole_sev2dZ EQU 0107D2280h
+PUBLIC _end_Pconsole_sev_GEaZ
+_end_Pconsole_sev_GEaZ EQU 0107D26B0h
+PUBLIC _end_Pconsole_sev_GEbZ
+_end_Pconsole_sev_GEbZ EQU 0107D2AE0h
+PUBLIC _end_Pconsole_sevaZ
+_end_Pconsole_sevaZ EQU 0107D2F60h
+PUBLIC _end_Pconsole_sevbZ
+_end_Pconsole_sevbZ EQU 0107D33D0h
+PUBLIC _end_Pconsole_sevcZ
+_end_Pconsole_sevcZ EQU 0107D3800h
+PUBLIC _end_Pconsole_sevdZ
+_end_Pconsole_sevdZ EQU 0107D3C30h
+PUBLIC _end_Pcryptdoor1aZ
+_end_Pcryptdoor1aZ EQU 0107D3DC0h
+PUBLIC _end_Pcryptdoor1bZ
+_end_Pcryptdoor1bZ EQU 0107D3F50h
+PUBLIC _end_Pcryptdoor2aZ
+_end_Pcryptdoor2aZ EQU 0107D40E0h
+PUBLIC _end_Pcryptdoor2bZ
+_end_Pcryptdoor2bZ EQU 0107D4270h
+PUBLIC _end_Pcryptdoor3Z
+_end_Pcryptdoor3Z EQU 0107D44E0h
+PUBLIC _end_Pcryptdoor4Z
+_end_Pcryptdoor4Z EQU 0107D4660h
+PUBLIC _end_PdamchaindoorZ
+_end_PdamchaindoorZ EQU 0107D48E0h
+PUBLIC _end_PdamgatedoorZ
+_end_PdamgatedoorZ EQU 0107D4B00h
+PUBLIC _end_PdamtundoorZ
+_end_PdamtundoorZ EQU 0107D4E70h
+PUBLIC _end_Pdepot_door_steelZ
+_end_Pdepot_door_steelZ EQU 0107D5010h
+PUBLIC _end_Pdepot_gate_entryZ
+_end_Pdepot_gate_entryZ EQU 0107D5250h
+PUBLIC _end_Pdesk1Z
+_end_Pdesk1Z EQU 0107D53D0h
+PUBLIC _end_Pdesk2Z
+_end_Pdesk2Z EQU 0107D5550h
+PUBLIC _end_Pdesk_arecibo1Z
+_end_Pdesk_arecibo1Z EQU 0107D5790h
+PUBLIC _end_Pdesk_lamp2Z
+_end_Pdesk_lamp2Z EQU 0107D5A90h
+PUBLIC _end_Pdest_engineZ
+_end_Pdest_engineZ EQU 0107D7380h
+PUBLIC _end_Pdest_exocetZ
+_end_Pdest_exocetZ EQU 0107D79E0h
+PUBLIC _end_Pdest_gunZ
+_end_Pdest_gunZ EQU 0107D8050h
+PUBLIC _end_Pdest_harpoonZ
+_end_Pdest_harpoonZ EQU 0107D88F0h
+PUBLIC _end_Pdest_seawolfZ
+_end_Pdest_seawolfZ EQU 0107D98A0h
+PUBLIC _end_Pdisc_readerZ
+_end_Pdisc_readerZ EQU 0107D9A60h
+PUBLIC _end_Pdisk_drive1Z
+_end_Pdisk_drive1Z EQU 0107D9BF0h
+PUBLIC _end_Pdoor_azt_chairZ
+_end_Pdoor_azt_chairZ EQU 0107D9D70h
+PUBLIC _end_Pdoor_azt_deskZ
+_end_Pdoor_azt_deskZ EQU 0107DA1B0h
+PUBLIC _end_Pdoor_azt_desk_topZ
+_end_Pdoor_azt_desk_topZ EQU 0107DA540h
+PUBLIC _end_Pdoor_aztecZ
+_end_Pdoor_aztecZ EQU 0107DA770h
+PUBLIC _end_Pdoor_dest1Z
+_end_Pdoor_dest1Z EQU 0107DAA70h
+PUBLIC _end_Pdoor_dest2Z
+_end_Pdoor_dest2Z EQU 0107DAE30h
+PUBLIC _end_Pdoor_eyelidZ
+_end_Pdoor_eyelidZ EQU 0107DB390h
+PUBLIC _end_Pdoor_irisZ
+_end_Pdoor_irisZ EQU 0107DBDE0h
+PUBLIC _end_Pdoor_mfZ
+_end_Pdoor_mfZ EQU 0107DC0D0h
+PUBLIC _end_Pdoor_roller1Z
+_end_Pdoor_roller1Z EQU 0107DC440h
+PUBLIC _end_Pdoor_roller2Z
+_end_Pdoor_roller2Z EQU 0107DC680h
+PUBLIC _end_Pdoor_roller3Z
+_end_Pdoor_roller3Z EQU 0107DC8C0h
+PUBLIC _end_Pdoor_roller4Z
+_end_Pdoor_roller4Z EQU 0107DCB20h
+PUBLIC _end_Pdoor_rollertrainZ
+_end_Pdoor_rollertrainZ EQU 0107DCC50h
+PUBLIC _end_Pdoor_st_arec1Z
+_end_Pdoor_st_arec1Z EQU 0107DCEB0h
+PUBLIC _end_Pdoor_st_arec2Z
+_end_Pdoor_st_arec2Z EQU 0107DD190h
+PUBLIC _end_Pdoor_winZ
+_end_Pdoor_winZ EQU 0107DD330h
+PUBLIC _end_PdoorconsoleZ
+_end_PdoorconsoleZ EQU 0107DD7A0h
+PUBLIC _end_PdoorpanelZ
+_end_PdoorpanelZ EQU 0107DDB10h
+PUBLIC _end_Pdoorprison1Z
+_end_Pdoorprison1Z EQU 0107DDC60h
+PUBLIC _end_PdoorstatgateZ
+_end_PdoorstatgateZ EQU 0107DDE60h
+PUBLIC _end_PexplosionbitZ
+_end_PexplosionbitZ EQU 0107DDF80h
+PUBLIC _end_Pfiling_cabinet1Z
+_end_Pfiling_cabinet1Z EQU 0107DE100h
+PUBLIC _end_PflagZ
+_end_PflagZ EQU 0107DE230h
+PUBLIC _end_PfloppyZ
+_end_PfloppyZ EQU 0107DE550h
+PUBLIC _end_Pfnp90magZ
+_end_Pfnp90magZ EQU 0107DE6F0h
+PUBLIC _end_Pgas_plant_met1_do1Z
+_end_Pgas_plant_met1_do1Z EQU 0107DEA70h
+PUBLIC _end_Pgas_plant_sw2_do1Z
+_end_Pgas_plant_sw2_do1Z EQU 0107DEC50h
+PUBLIC _end_Pgas_plant_sw3_do1Z
+_end_Pgas_plant_sw3_do1Z EQU 0107DEE50h
+PUBLIC _end_Pgas_plant_sw4_do1Z
+_end_Pgas_plant_sw4_do1Z EQU 0107DEFB0h
+PUBLIC _end_Pgas_plant_sw_do1Z
+_end_Pgas_plant_sw_do1Z EQU 0107DF240h
+PUBLIC _end_Pgas_plant_wc_cub1Z
+_end_Pgas_plant_wc_cub1Z EQU 0107DF450h
+PUBLIC _end_PgasbarrelZ
+_end_PgasbarrelZ EQU 0107DF660h
+PUBLIC _end_PgasbarrelsZ
+_end_PgasbarrelsZ EQU 0107DFBA0h
+PUBLIC _end_Pgasplant_clear_doorZ
+_end_Pgasplant_clear_doorZ EQU 0107E0100h
+PUBLIC _end_PgastankZ
+_end_PgastankZ EQU 0107E06B0h
+PUBLIC _end_Pglassware1Z
+_end_Pglassware1Z EQU 0107E0810h
+PUBLIC _end_Pglassware2Z
+_end_Pglassware2Z EQU 0107E0AA0h
+PUBLIC _end_Pglassware3Z
+_end_Pglassware3Z EQU 0107E0CB0h
+PUBLIC _end_Pglassware4Z
+_end_Pglassware4Z EQU 0107E1230h
+PUBLIC _end_PgoldeneyelogoZ
+_end_PgoldeneyelogoZ EQU 0107E20E0h
+PUBLIC _end_PgoldenshellsZ
+_end_PgoldenshellsZ EQU 0107E22E0h
+PUBLIC _end_PgroundgunZ
+_end_PgroundgunZ EQU 0107E2AB0h
+PUBLIC _end_Pgun_runway1Z
+_end_Pgun_runway1Z EQU 0107E31F0h
+PUBLIC _end_PhatberetZ
+_end_PhatberetZ EQU 0107E3490h
+PUBLIC _end_PhatberetblueZ
+_end_PhatberetblueZ EQU 0107E3760h
+PUBLIC _end_PhatberetredZ
+_end_PhatberetredZ EQU 0107E3A40h
+PUBLIC _end_PhatchboltZ
+_end_PhatchboltZ EQU 0107E3B10h
+PUBLIC _end_PhatchdoorZ
+_end_PhatchdoorZ EQU 0107E3D30h
+PUBLIC _end_PhatchsevxZ
+_end_PhatchsevxZ EQU 0107E3EA0h
+PUBLIC _end_PhatfurryZ
+_end_PhatfurryZ EQU 0107E40D0h
+PUBLIC _end_PhatfurryblackZ
+_end_PhatfurryblackZ EQU 0107E42F0h
+PUBLIC _end_PhatfurrybrownZ
+_end_PhatfurrybrownZ EQU 0107E4500h
+PUBLIC _end_PhathelmetZ
+_end_PhathelmetZ EQU 0107E4730h
+PUBLIC _end_PhathelmetgreyZ
+_end_PhathelmetgreyZ EQU 0107E4960h
+PUBLIC _end_PhatmoonZ
+_end_PhatmoonZ EQU 0107E4D40h
+PUBLIC _end_PhatpeakedZ
+_end_PhatpeakedZ EQU 0107E5050h
+PUBLIC _end_PhattbirdZ
+_end_PhattbirdZ EQU 0107E52A0h
+PUBLIC _end_PhattbirdbrownZ
+_end_PhattbirdbrownZ EQU 0107E5510h
+PUBLIC _end_PhelicopterZ
+_end_PhelicopterZ EQU 0107E9730h
+PUBLIC _end_PhindZ
+_end_PhindZ EQU 0107EAEA0h
+PUBLIC _end_PjeepZ
+_end_PjeepZ EQU 0107EC000h
+PUBLIC _end_Pjerry_can1Z
+_end_Pjerry_can1Z EQU 0107EC260h
+PUBLIC _end_Pjungle3_treeZ
+_end_Pjungle3_treeZ EQU 0107EC9E0h
+PUBLIC _end_Pjungle5_treeZ
+_end_Pjungle5_treeZ EQU 0107ECF10h
+PUBLIC _end_Pkey_holderZ
+_end_Pkey_holderZ EQU 0107ED260h
+PUBLIC _end_Pkeyboard1Z
+_end_Pkeyboard1Z EQU 0107ED3D0h
+PUBLIC _end_Pkit_units1Z
+_end_Pkit_units1Z EQU 0107ED670h
+PUBLIC _end_PlabbenchZ
+_end_PlabbenchZ EQU 0107EDA40h
+PUBLIC _end_PlandmineZ
+_end_PlandmineZ EQU 0107EDCB0h
+PUBLIC _end_PlegalpageZ
+_end_PlegalpageZ EQU 0107EEC70h
+PUBLIC _end_Pletter_tray1Z
+_end_Pletter_tray1Z EQU 0107EEDD0h
+PUBLIC _end_Plocker3Z
+_end_Plocker3Z EQU 0107EEF60h
+PUBLIC _end_Plocker4Z
+_end_Plocker4Z EQU 0107EF0F0h
+PUBLIC _end_Pm16magZ
+_end_Pm16magZ EQU 0107EF230h
+PUBLIC _end_PmagnumshellsZ
+_end_PmagnumshellsZ EQU 0107EF430h
+PUBLIC _end_Pmainframe1Z
+_end_Pmainframe1Z EQU 0107EF730h
+PUBLIC _end_Pmainframe2Z
+_end_Pmainframe2Z EQU 0107EFA00h
+PUBLIC _end_Pmetal_chair1Z
+_end_Pmetal_chair1Z EQU 0107EFD40h
+PUBLIC _end_Pmetal_crate1Z
+_end_Pmetal_crate1Z EQU 0107EFF00h
+PUBLIC _end_Pmetal_crate2Z
+_end_Pmetal_crate2Z EQU 0107F00C0h
+PUBLIC _end_Pmetal_crate3Z
+_end_Pmetal_crate3Z EQU 0107F0280h
+PUBLIC _end_Pmetal_crate4Z
+_end_Pmetal_crate4Z EQU 0107F0440h
+PUBLIC _end_PmilcopterZ
+_end_PmilcopterZ EQU 0107F1D20h
+PUBLIC _end_PmiltruckZ
+_end_PmiltruckZ EQU 0107F4020h
+PUBLIC _end_Pmissile_rack2Z
+_end_Pmissile_rack2Z EQU 0107F4A30h
+PUBLIC _end_Pmissile_rackZ
+_end_Pmissile_rackZ EQU 0107F4E10h
+PUBLIC _end_PmodemboxZ
+_end_PmodemboxZ EQU 0107F5150h
+PUBLIC _end_PmotorbikeZ
+_end_PmotorbikeZ EQU 0107F6010h
+PUBLIC _end_Pmp5kmagZ
+_end_Pmp5kmagZ EQU 0107F6160h
+PUBLIC _end_PnintendologoZ
+_end_PnintendologoZ EQU 0107F8C40h
+PUBLIC _end_Poil_drum1Z
+_end_Poil_drum1Z EQU 0107F8EB0h
+PUBLIC _end_Poil_drum2Z
+_end_Poil_drum2Z EQU 0107F91A0h
+PUBLIC _end_Poil_drum3Z
+_end_Poil_drum3Z EQU 0107F9490h
+PUBLIC _end_Poil_drum5Z
+_end_Poil_drum5Z EQU 0107F9780h
+PUBLIC _end_Poil_drum6Z
+_end_Poil_drum6Z EQU 0107F9A90h
+PUBLIC _end_Poil_drum7Z
+_end_Poil_drum7Z EQU 0107F9D90h
+PUBLIC _end_PpadlockZ
+_end_PpadlockZ EQU 0107FA7E0h
+PUBLIC _end_PpalmZ
+_end_PpalmZ EQU 0107FAC30h
+PUBLIC _end_PpalmtreeZ
+_end_PpalmtreeZ EQU 0107FB100h
+PUBLIC _end_Pphone1Z
+_end_Pphone1Z EQU 0107FB240h
+PUBLIC _end_PplaneZ
+_end_PplaneZ EQU 0107FD820h
+PUBLIC _end_Pplant11Z
+_end_Pplant11Z EQU 0107FDBE0h
+PUBLIC _end_Pplant1Z
+_end_Pplant1Z EQU 0107FDF70h
+PUBLIC _end_Pplant2Z
+_end_Pplant2Z EQU 0107FE2D0h
+PUBLIC _end_Pplant2bZ
+_end_Pplant2bZ EQU 0107FE6E0h
+PUBLIC _end_Pplant3Z
+_end_Pplant3Z EQU 0107FEB30h
+PUBLIC _end_Pradio_unit1Z
+_end_Pradio_unit1Z EQU 0107FECE0h
+PUBLIC _end_Pradio_unit2Z
+_end_Pradio_unit2Z EQU 0107FEEA0h
+PUBLIC _end_Pradio_unit3Z
+_end_Pradio_unit3Z EQU 0107FF060h
+PUBLIC _end_Pradio_unit4Z
+_end_Pradio_unit4Z EQU 0107FF220h
+PUBLIC _end_ProofgunZ
+_end_ProofgunZ EQU 0107FF880h
+PUBLIC _end_PsafeZ
+_end_PsafeZ EQU 0107FFBD0h
+PUBLIC _end_PsafedoorZ
+_end_PsafedoorZ EQU 0108000C0h
+PUBLIC _end_Psat1_reflectZ
+_end_Psat1_reflectZ EQU 010801630h
+PUBLIC _end_PsatboxZ
+_end_PsatboxZ EQU 010801750h
+PUBLIC _end_PsatdishZ
+_end_PsatdishZ EQU 010801BB0h
+PUBLIC _end_Psec_panelZ
+_end_Psec_panelZ EQU 010801D50h
+PUBLIC _end_Psev_door3Z
+_end_Psev_door3Z EQU 010801FE0h
+PUBLIC _end_Psev_door3_windZ
+_end_Psev_door3_windZ EQU 010802370h
+PUBLIC _end_Psev_door4_windZ
+_end_Psev_door4_windZ EQU 010802750h
+PUBLIC _end_Psev_doorZ
+_end_Psev_doorZ EQU 010802AA0h
+PUBLIC _end_Psev_door_v1Z
+_end_Psev_door_v1Z EQU 010802DD0h
+PUBLIC _end_Psev_trislideZ
+_end_Psev_trislideZ EQU 010803180h
+PUBLIC _end_PsevdishZ
+_end_PsevdishZ EQU 0108040A0h
+PUBLIC _end_PsevdoormetslideZ
+_end_PsevdoormetslideZ EQU 010804380h
+PUBLIC _end_PsevdoornowindZ
+_end_PsevdoornowindZ EQU 0108044F0h
+PUBLIC _end_PsevdoorwindZ
+_end_PsevdoorwindZ EQU 010804920h
+PUBLIC _end_PsevdoorwoodZ
+_end_PsevdoorwoodZ EQU 010804CD0h
+PUBLIC _end_PshuttleZ
+_end_PshuttleZ EQU 0108076D0h
+PUBLIC _end_Pshuttle_door_lZ
+_end_Pshuttle_door_lZ EQU 010808300h
+PUBLIC _end_Pshuttle_door_rZ
+_end_Pshuttle_door_rZ EQU 010809000h
+PUBLIC _end_PsilencerZ
+_end_PsilencerZ EQU 0108091A0h
+PUBLIC _end_Psilo_lift_doorZ
+_end_Psilo_lift_doorZ EQU 0108093E0h
+PUBLIC _end_PsilotopdoorZ
+_end_PsilotopdoorZ EQU 0108096D0h
+PUBLIC _end_PskorpionmagZ
+_end_PskorpionmagZ EQU 010809830h
+PUBLIC _end_PspectremagZ
+_end_PspectremagZ EQU 0108099A0h
+PUBLIC _end_PspeedboatZ
+_end_PspeedboatZ EQU 01080A6E0h
+PUBLIC _end_Pst_pete_room_1iZ
+_end_Pst_pete_room_1iZ EQU 01080D820h
+PUBLIC _end_Pst_pete_room_2iZ
+_end_Pst_pete_room_2iZ EQU 010810A00h
+PUBLIC _end_Pst_pete_room_3tZ
+_end_Pst_pete_room_3tZ EQU 010813940h
+PUBLIC _end_Pst_pete_room_5cZ
+_end_Pst_pete_room_5cZ EQU 010816ED0h
+PUBLIC _end_Pst_pete_room_6cZ
+_end_Pst_pete_room_6cZ EQU 01081A2E0h
+PUBLIC _end_Psteel_door1Z
+_end_Psteel_door1Z EQU 01081A550h
+PUBLIC _end_Psteel_door2Z
+_end_Psteel_door2Z EQU 01081A800h
+PUBLIC _end_Psteel_door2bZ
+_end_Psteel_door2bZ EQU 01081AAD0h
+PUBLIC _end_Psteel_door3Z
+_end_Psteel_door3Z EQU 01081ADA0h
+PUBLIC _end_Pstool1Z
+_end_Pstool1Z EQU 01081B060h
+PUBLIC _end_Pswipe_card2Z
+_end_Pswipe_card2Z EQU 01081B1F0h
+PUBLIC _end_Pswivel_chair1Z
+_end_Pswivel_chair1Z EQU 01081B480h
+PUBLIC _end_PtankZ
+_end_PtankZ EQU 01081CF20h
+PUBLIC _end_PtigerZ
+_end_PtigerZ EQU 01081EDB0h
+PUBLIC _end_Ptorpedo_rackZ
+_end_Ptorpedo_rackZ EQU 01081F630h
+PUBLIC _end_Ptrain_door2Z
+_end_Ptrain_door2Z EQU 01081FA00h
+PUBLIC _end_Ptrain_door3Z
+_end_Ptrain_door3Z EQU 01081FE20h
+PUBLIC _end_Ptrain_doorZ
+_end_Ptrain_doorZ EQU 010820090h
+PUBLIC _end_PtrainextdoorZ
+_end_PtrainextdoorZ EQU 0108203D0h
+PUBLIC _end_Ptt33magZ
+_end_Ptt33magZ EQU 010820510h
+PUBLIC _end_Ptuning_console1Z
+_end_Ptuning_console1Z EQU 010820A30h
+PUBLIC _end_Ptv1Z
+_end_Ptv1Z EQU 010820C00h
+PUBLIC _end_Ptv4screenZ
+_end_Ptv4screenZ EQU 010820DA0h
+PUBLIC _end_Ptv_holderZ
+_end_Ptv_holderZ EQU 010821470h
+PUBLIC _end_PtvscreenZ
+_end_PtvscreenZ EQU 010821540h
+PUBLIC _end_PuzimagZ
+_end_PuzimagZ EQU 010821680h
+PUBLIC _end_PvertdoorZ
+_end_PvertdoorZ EQU 010821C90h
+PUBLIC _end_PwalletbondZ
+_end_PwalletbondZ EQU 010823240h
+PUBLIC _end_PwindowZ
+_end_PwindowZ EQU 010823330h
+PUBLIC _end_Pwindow_cor11Z
+_end_Pwindow_cor11Z EQU 010823410h
+PUBLIC _end_Pwindow_lib_lg1Z
+_end_Pwindow_lib_lg1Z EQU 0108234F0h
+PUBLIC _end_Pwindow_lib_sm1Z
+_end_Pwindow_lib_sm1Z EQU 0108235E0h
+PUBLIC _end_Pwood_lg_crate1Z
+_end_Pwood_lg_crate1Z EQU 010823860h
+PUBLIC _end_Pwood_lg_crate2Z
+_end_Pwood_lg_crate2Z EQU 010823A80h
+PUBLIC _end_Pwood_md_crate3Z
+_end_Pwood_md_crate3Z EQU 010823CA0h
+PUBLIC _end_Pwood_sm_crate4Z
+_end_Pwood_sm_crate4Z EQU 010823F00h
+PUBLIC _end_Pwood_sm_crate5Z
+_end_Pwood_sm_crate5Z EQU 010824160h
+PUBLIC _end_Pwood_sm_crate6Z
+_end_Pwood_sm_crate6Z EQU 010824380h
+PUBLIC _end_Pwooden_table1Z
+_end_Pwooden_table1Z EQU 0108246F0h
+PUBLIC _end_PwppkmagZ
+_end_PwppkmagZ EQU 010824830h
+PUBLIC _end_Tbg_ame_all_p_stanZ
+_end_Tbg_ame_all_p_stanZ EQU 010826160h
+PUBLIC _end_Tbg_arch_all_p_stanZ
+_end_Tbg_arch_all_p_stanZ EQU 01082BE50h
+PUBLIC _end_Tbg_arec_all_p_stanZ
+_end_Tbg_arec_all_p_stanZ EQU 0108341A0h
+PUBLIC _end_Tbg_ark_all_p_stanZ
+_end_Tbg_ark_all_p_stanZ EQU 01083D160h
+PUBLIC _end_Tbg_ash_all_p_stanZ
+_end_Tbg_ash_all_p_stanZ EQU 01083EA90h
+PUBLIC _end_Tbg_azt_all_p_stanZ
+_end_Tbg_azt_all_p_stanZ EQU 010844010h
+PUBLIC _end_Tbg_cat_all_p_stanZ
+_end_Tbg_cat_all_p_stanZ EQU 010846740h
+PUBLIC _end_Tbg_cave_all_p_stanZ
+_end_Tbg_cave_all_p_stanZ EQU 01084B630h
+PUBLIC _end_Tbg_crad_all_p_stanZ
+_end_Tbg_crad_all_p_stanZ EQU 01084DF40h
+PUBLIC _end_Tbg_cryp_all_p_stanZ
+_end_Tbg_cryp_all_p_stanZ EQU 010850FB0h
+PUBLIC _end_Tbg_dam_all_p_stanZ
+_end_Tbg_dam_all_p_stanZ EQU 01085B390h
+PUBLIC _end_Tbg_depo_all_p_stanZ
+_end_Tbg_depo_all_p_stanZ EQU 0108622D0h
+PUBLIC _end_Tbg_dest_all_p_stanZ
+_end_Tbg_dest_all_p_stanZ EQU 010868BC0h
+PUBLIC _end_Tbg_dish_all_p_stanZ
+_end_Tbg_dish_all_p_stanZ EQU 0108696D0h
+PUBLIC _end_Tbg_imp_all_p_stanZ
+_end_Tbg_imp_all_p_stanZ EQU 01086B000h
+PUBLIC _end_Tbg_jun_all_p_stanZ
+_end_Tbg_jun_all_p_stanZ EQU 010872150h
+PUBLIC _end_Tbg_len_all_p_stanZ
+_end_Tbg_len_all_p_stanZ EQU 010872C10h
+PUBLIC _end_Tbg_oat_all_p_stanZ
+_end_Tbg_oat_all_p_stanZ EQU 010874510h
+PUBLIC _end_Tbg_pete_all_p_stanZ
+_end_Tbg_pete_all_p_stanZ EQU 010878BA0h
+PUBLIC _end_Tbg_ref_all_p_stanZ
+_end_Tbg_ref_all_p_stanZ EQU 01087A970h
+PUBLIC _end_Tbg_run_all_p_stanZ
+_end_Tbg_run_all_p_stanZ EQU 01087C3F0h
+PUBLIC _end_Tbg_sev_all_p_stanZ
+_end_Tbg_sev_all_p_stanZ EQU 0108801C0h
+PUBLIC _end_Tbg_sevb_all_p_stanZ
+_end_Tbg_sevb_all_p_stanZ EQU 010885100h
+PUBLIC _end_Tbg_sevx_all_p_stanZ
+_end_Tbg_sevx_all_p_stanZ EQU 01088E430h
+PUBLIC _end_Tbg_silo_all_p_stanZ
+_end_Tbg_silo_all_p_stanZ EQU 0108974D0h
+PUBLIC _end_Tbg_stat_all_p_stanZ
+_end_Tbg_stat_all_p_stanZ EQU 01089C390h
+PUBLIC _end_Tbg_tra_all_p_stanZ
+_end_Tbg_tra_all_p_stanZ EQU 01089E760h
+PUBLIC _end_UbriefarchZ
+_end_UbriefarchZ EQU 01089E780h
+PUBLIC _end_UbriefarkZ
+_end_UbriefarkZ EQU 01089E7A0h
+PUBLIC _end_UbriefaztZ
+_end_UbriefaztZ EQU 01089E7C0h
+PUBLIC _end_UbriefcaveZ
+_end_UbriefcaveZ EQU 01089E7E0h
+PUBLIC _end_UbriefcontrolZ
+_end_UbriefcontrolZ EQU 01089E800h
+PUBLIC _end_UbriefcradZ
+_end_UbriefcradZ EQU 01089E820h
+PUBLIC _end_UbriefcrypZ
+_end_UbriefcrypZ EQU 01089E840h
+PUBLIC _end_UbriefdamZ
+_end_UbriefdamZ EQU 01089E860h
+PUBLIC _end_UbriefdepoZ
+_end_UbriefdepoZ EQU 01089E880h
+PUBLIC _end_UbriefdestZ
+_end_UbriefdestZ EQU 01089E8A0h
+PUBLIC _end_UbriefjunZ
+_end_UbriefjunZ EQU 01089E8C0h
+PUBLIC _end_UbriefpeteZ
+_end_UbriefpeteZ EQU 01089E8E0h
+PUBLIC _end_UbriefrunZ
+_end_UbriefrunZ EQU 01089E900h
+PUBLIC _end_UbriefsevbZ
+_end_UbriefsevbZ EQU 01089E920h
+PUBLIC _end_UbriefsevbunkerZ
+_end_UbriefsevbunkerZ EQU 01089E940h
+PUBLIC _end_UbriefsevxZ
+_end_UbriefsevxZ EQU 01089E960h
+PUBLIC _end_UbriefsevxbZ
+_end_UbriefsevxbZ EQU 01089E980h
+PUBLIC _end_UbriefsiloZ
+_end_UbriefsiloZ EQU 01089E9A0h
+PUBLIC _end_UbriefstatueZ
+_end_UbriefstatueZ EQU 01089E9C0h
+PUBLIC _end_UbrieftraZ
+_end_UbrieftraZ EQU 01089E9E0h
+PUBLIC _end_Ump_setupameZ
+_end_Ump_setupameZ EQU 01089F100h
+PUBLIC _end_Ump_setuparchZ
+_end_Ump_setuparchZ EQU 0108A1EA0h
+PUBLIC _end_Ump_setuparkZ
+_end_Ump_setuparkZ EQU 0108A3BE0h
+PUBLIC _end_Ump_setupashZ
+_end_Ump_setupashZ EQU 0108A42D0h
+PUBLIC _end_Ump_setupcaveZ
+_end_Ump_setupcaveZ EQU 0108A6830h
+PUBLIC _end_Ump_setupcradZ
+_end_Ump_setupcradZ EQU 0108A7190h
+PUBLIC _end_Ump_setupcrypZ
+_end_Ump_setupcrypZ EQU 0108A7EF0h
+PUBLIC _end_Ump_setupdishZ
+_end_Ump_setupdishZ EQU 0108A82E0h
+PUBLIC _end_Ump_setupimpZ
+_end_Ump_setupimpZ EQU 0108A8920h
+PUBLIC _end_Ump_setupoatZ
+_end_Ump_setupoatZ EQU 0108A8C70h
+PUBLIC _end_Ump_setuprefZ
+_end_Ump_setuprefZ EQU 0108A9080h
+PUBLIC _end_Ump_setupsevbZ
+_end_Ump_setupsevbZ EQU 0108AA390h
+PUBLIC _end_Ump_setupstatueZ
+_end_Ump_setupstatueZ EQU 0108AB210h
+PUBLIC _end_UsetuparchZ
+_end_UsetuparchZ EQU 0108AF820h
+PUBLIC _end_UsetuparkZ
+_end_UsetuparkZ EQU 0108B33B0h
+PUBLIC _end_UsetupaztZ
+_end_UsetupaztZ EQU 0108B5CB0h
+PUBLIC _end_UsetupcaveZ
+_end_UsetupcaveZ EQU 0108B9B10h
+PUBLIC _end_UsetupcontrolZ
+_end_UsetupcontrolZ EQU 0108BD610h
+PUBLIC _end_UsetupcradZ
+_end_UsetupcradZ EQU 0108BF240h
+PUBLIC _end_UsetupcrypZ
+_end_UsetupcrypZ EQU 0108C10D0h
+PUBLIC _end_UsetupdamZ
+_end_UsetupdamZ EQU 0108C53A0h
+PUBLIC _end_UsetupdepoZ
+_end_UsetupdepoZ EQU 0108C8330h
+PUBLIC _end_UsetupdestZ
+_end_UsetupdestZ EQU 0108CA680h
+PUBLIC _end_UsetupjunZ
+_end_UsetupjunZ EQU 0108CDD80h
+PUBLIC _end_UsetuplenZ
+_end_UsetuplenZ EQU 0108CE350h
+PUBLIC _end_UsetuppeteZ
+_end_UsetuppeteZ EQU 0108D12D0h
+PUBLIC _end_UsetuprunZ
+_end_UsetuprunZ EQU 0108D2B30h
+PUBLIC _end_UsetupsevbZ
+_end_UsetupsevbZ EQU 0108D5190h
+PUBLIC _end_UsetupsevbunkerZ
+_end_UsetupsevbunkerZ EQU 0108D6BC0h
+PUBLIC _end_UsetupsevxZ
+_end_UsetupsevxZ EQU 0108DAED0h
+PUBLIC _end_UsetupsevxbZ
+_end_UsetupsevxbZ EQU 0108DEFC0h
+PUBLIC _end_UsetupsiloZ
+_end_UsetupsiloZ EQU 0108E1A10h
+PUBLIC _end_UsetupstatueZ
+_end_UsetupstatueZ EQU 0108E41E0h
+PUBLIC _end_UsetuptraZ
+_end_UsetuptraZ EQU 0108E7410h
+PUBLIC _end_bg_arch_all_p_seg
+_end_bg_arch_all_p_seg EQU 0105102D0h
+PUBLIC _end_bg_arec_all_p_seg
+_end_bg_arec_all_p_seg EQU 0104EA7E0h
+PUBLIC _end_bg_ark_all_p_seg
+_end_bg_ark_all_p_seg EQU 010660D70h
+PUBLIC _end_bg_azt_all_p_seg
+_end_bg_azt_all_p_seg EQU 01059A9F0h
+PUBLIC _end_bg_cat_all_p_seg
+_end_bg_cat_all_p_seg EQU 0106CAAF0h
+PUBLIC _end_bg_cave_all_p_seg
+_end_bg_cave_all_p_seg EQU 0106C55C0h
+PUBLIC _end_bg_crad_all_p_seg
+_end_bg_crad_all_p_seg EQU 0106DAE40h
+PUBLIC _end_bg_cryp_all_p_seg
+_end_bg_cryp_all_p_seg EQU 0105FFC50h
+PUBLIC _end_bg_dam_all_p_seg
+_end_bg_dam_all_p_seg EQU 01062FDF0h
+PUBLIC _end_bg_depo_all_p_seg
+_end_bg_depo_all_p_seg EQU 0105E0F90h
+PUBLIC _end_bg_dest_all_p_seg
+_end_bg_dest_all_p_seg EQU 01055E200h
+PUBLIC _end_bg_dish_all_p_seg
+_end_bg_dish_all_p_seg EQU 0106A10D0h
+PUBLIC _end_bg_ear_all_p_seg
+_end_bg_ear_all_p_seg EQU 0106EBBF0h
+PUBLIC _end_bg_imp_all_p_seg
+_end_bg_imp_all_p_seg EQU 0106DAE40h
+PUBLIC _end_bg_jun_all_p_seg
+_end_bg_jun_all_p_seg EQU 01069C860h
+PUBLIC _end_bg_lee_all_p_seg
+_end_bg_lee_all_p_seg EQU 0106EBBF0h
+PUBLIC _end_bg_len_all_p_seg
+_end_bg_len_all_p_seg EQU 0106ECB90h
+PUBLIC _end_bg_lip_all_p_seg
+_end_bg_lip_all_p_seg EQU 0106EBBF0h
+PUBLIC _end_bg_oat_all_p_seg
+_end_bg_oat_all_p_seg EQU 0106EBBF0h
+PUBLIC _end_bg_pam_all_p_seg
+_end_bg_pam_all_p_seg EQU 0106ECB90h
+PUBLIC _end_bg_pete_all_p_seg
+_end_bg_pete_all_p_seg EQU 0105B4620h
+PUBLIC _end_bg_ref_all_p_seg
+_end_bg_ref_all_p_seg EQU 0105EA5A0h
+PUBLIC _end_bg_rit_all_p_seg
+_end_bg_rit_all_p_seg EQU 0106E4DA0h
+PUBLIC _end_bg_run_all_p_seg
+_end_bg_run_all_p_seg EQU 01066B140h
+PUBLIC _end_bg_sev_all_p_seg
+_end_bg_sev_all_p_seg EQU 010449450h
+PUBLIC _end_bg_sevb_all_p_seg
+_end_bg_sevb_all_p_seg EQU 010578FA0h
+PUBLIC _end_bg_sevx_all_p_seg
+_end_bg_sevx_all_p_seg EQU 010687710h
+PUBLIC _end_bg_sho_all_p_seg
+_end_bg_sho_all_p_seg EQU 0106DAE40h
+PUBLIC _end_bg_silo_all_p_seg
+_end_bg_silo_all_p_seg EQU 01049A390h
+PUBLIC _end_bg_stat_all_p_seg
+_end_bg_stat_all_p_seg EQU 0104BC460h
+PUBLIC _end_bg_tra_all_p_seg
+_end_bg_tra_all_p_seg EQU 010530840h
+PUBLIC _end_bg_wax_all_p_seg
+_end_bg_wax_all_p_seg EQU 0106ECB90h
+PUBLIC _end_ob__ob_end_seg
+_end_ob__ob_end_seg EQU 0108F7DF0h
+PUBLIC _number_music_samples
+_number_music_samples EQU 010419790h
+PUBLIC _number_music_samples_end
+_number_music_samples_end EQU 010419794h
+PUBLIC _ob__ob_end_seg
+_ob__ob_end_seg EQU 0108F7DE0h
+PUBLIC _ramrom_BunkerI_1
+_ramrom_BunkerI_1 EQU 0102D1000h
+PUBLIC _ramrom_BunkerI_1_end
+_ramrom_BunkerI_1_end EQU 0102D4390h
+PUBLIC _ramrom_BunkerI_2
+_ramrom_BunkerI_2 EQU 0102D4390h
+PUBLIC _ramrom_BunkerI_2_end
+_ramrom_BunkerI_2_end EQU 0102D9610h
+PUBLIC _ramrom_Dam_1
+_ramrom_Dam_1 EQU 0102BF2D0h
+PUBLIC _ramrom_Dam_1_end
+_ramrom_Dam_1_end EQU 0102C44D0h
+PUBLIC _ramrom_Dam_2
+_ramrom_Dam_2 EQU 0102C44D0h
+PUBLIC _ramrom_Dam_2_end
+_ramrom_Dam_2_end EQU 0102C64A0h
+PUBLIC _ramrom_Facility_1
+_ramrom_Facility_1 EQU 0102C64A0h
+PUBLIC _ramrom_Facility_1_end
+_ramrom_Facility_1_end EQU 0102C7F50h
+PUBLIC _ramrom_Facility_2
+_ramrom_Facility_2 EQU 0102C7F50h
+PUBLIC _ramrom_Facility_2_end
+_ramrom_Facility_2_end EQU 0102CA330h
+PUBLIC _ramrom_Facility_3
+_ramrom_Facility_3 EQU 0102CA330h
+PUBLIC _ramrom_Facility_3_end
+_ramrom_Facility_3_end EQU 0102CBFA0h
+PUBLIC _ramrom_Frigate_1
+_ramrom_Frigate_1 EQU 0102DD770h
+PUBLIC _ramrom_Frigate_1_end
+_ramrom_Frigate_1_end EQU 0102DF120h
+PUBLIC _ramrom_Frigate_2
+_ramrom_Frigate_2 EQU 0102DF120h
+PUBLIC _ramrom_Frigate_2_end
+_ramrom_Frigate_2_end EQU 0102E2600h
+PUBLIC _ramrom_Runway_1
+_ramrom_Runway_1 EQU 0102CBFA0h
+PUBLIC _ramrom_Runway_1_end
+_ramrom_Runway_1_end EQU 0102CE6F0h
+PUBLIC _ramrom_Runway_2
+_ramrom_Runway_2 EQU 0102CE6F0h
+PUBLIC _ramrom_Runway_2_end
+_ramrom_Runway_2_end EQU 0102D1000h
+PUBLIC _ramrom_Silo_1
+_ramrom_Silo_1 EQU 0102D9610h
+PUBLIC _ramrom_Silo_1_end
+_ramrom_Silo_1_end EQU 0102DB7A0h
+PUBLIC _ramrom_Silo_2
+_ramrom_Silo_2 EQU 0102DB7A0h
+PUBLIC _ramrom_Silo_2_end
+_ramrom_Silo_2_end EQU 0102DD770h
+PUBLIC _ramrom_Train
+_ramrom_Train EQU 0102E2600h
+PUBLIC _ramrom_Train_end
+_ramrom_Train_end EQU 0102E63F0h
+PUBLIC _table_music_data
+_table_music_data EQU 010419794h
+PUBLIC _table_music_data_end
+_table_music_data_end EQU 01041998Ch
+PUBLIC _unknown2
+_unknown2 EQU 0102A4D50h
+PUBLIC _unknown2_end
+_unknown2_end EQU 0102BF2D0h
+END

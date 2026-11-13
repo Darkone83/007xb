@@ -1,0 +1,6 @@
+# Tool-specific runtime state / game-derived data / Windows builds
+.cache/
+dist/
+__pycache__/
+*.spec
+*.log
