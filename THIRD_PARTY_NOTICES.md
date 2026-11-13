@@ -1,38 +1,34 @@
-# Credits and third-party notices
+# Third-party notices and attribution
 
-This page credits upstream work **identified in the supplied 007xb source archive**. It is an attribution inventory, **not** a substitute for the original file headers, bundled license texts, or a complete redistribution-rights review. Paths below reflect the intended public layout where the uploaded `007xb/` source tree is placed under `src/`.
+**Attribution record, not a grant of redistribution rights.** Retain original file-level notices. Do not edit them into a project-wide license or imply the individuals listed here authorized the 007xb distribution.
 
-## Project and upstream work
-
-| Project / contributor | Contribution or relationship | Source and notice |
+| Upstream / author | Contribution and evidence | Required follow-up |
 | --- | --- | --- |
-| **Darkone83** | 007xb project direction, original-Xbox integration, Xbox-specific runtime/graphics work and project branding | This repository; verify file-by-file authorship of any modified upstream code |
-| **Rare / original GoldenEye 007 creators** | Original Nintendo 64 game, game design and original game content | Rights retained by their respective holders; original content is not granted an open license by this project |
-| **GoldenEye decompilation contributors** | Reconstructed N64 game source and game-structure reference | [n64decomp/007](https://github.com/n64decomp/007) (mirror of [kholdfuzion/goldeneye_src](https://gitlab.com/kholdfuzion/goldeneye_src)); source attribution must be preserved |
-| **James Dansereau** | GoldenEye 007 PC port, platform adaptations, converter and pipeline lineage | [jkdansereau/goldeneye-pc-port](https://github.com/jkdansereau/goldeneye-pc-port); MIT for the scoped PC-port work, © 2026; `src/007xb/engine/LICENSE` and `NOTICE` |
-| **Emill and MaikelChan** | Fast3D software graphics-port lineage | MIT © 2020; `src/007xb/engine/port/fast3d/LICENSE.txt` |
-| **Silicon Graphics, Inc., MIPS Computer Systems, AT&T and related owners** | N64-era system headers, math/libultra code and associated notices retained in imported sources | For example `src/007xb/engine/include/PR/`, `include/assert.h`, `include/math.h`, `include/sgidefs.h`, `src/libultra/`; **rights/redistribution review required** |
-| **Nintendo** | Some imported N64 SDK headers have Nintendo copyright statements; original platform and game-related trademarks | Example: `src/007xb/engine/include/PR/gs2dex.h`; verify redistribution status |
-| **Istvan Novak / SpectNet.SpectrumEmu** | Comment descriptions cited in the imported Spectrum emulator header | `src/007xb/engine/src/game/spectrum_hw.h` credits © 2017 Istvan Novak and [SpectNet source](https://github.com/Dotneteer/spectnetide) as MIT-licensed reference text |
-| **Original Xbox homebrew toolchain / RXDK authors** | Required build/runtime interfaces for the Xbox target | Toolchain and SDK terms are separate from this repository; identify exact redistributable components before a binary release |
+| Original GoldenEye 007 developers, Rare and other applicable game rights holders | Original game design/code/content reproduced or reconstructed in decomp lineage | Confirm applicable rights and obtain appropriate legal advice/permission before distributing covered material |
+| GoldenEye decompilation contributors; Larry Ficken (kholdfuzion) and other upstream contributors | https://github.com/n64decomp/007 and original project acknowledgments | Preserve upstream acknowledgments, review lack of comprehensive license and individual contributions |
+| James Dansereau | GoldenEye PC port — MIT **original port contributions**, © 2026; `src/007xb/engine/LICENSE` and adjacent `NOTICE` | Retain exact MIT text and NOTICE; verify code is within its stated scope |
+| Emill and MaikelChan | Fast3D original licensed lineage — MIT, © 2020; `src/007xb/engine/port/fast3d/LICENSE.txt` | Preserve text; trace adapted portions and other upstream contributors if present |
+| Silicon Graphics, Inc. | N64 SDK/libultra notices, including proprietary restriction statements (see audit) | Rights review / replacement / permission; retain notices, do not claim they are open-source |
+| Nintendo | SDK header `src/007xb/engine/include/PR/gs2dex.h`; game and platform trademark questions separately | Review redistribution and use rights |
+| MIPS Computer Systems, AT&T, UNIX System Laboratories | Notices in imported include files; full list in copyright audit | Preserve notices and verify applicable rights |
+| Istvan Novak / SpectNet.SpectrumEmu | `src/007xb/engine/src/game/spectrum_hw.h` cites MIT-licensed reference comments (2017) | Verify copied portions and retain attributable license notice for any reproduced material |
+| Darkone83 / original 007xb contributors | Xbox platform/runtime, NV2A work, original project branding where independently created | Verify each contributor's authorship and agree on a scoped license; never relicense inherited code |
+| Team Resurgent / RXDK and relevant Xbox toolchain rights holders | Build dependencies referenced in Visual Studio project (`RXDK_LIBS`) | Obtain exact toolchain provenance and redistribution terms, particularly for any linked XBE components |
+| Game footage/logo/title art contributors and underlying IP holders | `images/` and `src/007xb/titleimage.png`, plus original visual assets included in game | Confirm authorship, third-party image content, and use of marks before public release |
 
-**Additional decompilation documentation acknowledgments:** the upstream decompilation's README credits contributors to the reverse-engineering effort and GoldenEye/Perfect Dark technical documentation by Zoinkity. See the original upstream README for its full current acknowledgments.
+## Source notices that must stay intact
 
-## Archive and packer attribution
+- `src/007xb/engine/LICENSE` and `src/007xb/engine/NOTICE`.
+- `src/007xb/engine/port/fast3d/LICENSE.txt`.
+- Original copyright lines throughout `src/007xb/engine/include/PR/`, `engine/src/libultra/`, `engine/src/libultrare/`, and other source files.
+- `tools/007xb_converter_reference.zip`'s own `LICENSE` and `NOTICE` remain intact if the archive is distributed, **but those do not license the decomp-derived metadata contained in it**.
 
-The `tools/` directory contains 007xb Asset Studio and `tools/007xb_converter_reference.zip`. The bundle contains converter source/reference metadata and an upstream PC-port `LICENSE`/`NOTICE`. The upstream notice also names other libraries and build tools **used by the parent PC-port/decomp project**, such as rabbitizer, armips and puff/gzip tools. **Do not claim they are all present in or linked into 007xb** merely because they appear in a borrowed notice; include any extra license texts only for components actually redistributed.
+The PC-port `NOTICE` mentions rabbitizer, armips, puff/zlib, gzip and glad as dependencies **of the upstream project**. This audit has not established that each is present in or linked into 007xb. Do not list these as 007xb vendored binary dependencies without confirming which pieces actually ship.
 
-The asset studio requires a **user-provided clean US/NTSC-U GoldenEye ROM** and produces a single `007xb_assets.dat`. The source repository and downloadable tools should not distribute ROMs, extracted models/textures/audio or generated `.dat` files. ROM-derived metadata embedded in tooling needs a separate provenance check prior to release.
+## Specific media cautions
 
-## Visual media and branding
+- The game title and `007`/GoldenEye-related marks may raise trademark/branding questions independently of source-code licensing.
+- `images/demo.gif` shows game footage; original capture by the project does not automatically give exclusive rights to the underlying game visuals.
+- `images/logo.png`, `images/Darkone83.png`, `src/007xb/titleimage.png` and `tools/branding/` need a provenance entry stating who created each, what material was used, and what distribution permission exists.
 
-- `images/logo.png` — project logo supplied for the README; confirm project use/distribution permission.
-- `images/Darkone83.png` — Darkone83 branding supplied for the README; confirm project use/distribution permission.
-- `images/demo.gif` — captured 007xb gameplay preview; validate that the footage is approved for sharing and acknowledge underlying GoldenEye game content.
-- `src/007xb/titleimage.png` and `tools/branding/` — title/logo and embedded project branding assets; confirm provenance, especially when distributing the compiled XBE.
-
-## Keeping notices intact
-
-Preserve all original license texts and copyright headers inside source files. Add notices when introducing outside code or assets and record the upstream URL, version/commit (when known), author, license, changes, and affected paths in the pull request. If uncertain, **do not remove a notice or assume MIT applies**.
-
-See [Licensing](LICENSING.md), the [copyright header audit](docs/COPYRIGHT_HEADER_AUDIT.md), and the [release checklist](docs/PUBLIC_RELEASE_CHECKLIST.md).
+This file is a truthful credits map, **not a certification**. See [LICENSING.md](LICENSING.md), [docs/LEGAL_RELEASE_REVIEW.md](docs/LEGAL_RELEASE_REVIEW.md), and [docs/COPYRIGHT_HEADER_AUDIT.md](docs/COPYRIGHT_HEADER_AUDIT.md).

@@ -1,40 +1,59 @@
-# Licensing and redistribution
+# Licensing and redistribution — status and scope
 
-> **Draft for public-release review — not a project-wide license grant.**
->
-> This repository includes material from projects with different provenance and licensing terms. **Do not label the entire tree MIT-licensed.** A license for the original 007xb-specific contributions has **not yet been selected or authorized by the maintainer**. Do not interpret the presence of an upstream license file as permission to redistribute unrelated game code, headers, assets, XBE binaries, or this repository as a whole.
+**Status: rights review pending. This file is documentation, not a license or a public-release authorization.**
 
-## Scope by component
+007xb combines independently written Xbox integration, MIT-licensed port components, reconstructed GoldenEye source and metadata of unresolved licensing status, N64-era SDK/libultra files bearing restrictive notices, and user-supplied or embedded artwork. **No single license currently covers this entire repository.** The original-Xbox binary also requires its own distribution review.
 
-| Material | Relevant terms / current status |
+## The rule
+
+A copyright credit names a contributor. A license or other legal basis establishes what can be copied, modified, and distributed. **Crediting a rights holder alone is not permission.** Equally, the absence of a license header does **not** make material public domain. Publication on GitHub is not a blanket grant of open-source permissions.
+
+## What is established versus unresolved
+
+| Component | Scope / evidence | Working release status |
+| --- | --- | --- |
+| Original Xbox-specific additions and original documentation | May be licensed by their actual rights holders after authorship and any derivative portions are confirmed | **License choice pending; not a license grant** |
+| GoldenEye PC-port-specific original code | MIT, copyright © 2026 James Dansereau; original `engine/LICENSE` and scope-limiting `engine/NOTICE` | **Keep license and notice; verify each copied file's scope** |
+| Fast3D original work in its licensed lineage | MIT, © 2020 Emill and MaikelChan; `engine/port/fast3d/LICENSE.txt` | **Keep license; verify lineage for adapted files** |
+| GoldenEye decompilation-derived `engine/src/`, `engine/include/`, `engine/assets/` and other inherited files | Original upstream decomp has no identified blanket license, as explicitly stated in the PC-port `NOTICE` | **Not cleared for a general public license** |
+| N64 SDK and libultra-derived files | 79 SGI copyright-notice files, 77 of them flagged with restrictive wording; 53 of the SGI-notice files are listed as Visual Studio C/C++ compilation units | **High-priority rights review; do not assume attribution suffices** |
+| ROM-derived/static graphics, model, font and tables | Some game graphics/font arrays are embedded in source, in addition to the user's separately generated `.dat` | **Review/remove/replace or obtain appropriate clearance** |
+| ROM-only asset packer | Bundled converter reference combines MIT-covered PC tools with decomp-derived image/model references | **Tooling and bundled metadata need separate review** |
+| `default.xbe` | Compiled game code, graphics/data and potentially SDK/runtime components | **Not cleared by a source license; separate binary gate** |
+| `images/demo.gif`, `logo.png`, `Darkone83.png`, `titleimage.png` | Confirm ownership, embedded GoldenEye imagery, branding, and relevant trademark issues | **Approval/provenance pending** |
+
+## License locations to preserve (source tree moved to `src/`)
+
+- `src/007xb/engine/LICENSE` — MIT, © James Dansereau, **scope limited by the adjacent `NOTICE`**.
+- `src/007xb/engine/NOTICE` — defines the PC port's original-work scope and excludes inherited decompilation from its MIT grant.
+- `src/007xb/engine/port/fast3d/LICENSE.txt` — MIT, © Emill and MaikelChan.
+- `tools/007xb_converter_reference.zip` — contains copies of upstream `LICENSE` and `NOTICE`; those terms apply only to the covered original work, not all 522 enclosed entries.
+
+**Do not replace these upstream license files with a new root MIT license** or alter their scope. Original 007xb-authored code could later receive its own clearly scoped license after ownership and contributor permissions are settled. Until then, this document is a notice of unresolved rights rather than a grant of permission.
+
+## Release paths
+
+| Intended release | Required clearance before posting |
 | --- | --- |
-| Original 007xb Xbox host, NV2A/Direct3D8 backend, tools, branding and documentation | Maintainer to select and publish a license for material they have rights to license; **not specified by this draft**. Some files derive from upstream code and require a file-by-file provenance review. |
-| GoldenEye 007 PC-port-specific work | James Dansereau's MIT license applies to the **original PC-port work identified by its upstream `NOTICE`**; see `src/007xb/engine/LICENSE` and `src/007xb/engine/NOTICE`. It is not a blanket license for the inherited game source. |
-| Original GoldenEye 007 decompilation and inherited source/metadata | [n64decomp/007](https://github.com/n64decomp/007) is an upstream reconstruction; no universal upstream redistribution license has been established for all inherited game source. **Rights review required** before distribution. |
-| Fast3D-derived work | Portions are accompanied by an MIT license crediting Emill and MaikelChan; keep `src/007xb/engine/port/fast3d/LICENSE.txt` and review the provenance of adapted sections. |
-| Silicon Graphics / MIPS / AT&T / Nintendo N64 headers and libultra-derived files | Some files contain restrictive copyright or nondisclosure notices. **Retaining these notices does not itself grant redistribution rights.** Review before publishing these files. |
-| Original GoldenEye content | Game ROM, music, graphics, text, models and other original game materials remain with their respective rights holders. Users must provide their own ROM. Do not upload a ROM, extracted assets, or generated `007xb_assets.dat`. |
-| Original Xbox SDK / RXDK tools and binary dependencies | Subject to their own terms. Verify source/build dependency and precompiled XBE redistribution rights independently. No SDK binaries should be added to the repository without review. |
-| Project logos and gameplay GIF | Confirm the permission and ownership of each image and the embedded game footage before publication; see [third-party notices](THIRD_PARTY_NOTICES.md). |
+| Documentation only | Original documentation authorship; permission/appropriate legal basis for any included images or footage |
+| Asset Studio only | Audit converter scripts **and** bundled decomp-derived model/image metadata, branding, and included notices; no ROM or generated `.dat` |
+| Engine source | Resolve or replace decomp-derived code, SDK/libultra content, embedded game data, and source contributions; counsel's rights analysis |
+| Precompiled XBE | All source gates **plus** binary linkage, runtime/SDK, title graphics, and game-code distribution analysis |
 
-## Existing upstream license material
+See [the detailed review](docs/LEGAL_RELEASE_REVIEW.md), [rights-clearance tracker](docs/RIGHTS_CLEARANCE_TRACKER.md), [copyright header audit](docs/COPYRIGHT_HEADER_AUDIT.md), and [third-party notices](THIRD_PARTY_NOTICES.md). The public-release checklist is at [docs/PUBLIC_RELEASE_CHECKLIST.md](docs/PUBLIC_RELEASE_CHECKLIST.md).
 
-The supplied source archive includes these license/notice files. Preserve them with their original contents when reorganizing `007xb/` under `src/`:
+## Statements not made by this project
 
-- `src/007xb/engine/LICENSE` — the PC port's MIT license, copyright © 2026 James Dansereau.
-- `src/007xb/engine/NOTICE` — explicitly limits the PC-port license's scope and lists other dependencies.
-- `src/007xb/engine/port/fast3d/LICENSE.txt` — MIT license, copyright © 2020 Emill and MaikelChan.
-- `tools/007xb_converter_reference.zip` contains its own upstream `LICENSE` and `NOTICE`; keep and review those as well.
+The current review does **not** say the entire source tree is MIT-licensed, that ROM ownership resolves all extraction/distribution issues, that a non-commercial fan project is automatically exempt from copyright or trademark law, or that the upstream project's publication establishes independent permission for this port.
 
-Do not remove existing header-level notices. A separate [third-party inventory](THIRD_PARTY_NOTICES.md) and [copyright header audit](docs/COPYRIGHT_HEADER_AUDIT.md) document credit and provenance; it does not supersede the actual licenses.
+The appropriate legal basis for some reverse-engineered portions may depend on facts and jurisdiction; **no conclusion on fair use or interoperability exemptions is made here**. Obtain advice from a qualified IP attorney before releasing unresolved source or binaries.
 
-## Before making a public release
+## Primary references
 
-1. Confirm which source files are original 007xb work versus inherited or modified upstream work; choose a license **only** for works the maintainer has the right to license.
-2. Review `src/007xb/engine/include/` and `src/007xb/engine/src/libultra/` for third-party/proprietary notices, and decide what can lawfully be published.
-3. Review the bundled converter metadata and source, and the compiled `default.xbe` (including embedded third-party code) for permitted redistribution.
-4. Confirm the rights to publish `images/logo.png`, `images/Darkone83.png` and `images/demo.gif`.
-5. Exclude ROMs, `.dat` archives generated from ROMs, extracted assets, SDK binaries where not redistributable, private logs and machine-specific build settings.
-6. Preserve attribution and license texts in all distributions and document any further third-party components discovered during the audit.
+1. PC port source and scoped `NOTICE`: https://github.com/jkdansereau/goldeneye-pc-port — `NOTICE`, `LICENSE`, and `README.md`.
+2. Original decompilation: https://github.com/n64decomp/007 — published without a repository-wide license identified by this review.
+3. GitHub's no-license guidance: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository
+4. United States Copyright Act, 17 U.S.C. §106: https://uscode.house.gov/us/usc/119-124/t17/s106/
+5. 17 U.S.C. §1201(f) contains a conditional interoperability provision; it is **not** general authorization to redistribute all decompiled code: https://uscode.house.gov/us/usc/119-118/t17/s1201/
 
-See [public-release checklist](docs/PUBLIC_RELEASE_CHECKLIST.md). For unresolved rights questions, seek qualified legal advice before distribution. This document is a provenance checklist, not legal advice.
+**Reference snapshot:** November 12, 2026. **Not legal advice.**

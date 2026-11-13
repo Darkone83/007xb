@@ -1,35 +1,25 @@
 # Contributing to 007xb
 
-Thanks for helping improve this original-Xbox port of GoldenEye 007. The project is under active development. Please keep changes **small, traceable and testable**, with special care for original hardware and compatibility with the N64 gameplay engine.
+007xb is a work-in-progress original-Xbox compatibility project. Contributions should be focused, testable on real hardware where possible, and traceable to their actual authors and source licenses. Read [LICENSING.md](LICENSING.md) and the [rights tracker](docs/RIGHTS_CLEARANCE_TRACKER.md) first.
 
-## Before making changes
+## Before submitting
 
-- Read the [technical findings](docs/TECHNICAL_FINDINGS.md) and check for an existing issue or discussion before starting substantial work.
-- Do not upload a GoldenEye ROM, `007xb_assets.dat`, extracted game assets, game saves, proprietary SDK files, or other files without redistribution permission.
-- Preserve original source attribution and copyright notices. This repository contains material with **different licenses or unresolved rights**, so review [Licensing](LICENSING.md) and [third-party notices](THIRD_PARTY_NOTICES.md) before contributing code from another project.
-- Keep original-Xbox game source in `src/`, tool scripts and build commands in `tools/`, documentation in `docs/`, visual previews in `images/`, and user-deployable XBE material in `xbe/` when distribution is authorized.
+- Do not upload a GoldenEye ROM, `007xb_assets.dat`, extracted game assets, proprietary SDK/XDK files, private logs or copyrighted graphics lacking permission.
+- Only submit code, documentation or artwork for which you can establish suitable contribution rights. A copied file from a public repository is not automatically open-source.
+- Keep the complete existing copyright/attribution headers. Do **not** modify or delete notices to disguise copied material.
+- Record the **source URL, upstream commit, author, license, portions used, modifications, and intended redistribution** for each third-party addition.
+- Because a project-wide license has **not** been approved, discuss the proposed license scope with the maintainer for independently original contributions rather than assuming all PRs are MIT.
 
-## Development guidelines
+## Technical practices
 
-- Target the **original Xbox**, using the existing classic RXDK / Xbox Direct3D8 integration. Avoid dependencies on modern C++ runtimes, exceptions, RTTI or unsupported Direct3D features.
-- Separate Xbox platform/backend changes from original game logic. Use the [original N64 decompilation](https://github.com/n64decomp/007) to check gameplay fidelity and the [PC port](https://github.com/jkdansereau/goldeneye-pc-port) for portable implementation references. PC-specific changes do not automatically reflect original N64 behavior.
-- Avoid changing simulation ticks or RNG consumption when optimizing rendering, input or audio. Replay/determinism fixes should include comparative evidence and recorded first-divergence data.
-- Be conservative with graphics-state caching, culling and shader changes: retain gunbarrel, weapon models, transparency, large/scissor-crossing polygons, and display-list semantics.
-- Do not put required GPU/device behavior behind a diagnostics toggle. Logging should remain issue-focused and bounded.
-- Keep the ROM packer's **one-ROM-input, one-`007xb_assets.dat`-output** contract. Intermediate files and logs belong in `tools/.cache/`; not `xbe/data/` or the checked-in repository.
+- Keep `src/` for the Xbox engine, `tools/` for every tool/build command, `images/` for original visual material, and `docs/` for project notes.
+- Preserve original console rendering semantics, working gunbarrel, models and audio, and maintain small reversible performance changes.
+- Compare gameplay changes against the original decomp and PC port, while recognizing that the PC port is not always N64-identical.
+- Don't alter RNG/ticks as part of unrelated renderer optimizations. Keep diagnostic logging bounded.
+- For the asset packer, retain one user-supplied ROM → only `007xb_assets.dat` as output, with extraction caches private/local.
 
-## Pull request checklist
+## Pull request description
 
-1. Explain the problem and what changed. List modified files, any files that must be removed, and the intended release scope.
-2. Describe the baseline used and provide reproducible steps or minimal test data that **does not contain original game assets**.
-3. Build/test in the actual supported environment where possible; distinguish **host tests** from **real-Xbox hardware verification**.
-4. For rendering changes, check title/gunbarrel, normal gameplay, weapons, models, transparent effects and a large level such as Runway.
-5. For audio/timing changes, check music continuity, controller input and replay timing.
-6. For asset tooling, run the tests documented in [`tools/README.md`](tools/README.md); confirm `data/` contains only `007xb_assets.dat` after a normal build.
-7. If borrowing code, record its origin, license and any modifications in the PR and update [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) when appropriate.
+Include: rationale; changed files; delete list; exact tested source revision; real-Xbox versus host test results; rights/provenance details of every new external dependency or file. The maintainer may defer or decline code with unresolved rights even if it compiles.
 
-Bug reports are most useful with the hardware configuration (including RAM size), whether the test was on real Xbox or xemu, build revision, exact steps, expected/actual results, and a **short excerpt around the failure**. Please do not attach unbounded logs or ROM data.
-
-## Licensing of contributions
-
-**A project-wide license has not yet been selected.** Do not submit third-party material unless you can document the required rights and its compatibility with the eventual repository terms. Maintainers may need to discuss permissions before accepting changes. The project does not obtain rights to third-party game material simply by accepting a contribution.
+**Acceptance of a contribution does not authorize distribution of third-party game, SDK, or other materials the submitter does not own.**
