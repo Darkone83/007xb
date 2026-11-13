@@ -8,7 +8,7 @@
 - Only submit code, documentation or artwork for which you can establish suitable contribution rights. A copied file from a public repository is not automatically open-source.
 - Keep the complete existing copyright/attribution headers. Do **not** modify or delete notices to disguise copied material.
 - Record the **source URL, upstream commit, author, license, portions used, modifications, and intended redistribution** for each third-party addition.
-- Because a project-wide license has **not** been approved, discuss the proposed license scope with the maintainer for independently original contributions rather than assuming all PRs are MIT.
+- Original contributions should be offered under the root MIT license where the contributor owns or controls the necessary rights; by submitting a PR, clearly state whether you agree to license your original changes under MIT. If you cannot make that grant, disclose the limitation before submission. The root license never relicenses inherited code, tools, art, or data.
 
 ## Technical practices
 
