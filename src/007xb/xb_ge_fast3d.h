@@ -36,6 +36,9 @@ void ge_xbox_d3d8_attach(void* xbox_device,unsigned width,unsigned height);
 void ge_xbox_d3d8_detach(void);
 unsigned ge_xbox_d3d8_unsupported(void);
 unsigned ge_xbox_d3d8_drawn_triangles(void);
+unsigned ge_xbox_d3d8_room_hardware_triangles(void);
+/* Cumulative submitted hardware-room triangles (for 120-frame stats windows). */
+unsigned ge_xbox_d3d8_room_hardware_triangles_total(void);
 unsigned ge_xbox_d3d8_texture_bytes(void);
 void ge_xbox_d3d8_frame_stats(GEBackendFrameStats* out);
 /* Explicit boundary for external D3D8 draws embedded in a Fast3D list

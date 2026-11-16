@@ -13,6 +13,7 @@
  * Hardware validation remains required for RDP precision/overflow behaviour.
  */
 #include <xtl.h>
+#include "xb_native_mesh.h"
 /* Team Resurgent MK64-X uses the native Xbox swizzler rather than scattering
  * pixels through a scalar Morton loop.  Old-RXDK A/B switch below. */
 #ifndef GE_NV2A_FAST_SWIZZLE
@@ -33,6 +34,7 @@
 #include "xb_ge_fast3d.h"
 #include "gfx_cc.h"
 #include "ge_native_platform.h"
+#include "ge_phase0_profile.h"
 #include "ge_nv2a_combiner.h"
 
 /* NV2A scissor removes redundant CPU polygon clipping on screen/viewport
@@ -52,6 +54,22 @@
  * shader map is requested along this path. Disable for A/B with 0. */
 #ifndef GE_NV2A_STABLE_DRAW_SHADER_REUSE
 #define GE_NV2A_STABLE_DRAW_SHADER_REUSE 1
+#endif
+/* Fast3D often uses only V0/V1 interpolators, with no C0/C1 values
+ * derived from a triangle. The compiler already records exactly which
+ * register-combiner constant slots read source-vertex data. Classify each
+ * newly created native shader once; zero-input materials reuse a literal
+ * zero register block instead of packing it for every triangle.
+ * No shader, vertex, draw order, or driver-state change. A/B: set 0. */
+#ifndef GE_NV2A_SKIP_EMPTY_TRI_CONSTANTS
+#define GE_NV2A_SKIP_EMPTY_TRI_CONSTANTS 1
+#endif
+/* For non-fog combiners the source decoder leaves every fog component
+ * at zero. The 0xFF000000 result of packColor(0,0,0,1) is invariant,
+ * so skip repeated float clamps/rounding on ordinary opaque materials.
+ * Fog-enabled materials retain their original per-triangle RGB check. */
+#ifndef GE_NV2A_STATIC_NOFOG_COLOR
+#define GE_NV2A_STATIC_NOFOG_COLOR 1
 #endif
 /* Some original N64 combiners reference more independent per-vertex alpha
  * values than Xbox's two color alpha channels can interpolate (fog uses
@@ -76,6 +94,22 @@
  * for every emitted N64 triangle. Keep old path for A/B verification. */
 #ifndef GE_NV2A_GAMEPLAY_LEAN_VERTEX
 #define GE_NV2A_GAMEPLAY_LEAN_VERTEX 1
+#endif
+/* When a draw has no varying tile-clamp bounds, screen projection alone
+ * can prove a triangle invisible. Project xyz/w first and reject it before
+ * decoding texture coordinates, fog, and combiner colors. Keep the original
+ * late check for clamped materials to preserve every data validation path.
+ * Visible triangles reuse the exact projected x/y/rhw values; the GPU stream
+ * and source-data interpretation are unchanged. 0 restores legacy ordering. */
+#ifndef GE_NV2A_POSITION_FIRST_CULL
+#define GE_NV2A_POSITION_FIRST_CULL 1
+#endif
+/* Phase 0F: A/B cache for identical packed source vertices WITHIN ONE
+ * api_drawImpl call. Never crosses material, viewport, sampler or frame
+ * boundaries. Disable with GE_NV2A_SOURCE_VERTEX_DECODE_CACHE=0.
+ * Per-vertex tile clamps keep their original validation path. */
+#ifndef GE_NV2A_SOURCE_VERTEX_DECODE_CACHE
+#define GE_NV2A_SOURCE_VERTEX_DECODE_CACHE 1
 #endif
 /* On an unpadded, CLAMP-addressed NV2A texture, the hardware sampler returns
  * the same edge texel as N64's full-image per-pixel clamp. A smaller tile
@@ -138,6 +172,66 @@
 #define GE_TEXTURE_BUDGET (12u*1024u*1024u)
 #define GE_MAX_FRAMEBUFFERS 8
 #define GE_FVF (D3DFVF_XYZRHW | D3DFVF_DIFFUSE | D3DFVF_SPECULAR | D3DFVF_TEX2)
+/* One rollback switch for the complete CPU->NV2A gameplay offload. */
+#ifndef GE_XBOX_NATIVE_ROOM_BATCHES
+#define GE_XBOX_NATIVE_ROOM_BATCHES 1
+#endif
+#define GE_NV2A_ROOM_NATIVE_PACKETS GE_XBOX_NATIVE_ROOM_BATCHES
+#define GE_ROOM_FVF (D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_SPECULAR | D3DFVF_TEX2)
+#define GE_ROOM_PACKET_LIMIT GE_XBOX_ROOM_PACKET_RECORDS
+/* Halo's native Xbox renderer uses a separate static vertex and index
+ * buffer path. Index identical room vertices once at packet upload; never
+ * rehash or reassemble during warm rendering. A/B: 0 = original 6B VBs. */
+#ifndef GE_NV2A_ROOM_INDEXED_PACKETS
+#define GE_NV2A_ROOM_INDEXED_PACKETS 0
+#endif
+#ifndef GE_XBOX_ROOM_GPU_CLIP
+#define GE_XBOX_ROOM_GPU_CLIP 0
+#endif
+/* Cold GPU packet creation can stall visible frames. Keep the original
+ * one-upload-per-frame default even though the packet table is larger. */
+#ifndef GE_XBOX_ROOM_UPLOADS_PER_FRAME
+#define GE_XBOX_ROOM_UPLOADS_PER_FRAME 1u
+#endif
+/* Frontend and backend must use the same metadata/packet capacity. */
+#ifndef GE_XBOX_ROOM_PACKET_RECORDS
+#define GE_XBOX_ROOM_PACKET_RECORDS 128u
+#endif
+#if GE_XBOX_ROOM_PACKET_RECORDS != 48 && GE_XBOX_ROOM_PACKET_RECORDS != 128
+#error GE_XBOX_ROOM_PACKET_RECORDS must be 48 or 128
+#endif
+#ifndef GE_XBOX_NATIVE_ROOM_SHORT_RUNS
+#define GE_XBOX_NATIVE_ROOM_SHORT_RUNS 0
+#endif
+/* Phase 6D: bounded *resident* geometry, not merely a live allocation total.
+ * 6C evicted live VBs/IBs and allocated replacements during rendering; on
+ * NV2A this can force a driver/GPU wait and create visible stalls.
+ * Use a smaller retail-safe budget and do not evict until detach/reinit.
+ * Once full, all new packets take the unmodified Fast3D software path. */
+#ifndef GE_XBOX_ROOM_GPU_BUDGET_BYTES
+#define GE_XBOX_ROOM_GPU_BUDGET_BYTES (1024u*1024u)
+#endif
+#if GE_XBOX_ROOM_GPU_BUDGET_BYTES < 65536u || GE_XBOX_ROOM_GPU_BUDGET_BYTES > 2097152u
+#error GE_XBOX_ROOM_GPU_BUDGET_BYTES must be between 64 KiB and 2 MiB
+#endif
+#define GE_ROOM_VERTEX_BYTES GE_XBOX_ROOM_GPU_BUDGET_BYTES
+#ifndef GE_XBOX_ROOM_NO_LIVE_EVICTION
+#define GE_XBOX_ROOM_NO_LIVE_EVICTION 1
+#endif
+/* Cold GPU Create/Lock/Unlock is costly even if only one packet is built per
+ * frame. Throttle across frames, not just within one graphics task. */
+#ifndef GE_XBOX_ROOM_UPLOAD_FRAME_INTERVAL
+#define GE_XBOX_ROOM_UPLOAD_FRAME_INTERVAL 8u
+#endif
+/* Phase 6E: reject cold packet work before assembling 1024 vertices when
+ * the upload throttle, fixed resident budget or slot table cannot admit it.
+ * Warm packet queries (command_address != 0) are unaffected. */
+#ifndef GE_XBOX_ROOM_COLD_PREFLIGHT
+#define GE_XBOX_ROOM_COLD_PREFLIGHT 1
+#endif
+#if GE_XBOX_ROOM_UPLOAD_FRAME_INTERVAL < 1u || GE_XBOX_ROOM_UPLOAD_FRAME_INTERVAL > 120u
+#error Invalid room upload frame interval
+#endif
 #define GE_NOISE_FVF (D3DFVF_XYZRHW | D3DFVF_DIFFUSE | D3DFVF_SPECULAR | D3DFVF_TEX3 | D3DFVF_TEXCOORDSIZE4(2))
 #define GE_NOISE_SIZE 128u
 #define GE_NOISE_BYTES (GE_NOISE_SIZE*GE_NOISE_SIZE*4u)
@@ -150,6 +244,12 @@ struct GEVertex {
 };
 /* Only noisy materials carry screen-projected texture coordinates. Keep the
  * existing 40-byte vertex stream for ordinary game rendering. */
+struct GERoomVertex {
+    float x,y,z;
+    DWORD color,specular;
+    float u0,v0,u1,v1;
+};
+typedef char GERoomVertexMustBe36Bytes[(sizeof(GERoomVertex)==36)?1:-1];
 struct GENoiseVertex {
     GEVertex vertex;
     float u2,v2,z2,q2;
@@ -187,6 +287,7 @@ struct GENativeShader {
     uint64_t lastUse;
     GENV2AInputMap map;
     GENV2AProgram program;
+    unsigned char hasTriangleConstants;
 };
 struct GESourceVertex {
     float x,y,z,rhw;
@@ -194,6 +295,27 @@ struct GESourceVertex {
     float input[7][4];
     float fog[4];
 };
+#if GE_NV2A_SOURCE_VERTEX_DECODE_CACHE
+/* 64 direct-mapped entries, renderer-thread-owned, no heap or stack spike.
+ * Store the packed input BY VALUE so a reused or mutated input pointer cannot
+ * incorrectly return stale geometry. Exact comparison defeats hash collisions. */
+#define GE_VERTEX_DECODE_SLOTS 64u
+struct GEVertexDecodeEntry {
+    unsigned epoch;
+    float raw[48]; /* max no-clamp Fast3D layout: 44 floats */
+    GESourceVertex decoded;
+};
+static GEVertexDecodeEntry s_vertexDecodeEntries[GE_VERTEX_DECODE_SLOTS];
+static unsigned s_vertexDecodeEpoch=0;
+static unsigned geVertexDecodeSlot(const float *v) {
+    uint32_t bits[4];
+    memcpy(bits,v,sizeof(bits)); /* float aliasing and NaN bit patterns preserved */
+    uint32_t mix=(bits[0]*0x9e3779b1u) ^ (bits[1]*0x85ebca6bu) ^
+                 (bits[2]*0xc2b2ae35u) ^ (bits[3]*0x27d4eb2du);
+    mix^=mix>>16;mix*=0x7feb352du;mix^=mix>>15;
+    return (unsigned)(mix & (GE_VERTEX_DECODE_SLOTS-1u));
+}
+#endif
 struct GEPolygon { GESourceVertex vertex[16]; unsigned count; };
 struct GESplitScratch { GEPolygon below,above; };
 struct GEAddressScratch {
@@ -214,6 +336,33 @@ struct GETexture {
     unsigned stripSlot; /* 0=legacy; otherwise 1-based atlas row index. */
 };
 
+/* Same graphics worker owns creation, draw and retirement of room resources. */
+struct GERoomPacket {
+    XBNativeMesh mesh;
+    const void *source;
+    unsigned room,revision,signature,vertices;
+    unsigned shaderKey, texture0, samplerU,samplerV;
+    unsigned cullMode,textureUnits;
+    unsigned lastUse;
+};
+static GERoomPacket s_roomPackets[GE_ROOM_PACKET_LIMIT];
+static unsigned s_roomPacketBytes=0,s_roomPacketClock=0;
+static unsigned s_roomPacketBuildsFrame=0;
+static unsigned s_roomPrepareFrame=0;
+static bool s_roomGPUAllocationFailed=false;
+static unsigned s_roomGPUFrames=0,s_roomGPUTriangles=0;
+static unsigned s_roomGPUFrameTris=0;
+static void clearRoomPackets() {
+    for(unsigned i=0;i<GE_ROOM_PACKET_LIMIT;++i) {
+        s_roomPackets[i].mesh.Reset();
+        s_roomPackets[i].source=0;
+        s_roomPackets[i].vertices=0;
+        s_roomPackets[i].lastUse=0;
+    }
+    s_roomPacketBytes=0;s_roomPacketClock=0;s_roomPacketBuildsFrame=0;
+    s_roomPrepareFrame=0;s_roomGPUAllocationFailed=false;
+    s_roomGPUFrames=s_roomGPUTriangles=0;s_roomGPUFrameTris=0;
+}
 static IDirect3DDevice8* s_device = 0;
 static unsigned s_width = 640, s_height = 480;
 static ShaderProgram s_shaders[GE_MAX_SHADER];
@@ -234,6 +383,9 @@ static GENativeShader *s_batchShader=0;
 static GENativeShader *s_recentNativeShader=0;
 static unsigned s_batchCount=0;
 static DWORD s_batchConstants[8],s_batchFog=0;
+#if GE_NV2A_SKIP_EMPTY_TRI_CONSTANTS
+static const DWORD s_noTriangleConstants[8]={0u,0u,0u,0u,0u,0u,0u,0u};
+#endif
 static GESplitScratch s_splitScratch[8];
 /* Rendering runs on a small Xbox thread stack. Keep polygon workspaces here. */
 static GEAddressScratch s_addressScratch[4];
@@ -519,6 +671,7 @@ extern "C" void ge_xbox_d3d8_attach(void* xbox_device,unsigned width,unsigned he
         s_device->GetDepthStencilSurface(&s_originalDepth);
     }
     s_unsupported=0;s_drawCount=0;memset(&s_frameStats,0,sizeof(s_frameStats));
+    clearRoomPackets();
     s_textureBytes=0;
     s_stripAtlas=0;s_stripStaging=0;s_stripCount=s_stripReady=s_stripFailed=0;
     s_stripBuilds=0;
@@ -531,6 +684,7 @@ extern "C" void ge_xbox_d3d8_attach(void* xbox_device,unsigned width,unsigned he
 }
 extern "C" void ge_xbox_d3d8_detach(void) {
     nativeBatchBarrier();
+    clearRoomPackets();
     clearNativeShaders();
     if(s_device)s_device->SetTexture(2,0);
     if(s_noiseTexture){s_noiseTexture->Release();s_noiseTexture=0;}
@@ -555,6 +709,8 @@ extern "C" void ge_xbox_d3d8_detach(void) {
 }
 extern "C" unsigned ge_xbox_d3d8_unsupported(void){return s_unsupported;}
 extern "C" unsigned ge_xbox_d3d8_drawn_triangles(void){return s_drawCount;}
+extern "C" unsigned ge_xbox_d3d8_room_hardware_triangles(void){return s_roomGPUFrameTris;}
+extern "C" unsigned ge_xbox_d3d8_room_hardware_triangles_total(void){return s_roomGPUTriangles;}
 extern "C" unsigned ge_xbox_d3d8_texture_bytes(void){return s_textureBytes+(s_noiseTexture?GE_NOISE_BYTES:0u);}
 extern "C" unsigned ge_xbox_d3d8_atlas_rows(void){return s_stripReady?s_stripCount:0;}
 extern "C" unsigned ge_xbox_d3d8_atlas_builds(void){return s_stripBuilds;}
@@ -799,7 +955,10 @@ static void api_upload_textureImpl(const unsigned char* rgba,unsigned width,unsi
         s_textureBytes+=bytes;
     }
     D3DLOCKED_RECT lock;
-    if(FAILED(t->tex->LockRect(0,&lock,0,0))){backendError("Xbox texture upload lock failed");return;}
+    const unsigned long long p0TexLockStart=geP0BStart();
+    const HRESULT texLockResult=t->tex->LockRect(0,&lock,0,0);
+    geP0BEnd(GE_P0B_TEX_LOCK,p0TexLockStart);
+    if(FAILED(texLockResult)){backendError("Xbox texture upload lock failed");return;}
     /* Preserve the original odd-NPOT leading gutter EXACTLY. The native
      * texture sees the same 32-bit A8R8G8B8 pixels and identical source
      * x/y wrap order as the manual swizzler, but XGSwizzleRect writes its
@@ -872,10 +1031,12 @@ static void api_upload_textureImpl(const unsigned char* rgba,unsigned width,unsi
     if(mipmaps)++s_unsupported;
 }
 static void api_upload_texture(const unsigned char* rgba,unsigned width,unsigned height,bool mipmaps) {
+    const unsigned long long p0UploadStart=geP0BStart();
 #if GE_NV2A_PHASE_PROFILE
     const uint64_t start=sysGetMicroseconds();
 #endif
     api_upload_textureImpl(rgba,width,height,mipmaps);
+    geP0BEnd(GE_P0B_UPLOAD,p0UploadStart);
 #if GE_NV2A_PHASE_PROFILE
     recordNativePhase(&s_frameStats.upload_api_us,start);
 #endif
@@ -1044,7 +1205,10 @@ static GENativeShader *nativeShader(ShaderProgram *parent,const GENV2AInputMap& 
     /* No final C0/C1 references; allow texture mode adjustment by the SDK. */
     def.PSFinalCombinerConstants=0x000001ffu;
     DWORD handle=0;
-    if(FAILED(s_device->CreatePixelShader(&def,&handle))) {
+    const unsigned long long p0ShaderStart=geP0BStart();
+    const HRESULT shaderResult=s_device->CreatePixelShader(&def,&handle);
+    geP0BEnd(GE_P0B_SHADER_CREATE,p0ShaderStart);
+    if(FAILED(shaderResult)) {
         backendError("RXDK could not create the native register combiner");return 0;
     }
     ++s_frameStats.shader_creates;
@@ -1062,6 +1226,15 @@ static GENativeShader *nativeShader(ShaderProgram *parent,const GENV2AInputMap& 
     memset(slot,0,sizeof(*slot));
     slot->parent=parent;slot->key=key;slot->handle=handle;slot->used=1;
     slot->lastUse=++s_nativeShaderClock;slot->map=map;slot->program=program;
+#if GE_NV2A_SKIP_EMPTY_TRI_CONSTANTS
+    /* Validate the entire compiled C0/C1 description, not just the source
+     * map: a material may use a constant in only one equation channel.
+     * Newly created shader slots are cleared above, including on eviction. */
+    for(unsigned stage=0;stage<program.constantStages;++stage)
+        for(unsigned c=0;c<2;++c)for(unsigned channel=0;channel<2;++channel)
+            if(program.constantInput[stage][c][channel])
+                slot->hasTriangleConstants=1;
+#endif
     s_recentNativeShader=slot;
 #if GE_NV2A_MATERIAL_SHADER_CACHE
     rememberNativeShader(parent,slot);
@@ -1092,7 +1265,10 @@ static bool drawStreamVB(const void* vertices,unsigned vertexCount,unsigned stri
     BYTE* mapped=0;
     const DWORD flags=offset?D3DLOCK_NOOVERWRITE:0u;
     ++s_frameStats.vb_locks;
-    if(FAILED(vb->Lock(offset,bytes,&mapped,flags)) || !mapped) {
+    const unsigned long long p0LockStart=geP0BStart();
+    const HRESULT lockResult=vb->Lock(offset,bytes,&mapped,flags);
+    geP0BEnd(GE_P0B_VB_LOCK,p0LockStart);
+    if(FAILED(lockResult) || !mapped) {
         s_streamFallback=1;return false;
     }
     memcpy(mapped,vertices,bytes);
@@ -1102,7 +1278,10 @@ static bool drawStreamVB(const void* vertices,unsigned vertexCount,unsigned stri
         s_streamBound=vb;
     }
     s_streamOffset[type][slot]=offset+bytes;
-    if(FAILED(s_device->DrawPrimitive(D3DPT_TRIANGLELIST,offset/stride,vertexCount/3u))) {
+    const unsigned long long p0VBDrawStart=geP0BStart();
+    const HRESULT vbDrawResult=s_device->DrawPrimitive(D3DPT_TRIANGLELIST,offset/stride,vertexCount/3u);
+    geP0BEnd(GE_P0B_DRAW_VB,p0VBDrawStart);
+    if(FAILED(vbDrawResult)) {
         s_streamFallback=1;return false;
     }
     ++s_streamVBSubmissions;
@@ -1171,7 +1350,10 @@ static void flushNativeBatchImpl(void) {
     if(!submitted) {
         /* Preserve the previous backend on old RXDKs or driver allocation
          * failures. This also permits a compile-time A/B comparison. */
-        if(FAILED(s_device->DrawPrimitiveUP(D3DPT_TRIANGLELIST,s_batchCount/3u,vertices,stride)))
+        const unsigned long long p0UpDrawStart=geP0BStart();
+        const HRESULT upDrawResult=s_device->DrawPrimitiveUP(D3DPT_TRIANGLELIST,s_batchCount/3u,vertices,stride);
+        geP0BEnd(GE_P0B_DRAW_UP,p0UpDrawStart);
+        if(FAILED(upDrawResult))
             backendError("Xbox native triangle submission failed");
         else {
             submitted=true;++s_streamUPSubmissions;
@@ -1193,10 +1375,12 @@ static void flushNativeBatch(void) {
     /* Match the former early-out BEFORE reading the profiling clock. Most
      * Fast3D state barriers have no pending triangles, especially in menus. */
     if(!s_batchCount)return;
+    const unsigned long long p0FlushStart=geP0BStart();
 #if GE_NV2A_PHASE_PROFILE
     const uint64_t start=sysGetMicroseconds();
 #endif
     flushNativeBatchImpl();
+    geP0BEnd(GE_P0B_FLUSH,p0FlushStart);
 #if GE_NV2A_PHASE_PROFILE
     recordNativePhase(&s_frameStats.submit_us,start);
 #endif
@@ -1584,6 +1768,16 @@ static void api_drawImpl(float vbo[],size_t nFloats,size_t nTriangles){
         s_scissor?(float)s_scY:0.0f,
         s_scissor?(float)(s_scY+s_scH):(float)s_height
     };
+    /* Only use the position-first path when no per-vertex clamp bounds
+     * require validation. The existing later cull remains authoritative for
+     * every other material and for the A/B-disabled configuration. */
+#if GE_NV2A_POSITION_FIRST_CULL && GE_NV2A_EARLY_OFFSCREEN_REJECT
+    bool hasVertexClamp=false;
+    for(unsigned tex=0;tex<2;++tex)if(p->useTex[tex])
+        for(unsigned ax=0;ax<2;++ax)
+            if(p->clamps[tex][ax])hasVertexClamp=true;
+    const bool positionFirst=!hasVertexClamp;
+#endif
     unsigned paddedTrim[2][2]={{0,0},{0,0}};
     float paddedTrimMin[2][2],paddedTrimMax[2][2];
     bool hasPaddedTrim=false;
@@ -1600,6 +1794,18 @@ static void api_drawImpl(float vbo[],size_t nFloats,size_t nTriangles){
     /* The stable map covers the common 1/2-input geometry shaders; complex
      * combiner programs keep their per-triangle mapping unchanged. */
     initStableMap(p);
+#if GE_NV2A_SOURCE_VERTEX_DECODE_CACHE
+    /* Clamp-enabled materials validate each vertex's tile bound against the
+     * first vertex; those side effects MUST execute even for duplicate data. */
+    bool decodeCacheEligible=nTriangles>=3u && stride>=14u && stride<=48u;
+    for(unsigned tex=0;tex<2u;++tex)if(p->useTex[tex])
+        for(unsigned axis=0;axis<2u;++axis)
+            if(p->clamps[tex][axis])decodeCacheEligible=false;
+    if(++s_vertexDecodeEpoch==0u) {
+        memset(s_vertexDecodeEntries,0,sizeof(s_vertexDecodeEntries));
+        s_vertexDecodeEpoch=1u;
+    }
+#endif
 #if GE_NV2A_STABLE_DRAW_SHADER_REUSE
     GENativeShader *stableDrawShader=0;
 #endif
@@ -1610,6 +1816,49 @@ static void api_drawImpl(float vbo[],size_t nFloats,size_t nTriangles){
 #endif
         s_trimCount=0;s_addressPieces=0;
         memset(s_trimEnabled,0,sizeof(s_trimEnabled));
+#if GE_NV2A_POSITION_FIRST_CULL && GE_NV2A_EARLY_OFFSCREEN_REJECT
+        unsigned projectedCount=0;
+        if(positionFirst) {
+            /* Compute source vertex zero exactly once. If it lies inside
+             * every inclusive clip halfspace, the triangle cannot be fully
+             * outside, so decode vertices one and two normally below. */
+            const float *v=vbo+tri*3u*stride;
+            GESourceVertex& o=vertex[0];
+            if(!(v[3]>0.0000001f)){backendError("Native draw has an unclipped nonpositive W");return;}
+            o.rhw=1.0f/v[3];
+            o.x=(float)s_viewport.X+(v[0]*o.rhw*.5f+.5f)*(float)s_viewport.Width;
+            o.y=(float)s_viewport.Y+(.5f-v[1]*o.rhw*.5f)*(float)s_viewport.Height;
+            projectedCount=1;
+            bool firstInside=true;
+            for(unsigned plane=0;plane<4u;++plane) {
+                if(!(planeDistance(o,plane,clipBounds[plane])>=0.0f)) {
+                    firstInside=false;break;
+                }
+            }
+            if(!firstInside) {
+                for(unsigned n=1;n<3;++n) {
+                    const float *source=vbo+(tri*3u+n)*stride;
+                    GESourceVertex& projected=vertex[n];
+                    if(!(source[3]>0.0000001f)){backendError("Native draw has an unclipped nonpositive W");return;}
+                    projected.rhw=1.0f/source[3];
+                    projected.x=(float)s_viewport.X+(source[0]*projected.rhw*.5f+.5f)*(float)s_viewport.Width;
+                    projected.y=(float)s_viewport.Y+(.5f-source[1]*projected.rhw*.5f)*(float)s_viewport.Height;
+                }
+                projectedCount=3;
+                /* Keep the original four-plane classification identical. */
+                bool outside=false;
+                for(unsigned plane=0;plane<4u;++plane) {
+                    bool allOutside=true;
+                    for(unsigned n=0;n<3u;++n)
+                        if(planeDistance(vertex[n],plane,clipBounds[plane])>=0.0f) {
+                            allOutside=false;break;
+                        }
+                    if(allOutside){outside=true;break;}
+                }
+                if(outside){++s_frameStats.screen_rejects;continue;}
+            }
+        }
+#endif
         if(hasPaddedTrim)for(unsigned tex=0;tex<2;++tex)for(unsigned ax=0;ax<2;++ax)
             if(paddedTrim[tex][ax]) {
                 s_trimEnabled[tex][ax]=1;
@@ -1619,10 +1868,29 @@ static void api_drawImpl(float vbo[],size_t nFloats,size_t nTriangles){
         for(unsigned n=0;n<3;++n) {
             const float *v=vbo+(tri*3u+n)*stride;
             GESourceVertex& o=vertex[n];
-            if(!(v[3]>0.0000001f)){backendError("Native draw has an unclipped nonpositive W");return;}
-            o.rhw=1.0f/v[3];
-            o.x=(float)s_viewport.X+(v[0]*o.rhw*.5f+.5f)*(float)s_viewport.Width;
-            o.y=(float)s_viewport.Y+(.5f-v[1]*o.rhw*.5f)*(float)s_viewport.Height;
+#if GE_NV2A_SOURCE_VERTEX_DECODE_CACHE
+            GEVertexDecodeEntry *cacheEntry=0;
+            if(decodeCacheEligible) {
+                cacheEntry=&s_vertexDecodeEntries[geVertexDecodeSlot(v)];
+                if(cacheEntry->epoch==s_vertexDecodeEpoch &&
+                   memcmp(cacheEntry->raw,v,stride*sizeof(float))==0) {
+                    /* Only memcpy raw decoded values: no extra arithmetic,
+                     * interpolation or changed precision on the hit path. */
+                    memcpy(&o,&cacheEntry->decoded,sizeof(o));
+                    continue;
+                }
+            }
+#endif
+#if GE_NV2A_POSITION_FIRST_CULL && GE_NV2A_EARLY_OFFSCREEN_REJECT
+            if(!positionFirst || n>=projectedCount) {
+#endif
+                if(!(v[3]>0.0000001f)){backendError("Native draw has an unclipped nonpositive W");return;}
+                o.rhw=1.0f/v[3];
+                o.x=(float)s_viewport.X+(v[0]*o.rhw*.5f+.5f)*(float)s_viewport.Width;
+                o.y=(float)s_viewport.Y+(.5f-v[1]*o.rhw*.5f)*(float)s_viewport.Height;
+#if GE_NV2A_POSITION_FIRST_CULL && GE_NV2A_EARLY_OFFSCREEN_REJECT
+            }
+#endif
             o.z=(v[2]*o.rhw*.5f+.5f)*(s_zFar-s_zNear)+s_zNear;
             unsigned k=4;
             for(unsigned t=0;t<2;++t)if(p->useTex[t]) {
@@ -1668,6 +1936,13 @@ static void api_drawImpl(float vbo[],size_t nFloats,size_t nTriangles){
                 for(unsigned c=0;c<3;++c)o.input[input][c]=clamp01(v[k++]);
                 o.input[input][3]=p->alpha?clamp01(v[k++]):1.0f;
             }
+#if GE_NV2A_SOURCE_VERTEX_DECODE_CACHE
+            if(cacheEntry) {
+                memcpy(cacheEntry->raw,v,stride*sizeof(float));
+                memcpy(&cacheEntry->decoded,&o,sizeof(o));
+                cacheEntry->epoch=s_vertexDecodeEpoch; /* publish last */
+            }
+#endif
         }
         for(unsigned texture=0;texture<2;++texture)for(unsigned axis=0;axis<2;++axis)
             if(s_trimEnabled[texture][axis]) {
@@ -1680,6 +1955,9 @@ static void api_drawImpl(float vbo[],size_t nFloats,size_t nTriangles){
          * trivially rejected by the viewport/scissor, and skipping this
          * work cannot affect game state or RNG. */
         bool triviallyOutside=false;
+#if GE_NV2A_POSITION_FIRST_CULL && GE_NV2A_EARLY_OFFSCREEN_REJECT
+        if(!positionFirst)
+#endif
         for(unsigned plane=0;plane<4u;++plane){
             bool allOutside=true;
             for(unsigned n=0;n<3u;++n)
@@ -1721,18 +1999,33 @@ static void api_drawImpl(float vbo[],size_t nFloats,size_t nTriangles){
 #endif
             shader=nativeShader(p,map);
         if(!shader)return;
-        DWORD constants[8];triangleConstants(vertex[0],*shader,constants);
+        DWORD constants[8];
+        const DWORD *triangleConstantsPtr=constants;
+#if GE_NV2A_SKIP_EMPTY_TRI_CONSTANTS
+        if(!shader->hasTriangleConstants)
+            triangleConstantsPtr=s_noTriangleConstants;
+        else
+#endif
+            triangleConstants(vertex[0],*shader,constants);
 #if !GE_NV2A_EARLY_OFFSCREEN_REJECT
         if(triviallyOutside){++s_frameStats.screen_rejects;continue;}
 #endif
-        DWORD fog=packColor(vertex[0].fog[0],vertex[0].fog[1],vertex[0].fog[2],1);
+        DWORD fog;
+#if GE_NV2A_STATIC_NOFOG_COLOR
+        if(!p->fog)
+            fog=0xFF000000u; /* exactly packColor(0,0,0,1) */
+        else
+#endif
+            fog=packColor(vertex[0].fog[0],vertex[0].fog[1],vertex[0].fog[2],1);
         if(p->fog)for(unsigned n=1;n<3;++n)
             if(fog!=packColor(vertex[n].fog[0],vertex[n].fog[1],vertex[n].fog[2],1)) {
                 backendError("Varying fog colour cannot use the native fog register");return;
             }
-        if(s_batchShader!=shader || s_batchFog!=fog || memcmp(constants,s_batchConstants,sizeof(constants))) {
+        if(s_batchShader!=shader || s_batchFog!=fog ||
+           memcmp(triangleConstantsPtr,s_batchConstants,sizeof(constants))) {
             flushNativeBatch();
-            s_batchShader=shader;s_batchFog=fog;memcpy(s_batchConstants,constants,sizeof(constants));
+            s_batchShader=shader;s_batchFog=fog;
+            memcpy(s_batchConstants,triangleConstantsPtr,sizeof(constants));
         }
         /* Most gameplay triangles are entirely inside the viewport. Avoid
          * copying them through the 16-slot clipping polygon or testing four
@@ -1804,10 +2097,12 @@ static void api_drawImpl(float vbo[],size_t nFloats,size_t nTriangles){
      * entry points and api_end() drain the queued vertices instead. */
 }
 static void api_draw(float vbo[],size_t nFloats,size_t nTriangles) {
+    const unsigned long long p0DrawStart=geP0BStart();
 #if GE_NV2A_PHASE_PROFILE
     const uint64_t start=sysGetMicroseconds();
 #endif
     api_drawImpl(vbo,nFloats,nTriangles);
+    geP0BEnd(GE_P0B_DRAW,p0DrawStart);
 #if GE_NV2A_PHASE_PROFILE
     recordNativePhase(&s_frameStats.draw_api_us,start);
 #endif
@@ -1827,6 +2122,9 @@ static void api_init(void){
 static void api_resize(void){nativeBatchBarrier();if(s_device){s_device->SetViewport(&s_viewport);applyHardwareScissor();}}
 static void api_begin(void){
     nativeBatchBarrier();
+    ++s_roomPrepareFrame;
+    s_roomPacketBuildsFrame=0;
+    s_roomGPUFrameTris=0;
     s_streamFrameSlot=(s_streamFrameSlot+1u)%GE_STREAM_FRAME_COUNT;
     s_streamOffset[0][s_streamFrameSlot]=0;
     s_streamOffset[1][s_streamFrameSlot]=0;
@@ -1959,6 +2257,364 @@ static void api_mip_filter(MipmapFilteringMode f){if(f!=MIPMAP_DISABLED)++s_unsu
 static void api_aniso(int n){if(n>1)++s_unsupported;}
 static int api_get_aniso(void){return 1;}
 
+
+/* Phase 6B: native static room packets. No per-triangle fast-path probing.
+ * Each lookup is for an entire contiguous TRI1/TRI4 command run. Original
+ * RDP state commands are still interpreted in order by the Fast3D frontend.
+ * Only source-proven room vertices can reach this path. */
+static bool roomProjectionSafe(const GfxNativeRoomDraw *d) {
+    if(!d || d->vertex_count<(GE_XBOX_NATIVE_ROOM_SHORT_RUNS?24u:48u) ||
+       d->vertex_count>1024u ||
+       d->cull_mode>2u || d->texture_units>1u ||
+       !s_device || !s_shader || s_currentFB!=0 ||
+       !s_hwScissorActive || !s_viewport.Width || !s_viewport.Height || s_decalDepth ||
+       s_zNear<0.0f || s_zFar>1.0f || s_zFar<s_zNear ||
+       !(d->aspect_scale>0.0f && d->aspect_scale<4.0f))return false;
+#if !GE_XBOX_ROOM_GPU_CLIP
+    /* Rollback: old room-AABB test (very conservative around the camera). */
+    for(unsigned k=0;k<8u;++k) {
+        const float x=(k&1u)?d->max_bound[0]:d->min_bound[0];
+        const float y=(k&2u)?d->max_bound[1]:d->min_bound[1];
+        const float z=(k&4u)?d->max_bound[2]:d->min_bound[2];
+        const float wz=x*d->matrix[3]+y*d->matrix[7]+z*d->matrix[11]+d->matrix[15];
+        const float cz=x*d->matrix[2]+y*d->matrix[6]+z*d->matrix[10]+d->matrix[14];
+        if(!(wz>0.005f && cz > -wz+0.005f && cz < wz-0.005f))return false;
+    }
+#endif
+    /* Hardware is allowed to clip opaque single-texture room triangles.
+     * Room materials with fog/alpha/noise/tile-dependent UVs still fall back
+     * through roomMaterialSafe(), including the N64 RSP near-plane lerp. */
+    return true;
+}
+static bool roomMaterialSafe(const GfxNativeRoomDraw *d,GENativeShader **native) {
+    if(native)*native=0;
+    if(!roomProjectionSafe(d))return false;
+    ShaderProgram *p=s_shader;
+    if(!p || p->alpha || p->fog || p->grayscale || p->inputs>1u ||
+       p->useTex[1] || (unsigned)p->useTex[0]!=d->texture_units ||
+       p->features.opt_alpha || p->features.opt_noise ||
+       p->features.opt_texture_edge || p->features.opt_fog ||
+       p->features.opt_grayscale || p->features.opt_blur ||
+       p->features.opt_invisible || p->features.opt_2cyc)return false;
+    for(unsigned t=0;t<2u;++t)for(unsigned ax=0;ax<2u;++ax)
+        if(p->clamps[t][ax])return false;
+    const unsigned tex=s_selectedTex[0];
+    if(d->texture_units) {
+        if(tex>=s_textureCount)return false;
+        const GETexture &texture=s_textures[tex];
+        if(!texture.live || !texture.tex || texture.stripSlot ||
+           texture.width!=texture.storageWidth ||
+           texture.height!=texture.storageHeight)return false;
+    }
+    initStableMap(p);
+    if(!p->stableMapValid)return false;
+    /* With a single SHADE varying, RGB maps directly to V0 (diffuse). */
+    if(p->inputs && p->stableMap.rgb[0]!=1u)return false;
+    for(unsigned i=1;i<2u;++i)if(p->stableMap.rgb[i])return false;
+    if(p->stableMap.alpha[0] || p->stableMap.alpha[1])return false;
+    /* Defer native pixel-shader creation until a cold packet is built and
+     * revisited; cache misses otherwise cannot increase shader churn. */
+    GENativeShader *shader=nativeShader(p,p->stableMap);
+    if(!shader || shader->hasTriangleConstants || shader->program.usesNoise)return false;
+    if(native)*native=shader;
+    return true;
+}
+#if GE_NV2A_ROOM_INDEXED_PACKETS
+/* Graphics-thread-only cold packet scratch.  No heap allocation or hashing
+ * on a warm draw. Identical vertex byte patterns are reusable even when
+ * they appeared in different triangle positions; the index stream preserves
+ * original triangle order exactly. 2048 slots, <=1024 source vertices. */
+enum { GE_ROOM_INDEX_HASH_SLOTS=2048u, GE_ROOM_INDEX_MAX_VERTS=1024u };
+static GERoomVertex s_roomUnique[GE_ROOM_INDEX_MAX_VERTS];
+static unsigned short s_roomIndices[GE_ROOM_INDEX_MAX_VERTS];
+static unsigned short s_roomIndexHash[GE_ROOM_INDEX_HASH_SLOTS];
+static unsigned geRoomVertexHash(const GERoomVertex &v) {
+    const unsigned char *p=(const unsigned char*)&v;
+    unsigned h=2166136261u;
+    for(unsigned i=0;i<sizeof(v);++i)h=(h^(unsigned)p[i])*16777619u;
+    return h & (GE_ROOM_INDEX_HASH_SLOTS-1u);
+}
+static bool geRoomIndexPacket(const GfxNativeRoomDraw *d,unsigned *uniqueOut) {
+    if(!d || !uniqueOut || !d->vertices ||
+       !d->vertex_count || d->vertex_count>GE_ROOM_INDEX_MAX_VERTS)return false;
+    memset(s_roomIndexHash,0,sizeof(s_roomIndexHash));
+    unsigned n=0;
+    for(unsigned i=0;i<d->vertex_count;++i) {
+        const GfxNativeRoomVertex &v=d->vertices[i];
+        GERoomVertex candidate;
+        candidate.x=v.x; candidate.y=v.y; candidate.z=v.z;
+        candidate.color=(d->texture_units || s_shader->inputs)?v.color:0u;
+        candidate.specular=0u;
+        candidate.u0=v.u0; candidate.v0=v.v0;
+        candidate.u1=0.0f; candidate.v1=0.0f;
+        unsigned bucket=geRoomVertexHash(candidate);
+        bool found=false;
+        for(unsigned probe=0;probe<GE_ROOM_INDEX_HASH_SLOTS;++probe) {
+            const unsigned short record=s_roomIndexHash[bucket];
+            if(!record) {
+                if(n>=GE_ROOM_INDEX_MAX_VERTS)return false;
+                s_roomUnique[n]=candidate;
+                s_roomIndices[i]=(unsigned short)n;
+                s_roomIndexHash[bucket]=(unsigned short)(++n);
+                found=true;break;
+            }
+            if(memcmp(&candidate,&s_roomUnique[record-1u],sizeof(candidate))==0) {
+                s_roomIndices[i]=(unsigned short)(record-1u);
+                found=true;break;
+            }
+            bucket=(bucket+1u)&(GE_ROOM_INDEX_HASH_SLOTS-1u);
+        }
+        if(!found)return false;
+    }
+    *uniqueOut=n;
+    return true;
+}
+#endif
+
+static GERoomPacket *findRoomPacket(const GfxNativeRoomDraw *d) {
+    for(unsigned i=0;i<GE_ROOM_PACKET_LIMIT;++i) {
+        GERoomPacket &r=s_roomPackets[i];
+        if(r.mesh.Ready() && r.source==d->command_address &&
+           r.room==d->room && r.revision==d->revision &&
+           r.signature==d->signature && r.vertices==d->vertex_count &&
+           r.texture0==s_selectedTex[0] &&
+           r.samplerU==s_addressMode[0][0] &&
+           r.samplerV==s_addressMode[0][1] &&
+           r.shaderKey==(unsigned)(uintptr_t)s_shader &&
+           r.cullMode==d->cull_mode && r.textureUnits==d->texture_units) {
+            r.lastUse=++s_roomPacketClock;
+            return &r;
+        }
+    }
+    return 0;
+}
+static void nativeRoomState(const GfxNativeRoomDraw *d,GENativeShader *shader) {
+    nativeBatchBarrier();
+    /* A freshly selected native combiner is identical to that used by the
+     * nonresident Fast3D packet. This subset has no per-triangle constants. */
+    if(!s_batchState.shaderValid || s_batchState.shaderHandle!=shader->handle) {
+        s_device->SetPixelShader(shader->handle);
+        s_batchState.shaderHandle=shader->handle;s_batchState.shaderValid=1;
+        s_batchState.constantsValid=s_batchState.fogValid=s_batchState.alphaValid=0;
+    }
+    static const DWORD emptyConstants[8]={0,0,0,0,0,0,0,0};
+    if(!s_batchState.constantsValid ||
+       memcmp(s_batchState.constants,emptyConstants,sizeof(emptyConstants))) {
+        float values[8][4];memset(values,0,sizeof(values));
+        s_device->SetPixelShaderConstant(0,values,8);
+        memcpy(s_batchState.constants,emptyConstants,sizeof(emptyConstants));
+        s_batchState.constantsValid=1;
+    }
+    if(!s_batchState.fogValid || s_batchState.fogColor!=0xFF000000u) {
+        s_device->SetRenderState(D3DRS_FOGENABLE,FALSE);
+        s_device->SetRenderState(D3DRS_FOGCOLOR,0xFF000000u);
+        s_batchState.fogColor=0xFF000000u;s_batchState.fogValid=1;
+    }
+    if(!s_batchState.alphaValid || s_batchState.alphaRef!=0) {
+        s_device->SetRenderState(D3DRS_ALPHATESTENABLE,FALSE);
+        s_device->SetRenderState(D3DRS_ALPHAREF,0);
+        s_batchState.alphaRef=0;s_batchState.alphaValid=1;
+    }
+    bindNoiseTexture(false);
+    s_device->SetRenderState(D3DRS_SPECULARENABLE,TRUE);
+    s_device->SetRenderState(D3DRS_CULLMODE,
+        d->cull_mode==1u?D3DCULL_CW:
+        d->cull_mode==2u?D3DCULL_CCW:D3DCULL_NONE);
+    s_device->SetVertexShader(GE_ROOM_FVF);
+    /* Row-vector projection, same MP_matrix that Fast3D used for original
+     * software clip vertices. Account for widescreen offset and Xbox D3D
+     * [0,1] depth while preserving the original clip W exactly. */
+    D3DMATRIX identity,projection;
+    memset(&identity,0,sizeof(identity));
+    identity._11=identity._22=identity._33=identity._44=1.0f;
+    float *m=(float*)&projection;
+    const float scale=d->aspect_scale;
+    for(unsigned row=0;row<4u;++row) {
+        const float w=d->matrix[row*4u+3u];
+        m[row*4u+0u]=(d->matrix[row*4u]+d->aspect_offset*w)*scale;
+        m[row*4u+1u]=d->matrix[row*4u+1u];
+        m[row*4u+2u]=0.5f*(d->matrix[row*4u+2u]+w)*(s_zFar-s_zNear)+s_zNear*w;
+        m[row*4u+3u]=w;
+        /* Original XYZRHW backend applies -0.5 screen-space pixel offset. */
+        m[row*4u+0u]-=w/(float)s_viewport.Width;
+        m[row*4u+1u]+=w/(float)s_viewport.Height;
+    }
+    s_device->SetTransform(D3DTS_WORLD,&identity);
+    s_device->SetTransform(D3DTS_VIEW,&identity);
+    s_device->SetTransform(D3DTS_PROJECTION,&projection);
+}
+static bool api_nativeRoomDraw(const GfxNativeRoomDraw *d) {
+#if GE_NV2A_ROOM_NATIVE_PACKETS
+    GERoomPacket *p=d?findRoomPacket(d):0;
+    if(!p)return false;
+    GENativeShader *shader=0;
+    if(!roomMaterialSafe(d,&shader))return false;
+    nativeRoomState(d,shader);
+    const bool drawn=p->mesh.DrawTriangles(s_device);
+    /* Rebind the screen-space pipeline next time through flushNativeBatch.
+     * The N64 frontend's RDP state and the shader selection are untouched. */
+    s_device->SetRenderState(D3DRS_CULLMODE,D3DCULL_NONE);
+    s_device->SetVertexShader(GE_FVF);
+    s_streamBound=0;
+    s_batchState.vertexValid=0;
+    if(drawn) {
+        const unsigned tris=d->vertex_count/3u;
+        ++s_roomGPUFrames;s_roomGPUTriangles+=tris;
+        s_roomGPUFrameTris+=tris;
+        ++s_frameStats.gpu_batches;s_frameStats.output_triangles+=tris;
+        s_drawCount+=tris;
+    }
+    return drawn;
+#else
+    (void)d;return false;
+#endif
+}
+static bool api_nativeRoomPrepare(const GfxNativeRoomDraw *d) {
+#if GE_NV2A_ROOM_NATIVE_PACKETS
+    if(!d)return false;
+#if GE_XBOX_ROOM_COLD_PREFLIGHT
+    /* A NULL source and NULL vertex array denote a *cold admission probe*,
+     * never a native draw. This must remain read-only: no D3D calls, no
+     * shader builds, no allocation, no change to the packet LRU or throttle.
+     * The source has already counted triangles but hasn't copied/UV-packed
+     * their vertices. A warm lookup has a non-NULL command_address. */
+    if(!d->vertices && !d->command_address) {
+        if(!s_device || s_roomGPUAllocationFailed ||
+           s_roomPacketBuildsFrame>=GE_XBOX_ROOM_UPLOADS_PER_FRAME ||
+           (s_roomPrepareFrame%GE_XBOX_ROOM_UPLOAD_FRAME_INTERVAL)!=0u ||
+           !d->vertex_count || d->vertex_count>1024u ||
+           (d->vertex_count%3u)!=0u)return false;
+        /* With 6D's default non-indexed packets, the byte count is exact.
+         * For optional indexed packets, unique-vertex count is unknown
+         * until conversion: never reject solely on a direct-size estimate
+         * because an indexed packet could still fit. */
+#if GE_XBOX_ROOM_NO_LIVE_EVICTION
+#if GE_NV2A_ROOM_INDEXED_PACKETS
+        if(s_roomPacketBytes>=GE_ROOM_VERTEX_BYTES)return false;
+#else
+        const unsigned coldBytes=d->vertex_count*sizeof(GERoomVertex);
+        if(s_roomPacketBytes>GE_ROOM_VERTEX_BYTES ||
+           coldBytes>GE_ROOM_VERTEX_BYTES-s_roomPacketBytes)return false;
+#endif
+        for(unsigned i=0;i<GE_ROOM_PACKET_LIMIT;++i)
+            if(!s_roomPackets[i].mesh.Ready())return true;
+        return false; /* No live eviction: nothing safe to allocate. */
+#else
+        /* Do not change legacy LRU eviction semantics in an A/B build. */
+        return true;
+#endif
+    }
+#endif
+    /* No vertex pointer: a read-only residency query after a camera-bound
+     * hardware fallback. Preserve the frontend metadata when the GPU
+     * packet still exists, avoiding rebuilds during near-plane crossings. */
+    if(!d->vertices)return findRoomPacket(d)!=0;
+    if(s_roomGPUAllocationFailed ||
+       s_roomPacketBuildsFrame>=GE_XBOX_ROOM_UPLOADS_PER_FRAME ||
+       !d->vertex_count || d->vertex_count>1024u ||
+       (d->vertex_count%3u)!=0u ||
+       (s_roomPrepareFrame%GE_XBOX_ROOM_UPLOAD_FRAME_INTERVAL)!=0u)return false;
+    GENativeShader *shader=0;
+    if(!roomMaterialSafe(d,&shader) || findRoomPacket(d))return false;
+#if GE_NV2A_ROOM_INDEXED_PACKETS
+    unsigned uniqueVertices=0;
+    if(!geRoomIndexPacket(d,&uniqueVertices))return false;
+    const unsigned directBytes=d->vertex_count*sizeof(GERoomVertex);
+    const unsigned indexedBytes=uniqueVertices*sizeof(GERoomVertex)+
+                                d->vertex_count*sizeof(unsigned short);
+    /* Use the index buffer only if it actually saves >=25% of resident
+     * space. Avoid extra index submission overhead for nearly unique runs. */
+    const bool useIndexed=(indexedBytes*4u<=directBytes*3u);
+    const unsigned bytes=useIndexed?indexedBytes:directBytes;
+#else
+    const unsigned bytes=d->vertex_count*sizeof(GERoomVertex);
+#endif
+    if(bytes>GE_ROOM_VERTEX_BYTES)return false;
+    /* Always enforce the actual resident-byte cap *before* any D3D allocation.
+     * Prevent unsigned overflow even if corrupt metadata slips through. */
+#if GE_XBOX_ROOM_NO_LIVE_EVICTION
+    if(s_roomPacketBytes>GE_ROOM_VERTEX_BYTES ||
+       bytes>GE_ROOM_VERTEX_BYTES-s_roomPacketBytes)return false;
+    GERoomPacket *dest=0;
+    for(unsigned i=0;i<GE_ROOM_PACKET_LIMIT;++i)
+        if(!s_roomPackets[i].mesh.Ready()){dest=&s_roomPackets[i];break;}
+    /* Never Release/replace a VB or IB while the NV2A could reference it.
+     * A full cache is a normal software-fallback condition, not an error. */
+    if(!dest)return false;
+#else
+    GERoomPacket *dest=0;
+    for(unsigned i=0;i<GE_ROOM_PACKET_LIMIT;++i)
+        if(!s_roomPackets[i].mesh.Ready()){dest=&s_roomPackets[i];break;}
+    if(!dest) {
+        for(unsigned i=0;i<GE_ROOM_PACKET_LIMIT;++i)
+            if(!dest || s_roomPackets[i].lastUse<dest->lastUse)dest=&s_roomPackets[i];
+    }
+    if(!dest)return false;
+    /* Reclaim the destination FIRST; 6C previously evicted unrelated packets
+     * even when replacing the selected slot would have freed enough space. */
+    if(dest->mesh.Ready()){
+        s_roomPacketBytes-=dest->mesh.Bytes();
+        dest->mesh.Reset();dest->source=0;dest->vertices=0;
+    }
+    while(bytes>GE_ROOM_VERTEX_BYTES-s_roomPacketBytes) {
+        GERoomPacket *oldest=0;
+        for(unsigned i=0;i<GE_ROOM_PACKET_LIMIT;++i) {
+            GERoomPacket *r=&s_roomPackets[i];
+            if(r==dest || !r->mesh.Ready())continue;
+            if(!oldest || r->lastUse<oldest->lastUse)oldest=r;
+        }
+        if(!oldest)return false;
+        s_roomPacketBytes-=oldest->mesh.Bytes();
+        oldest->mesh.Reset();oldest->source=0;oldest->vertices=0;
+    }
+#endif
+    ++s_roomPacketBuildsFrame;
+    dest->source=0;dest->vertices=0;
+#if GE_NV2A_ROOM_INDEXED_PACKETS
+    if(useIndexed) {
+        if(!dest->mesh.BuildIndexed(s_device,uniqueVertices,sizeof(GERoomVertex),
+                                    GE_ROOM_FVF,s_roomUnique,d->vertex_count,
+                                    s_roomIndices)) {
+            s_roomGPUAllocationFailed=true;
+            return false;
+        }
+    } else
+#endif
+    {
+    void *mapped=0;
+    if(!dest->mesh.BeginBuild(s_device,d->vertex_count,sizeof(GERoomVertex),GE_ROOM_FVF,&mapped)) {
+        s_roomGPUAllocationFailed=true;
+        return false;
+    }
+    GERoomVertex *dst=(GERoomVertex*)mapped;
+    for(unsigned i=0;i<d->vertex_count;++i) {
+        const GfxNativeRoomVertex &v=d->vertices[i];
+        GERoomVertex &o=dst[i];
+        o.x=v.x;o.y=v.y;o.z=v.z;
+        o.color=d->texture_units || s_shader->inputs?v.color:0u;
+        /* The original backend uses diffuse RGB from V0, no varying
+         * alpha or V1 for this narrowly selected material subset. */
+        o.specular=0u;o.u0=v.u0;o.v0=v.v0;o.u1=o.v1=0.0f;
+    }
+    if(!dest->mesh.EndBuild()) {
+        s_roomGPUAllocationFailed=true;
+        return false;
+    }
+    }
+    dest->source=d->command_address;dest->room=d->room;
+    dest->revision=d->revision;dest->signature=d->signature;
+    dest->vertices=d->vertex_count;dest->lastUse=++s_roomPacketClock;
+    dest->shaderKey=(unsigned)(uintptr_t)s_shader;
+    dest->texture0=s_selectedTex[0];dest->samplerU=s_addressMode[0][0];
+    dest->samplerV=s_addressMode[0][1];
+    dest->cullMode=d->cull_mode;dest->textureUnits=d->texture_units;
+    s_roomPacketBytes+=bytes;
+    return true;
+#else
+    (void)d;return false;
+#endif
+}
+
 extern "C" {
 GfxRenderingAPI gfx_xbox_d3d8_api={
     api_name,api_max_texture,api_clip,api_unload_shader,api_load_shader,
@@ -1968,6 +2624,7 @@ GfxRenderingAPI gfx_xbox_d3d8_api={
     api_draw,api_init,api_resize,api_begin,api_end,api_finish,
     api_create_fb,api_fb_params,api_fb_start,api_fb_copy,api_fb_clear,
     api_fb_resolve,api_fb_tex,api_fb_select,api_tex_delete,
-    api_filter,api_get_filter,api_mip_filter,api_aniso,api_get_aniso
+    api_filter,api_get_filter,api_mip_filter,api_aniso,api_get_aniso,
+    api_nativeRoomDraw,api_nativeRoomPrepare
 };
 }

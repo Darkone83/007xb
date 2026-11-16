@@ -1,4 +1,9 @@
 #include <ultra64.h>
+#if defined(GE_XBOX_NATIVE32)
+#ifndef GE_XBOX_NATIVE_ROOM_BATCHES
+#define GE_XBOX_NATIVE_ROOM_BATCHES 1
+#endif
+#endif
 #include <PR/os.h>
 #include <PR/gbi.h>
 #include <gbi_extension.h>
@@ -32,6 +37,17 @@
 
 #define BG_STACK_SIZE 20
 #define STAGES_MAX 38
+
+/* Xbox-only optimisation: preserve every original visibility and scissor
+ * decision, but avoid rescanning the drawn-room list on every character
+ * visibility/bbox query.  Disable with GE_XBOX_BG_ROOM_INDEX_CACHE=0. */
+#if defined(GE_XBOX_NATIVE32)
+#ifndef GE_XBOX_BG_ROOM_INDEX_CACHE
+#define GE_XBOX_BG_ROOM_INDEX_CACHE 1
+#endif
+#else
+#define GE_XBOX_BG_ROOM_INDEX_CACHE 0
+#endif
 
 typedef struct GlobalVisCommand {
     u8 type;
@@ -470,6 +486,66 @@ next_entry:
 }
 
 
+#if GE_XBOX_BG_ROOM_INDEX_CACHE
+/* One generation for each portal/room visibility pass, INCLUDING the extra
+ * authored-distance pass when D466 is enabled.  No stale indices can cross
+ * a render pass, split-screen view, or level transition.  The original room
+ * array stays authoritative (we retain the linear fallback). */
+static u32 s_bgRoomDrawGeneration = 1;
+static u32 s_bgRoomDrawStamp[MAXROOMCOUNT];
+static s16 s_bgRoomDrawIndex[MAXROOMCOUNT];
+
+static void bgRoomDrawCacheNewPass(void)
+{
+    ++s_bgRoomDrawGeneration;
+    if (s_bgRoomDrawGeneration == 0)
+    {
+        s32 i;
+        for (i = 0; i < MAXROOMCOUNT; ++i)
+        {
+            s_bgRoomDrawStamp[i] = 0;
+        }
+        s_bgRoomDrawGeneration = 1;
+    }
+}
+
+static void bgRoomDrawCacheRemember(s32 room_id, s32 index)
+{
+    if (room_id >= 0 && room_id < MAXROOMCOUNT)
+    {
+        s_bgRoomDrawIndex[room_id] = (s16)index;
+        s_bgRoomDrawStamp[room_id] = s_bgRoomDrawGeneration;
+    }
+}
+
+static s32 bgFindDrawnRoomIndex(s32 room_id)
+{
+    s32 i;
+    if (room_id >= 0 && room_id < MAXROOMCOUNT &&
+        s_bgRoomDrawStamp[room_id] == s_bgRoomDrawGeneration)
+    {
+        i = (s32)s_bgRoomDrawIndex[room_id];
+        if (i >= 0 && i < g_BgNumberOfRoomsDrawn &&
+            dword_CODE_bss_8007FFA0[i].roomid == room_id)
+        {
+            return i;
+        }
+    }
+
+    /* Kept for unusual callers and to retain exact first-match semantics
+     * if another source path ever modifies the room draw list directly. */
+    for (i = 0; i < g_BgNumberOfRoomsDrawn; ++i)
+    {
+        if (dword_CODE_bss_8007FFA0[i].roomid == room_id)
+        {
+            bgRoomDrawCacheRemember(room_id, i);
+            return i;
+        }
+    }
+    return -1;
+}
+#endif
+
 /**
  * Address 0x7F0B39BC.
  *
@@ -486,9 +562,15 @@ s32 sub_GAME_7F0B39BC(int curroom,int unk1, bbox2d * screensize, s32 next)
     }
 
     // Need g_BgNumberOfRoomsDrawn in a3
+#if GE_XBOX_BG_ROOM_INDEX_CACHE
+    i = bgFindDrawnRoomIndex(curroom);
+    if (i >= 0)
+#else
     for (i = 0; i < g_BgNumberOfRoomsDrawn; i++)
     {
-        if (curroom == dword_CODE_bss_8007FFA0[i].roomid) {
+        if (curroom == dword_CODE_bss_8007FFA0[i].roomid)
+#endif
+        {
             if (dword_CODE_bss_8007FFA0[i].unk1 < unk1) {
                 dword_CODE_bss_8007FFA0[i].unk1 = unk1;
             }
@@ -502,7 +584,9 @@ s32 sub_GAME_7F0B39BC(int curroom,int unk1, bbox2d * screensize, s32 next)
 
             return temp;
         }
+#if !GE_XBOX_BG_ROOM_INDEX_CACHE
     }
+#endif
 
 #if defined(VERSION_EU)
     i = g_BgNumberOfRoomsDrawn;
@@ -532,6 +616,9 @@ s32 sub_GAME_7F0B39BC(int curroom,int unk1, bbox2d * screensize, s32 next)
     dword_CODE_bss_8007FFA0[i].bbox.max.y = screensize->max.y;
     dword_CODE_bss_8007FFA0[i].next = next;
     g_BgNumberOfRoomsDrawn = i + 1;
+#if GE_XBOX_BG_ROOM_INDEX_CACHE
+    bgRoomDrawCacheRemember(curroom, i);
+#endif
 
     if (g_BgNumberOfRoomsDrawn) {}
 
@@ -576,6 +663,9 @@ void bgResetPortalVisitCounts(void)
   s32 i;
 
   g_BgNumberOfRoomsDrawn = 0;
+#if GE_XBOX_BG_ROOM_INDEX_CACHE
+  bgRoomDrawCacheNewPass();
+#endif
 #ifdef VERSION_EU
   eu_cdata_0x1f0d0 = 0;
 #endif
@@ -601,9 +691,14 @@ void bgResetPortalVisitCounts(void)
 s32 bgGet2dBboxByRoomId(s32 room_id, struct bbox2d *result)
 {
     s32 i;
+#if GE_XBOX_BG_ROOM_INDEX_CACHE
+    i = bgFindDrawnRoomIndex(room_id);
+    if (i >= 0)
+#else
     for (i=0; i<g_BgNumberOfRoomsDrawn; i++)
     {
         if (room_id == dword_CODE_bss_8007FFA0[i].roomid)
+#endif
         {
             result->f[0][0] = dword_CODE_bss_8007FFA0[i].bbox.f[0][0];
             result->f[0][1] = dword_CODE_bss_8007FFA0[i].bbox.f[0][1];
@@ -612,7 +707,9 @@ s32 bgGet2dBboxByRoomId(s32 room_id, struct bbox2d *result)
 
             return 1;
         }
+#if !GE_XBOX_BG_ROOM_INDEX_CACHE
     }
+#endif
 
     // It's pointless to set those because when this function returns false, result is unused
     result->f[0][0] = 0.0f;
@@ -2664,6 +2761,32 @@ s32 bgLoadRoomSecondaryGdl(s32 roomnum, u8 *dst, s32 allocsize)
 }
 
 
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_NATIVE_ROOM_BATCHES
+/* CPU-side room edits never touch D3D resources: the graphics worker
+ * generations invalidate any resident GPU copies when the room reloads. */
+static u32 s_native_room_revision[MAXROOMCOUNT];
+void geNativeRoomBumpRevision(s32 room) {
+    if(room<0 || room>=MAXROOMCOUNT)return;
+    if(++s_native_room_revision[room]==0u)++s_native_room_revision[room];
+}
+/* Reserved Xbox-only display-list metadata, not N64 microcode opcodes.
+ * The original room DL and all RDP commands execute unchanged. */
+static Gfx* geNativeRoomBegin(Gfx* gdl,s32 room) {
+    gdl->words.w0=((u32)0x49u<<24)|(u32)(room&0xffff);
+    gdl->words.w1=OS_K0_TO_PHYSICAL(g_BgRoomInfo[room].ptr_expanded_mapping_info);
+    ++gdl;
+    gdl->words.w0=((u32)0x4bu<<24)|(s_native_room_revision[room]&0xffffffu);
+    gdl->words.w1=(u32)g_BgRoomInfo[room].usize_primary_DL_binary;
+    return gdl+1;
+}
+static Gfx* geNativeRoomEnd(Gfx* gdl) {
+    gdl->words.w0=(u32)0x4au<<24;
+    gdl->words.w1=0;
+    return gdl+1;
+}
+#endif
+
+
 s32 bgCheckIfRoomModelNeedsLoad(s32 roomID)
 {
     g_BgRoomInfo[roomID].field_35 = 1;
@@ -2789,6 +2912,9 @@ void bgLoadRoomModelData(s32 roomID)
 
     g_BgRoomInfo[roomID].cur_room_totalsize = ((used + 0x20) & ~0xf);
     g_BgRoomInfo[roomID].model_bin_loaded = 1;
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_NATIVE_ROOM_BATCHES
+    geNativeRoomBumpRevision(roomID);
+#endif
     D104LD("D104 LOAD room=%d OK used=%d vtx=%d prim=%d sec=%d\n", roomID, used,
         (s32)g_BgRoomInfo[roomID].usize_point_index_binary,
         (s32)g_BgRoomInfo[roomID].usize_primary_DL_binary,
@@ -2879,6 +3005,9 @@ void delete_room_data(s32 roomID)
     }
 
     room->model_bin_loaded = 0;
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_NATIVE_ROOM_BATCHES
+    geNativeRoomBumpRevision(roomID);
+#endif
     roomsHandleStateDebugging();
 }
 
@@ -2972,9 +3101,15 @@ Gfx *bgRenderRoomPrimary(Gfx *gdl, s32 room_index)
         else
         {
             gdl = applyRoomMatrixToDisplayList(gdl, room_index);
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_NATIVE_ROOM_BATCHES
+            gdl = geNativeRoomBegin(gdl,room_index);
+#endif
 
             gSPSegment(gdl++, SPSEGMENT_BG_VTX, OS_K0_TO_PHYSICAL(g_BgRoomInfo[room_index].vertices));
             gSPDisplayList(gdl++, OS_K0_TO_PHYSICAL(g_BgRoomInfo[room_index].ptr_expanded_mapping_info));
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_NATIVE_ROOM_BATCHES
+            gdl = geNativeRoomEnd(gdl);
+#endif
 
             // Set the room's state to "loaded"
             g_BgRoomInfo[room_index].model_bin_loaded = 1;

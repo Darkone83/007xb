@@ -5061,6 +5061,40 @@ void init_menu0f_mpcharsel(void)
 
 
 
+/* Native Xbox multiplayer setup navigation. The original -2..1 range mapping
+ * requires much more RIGHT-stick deflection than LEFT. Keep original N64
+ * behavior outside GE_XBOX_NATIVE32. Do not consume the gamepad sideband:
+ * menu navigation uses the normal SI edges and per-port samples. */
+#if defined(GE_XBOX_NATIVE32)
+#ifndef GE_XBOX_MP_MENU_STICK_FIX
+#define GE_XBOX_MP_MENU_STICK_FIX 1
+#endif
+#if GE_XBOX_MP_MENU_STICK_FIX
+static s32 nativeMpMenuStickDirection(s32 port)
+{
+    s32 x=joyGetStickX((s8)port);
+    return x<=-20?-1:(x>=20?1:0);
+}
+static s32 nativeMpMenuStickCentered(s32 port)
+{
+    s32 x=joyGetStickX((s8)port);
+    return x>-16 && x<16;
+}
+#endif
+#endif
+
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_MP_MENU_STICK_FIX
+#define MP_NATIVE_LEFT_STICK(i)       (nativeMpMenuStickDirection(i) < 0)
+#define MP_NATIVE_RIGHT_STICK(i)      (nativeMpMenuStickDirection(i) > 0)
+#define MP_NATIVE_STICK_CENTER(i)     nativeMpMenuStickCentered(i)
+#define MP_NATIVE_CONFIRM_R          | R_TRIG
+#else
+#define MP_NATIVE_LEFT_STICK(i)       (joyGetStickXInRange(i,-2,1) < -1)
+#define MP_NATIVE_RIGHT_STICK(i)      (joyGetStickXInRange(i,-2,1) > 0)
+#define MP_NATIVE_STICK_CENTER(i)     ((joyGetStickXInRange(i,-2,1)==-1)||(joyGetStickXInRange(i,-2,1)==0))
+#define MP_NATIVE_CONFIRM_R
+#endif
+
 //********************************************************************************************************
 //MULTIPLAYER CHARACTER SELECT
 //********************************************************************************************************
@@ -5124,7 +5158,11 @@ void interface_menu0F_mpcharsel(void)
                     mp_char_cur_select_player[i]++;
                 }
             }
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_MP_MENU_STICK_FIX
+            else if (joyGetButtonsPressedThisFrame(i, A_BUTTON|Z_TRIG|R_TRIG|START_BUTTON))
+#else
             else if (joyGetButtonsPressedThisFrame(i, A_BUTTON|Z_TRIG|START_BUTTON)) // 0xb000
+#endif
             {
                 if (get_players_who_have_selected_mp_char(mp_char_cur_select_player[i]) == 0)
                 {
@@ -5135,7 +5173,11 @@ void interface_menu0F_mpcharsel(void)
                     sndPlaySfx((struct ALBankAlt_s *) g_musicSfxBufferPtr, DOOR_METAL_CLOSE2_SFX, NULL);
                 }
             }
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_MP_MENU_STICK_FIX
+            else if (nativeMpMenuStickDirection(i) > 0)
+#else
             else if (joyGetStickXInRange(i, -2, 1) > 0)
+#endif
             {
                 if (mp_char_select_scroll_offset[i] == 0)
                 {
@@ -5145,7 +5187,11 @@ void interface_menu0F_mpcharsel(void)
                     }
                 }
             }
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_MP_MENU_STICK_FIX
+            else if (nativeMpMenuStickDirection(i) < 0 && mp_char_select_scroll_offset[i] == 0)
+#else
             else if ((joyGetStickXInRange(i, -2, 1) < -1) && (mp_char_select_scroll_offset[i] == 0))
+#endif
             {
                 if (mp_char_cur_select_player[i] > 0)
                 {
@@ -5241,7 +5287,21 @@ Gfx *frontRenderCharacterPortrait(Gfx *DL, s32 arg1, s32 arg2, s32 arg3, s32 arg
     DL = microcode_constructor(DL);
 
     guOrtho(spD4, 0.0f, 440.0f, 0.0f, 330.0f, 1.0f, 10.0f, 1.0f);
+#if defined(GE_XBOX_NATIVE32) && !defined(GE_XBOX_MP_PORTRAIT_MODELVIEW_FIX)
+#define GE_XBOX_MP_PORTRAIT_MODELVIEW_FIX 1
+#endif
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_MP_PORTRAIT_MODELVIEW_FIX
+    /* The existing guRotate helper takes DEGREES, not radians. Passing PI
+     * rotated the portrait quads by ~3.14 degrees around world X. Their
+     * Y coordinates are in the hundreds, so that small tilt moves their
+     * Z positions well beyond the orthographic near plane (-1..-10).
+     * Player one's portraits vanish, while only the edge of player two's
+     * survives. These are 2D screen-aligned tiles; leave the modelview
+     * identity and retain the authored z=-5 for all four player panels. */
+    guMtxIdent(spD0);
+#else
     guRotate(spD0, 3.1415927f, 1.0f, 0.0f, 0.0f);
+#endif
 
     vtx_index = 0;
 
@@ -5506,7 +5566,7 @@ void interface_menu10_mphandicap(void)
         if (player_has_selected_char[i] == 0)
         {
             // 0x202
-            if (joyGetButtonsPressedThisFrame(i, L_JPAD|L_CBUTTONS) || ((joyGetStickXInRange(i, -2, 1) < -1) && dword_CODE_bss_80069760[i] != 0))
+            if (joyGetButtonsPressedThisFrame(i, L_JPAD|L_CBUTTONS) || ((MP_NATIVE_LEFT_STICK(i)) && dword_CODE_bss_80069760[i] != 0))
             {
                 if (player_handicap[i] > 0)
                 {
@@ -5514,20 +5574,20 @@ void interface_menu10_mphandicap(void)
                 }
             }
             // 0x101
-            else if (joyGetButtonsPressedThisFrame(i, R_JPAD|R_CBUTTONS) || ((joyGetStickXInRange(i, -2, 1) > 0) && dword_CODE_bss_80069760[i] != 0))
+            else if (joyGetButtonsPressedThisFrame(i, R_JPAD|R_CBUTTONS) || ((MP_NATIVE_RIGHT_STICK(i)) && dword_CODE_bss_80069760[i] != 0))
             {
                 if (player_handicap[i] < 0xA)
                 {
                     player_handicap[i]++;
                 }
             }
-            else if (joyGetButtonsPressedThisFrame(i, A_BUTTON|Z_TRIG|START_BUTTON)) // 0xb000
+            else if (joyGetButtonsPressedThisFrame(i, A_BUTTON|Z_TRIG MP_NATIVE_CONFIRM_R |START_BUTTON)) // 0xb000
             {
                 player_has_selected_char[i] = 1;
                 sndPlaySfx((struct ALBankAlt_s *) g_musicSfxBufferPtr, DOOR_METAL_CLOSE2_SFX, NULL);
             }
 
-            if ((joyGetStickXInRange(i, -2, 1) == -1) || (joyGetStickXInRange(i, -2, 1) == 0))
+            if (MP_NATIVE_STICK_CENTER(i))
             {
                 dword_CODE_bss_80069760[i] = 1;
             }
@@ -5724,12 +5784,12 @@ void interface_menu11_mpcontrols(void)
             if (!allowDual && controllerIsDualControlType(controlstyle_player[i]))
                 controlstyle_player[i] = CONTROLLER_CONFIG_HONEY;
             if (joyGetButtonsPressedThisFrame(i, L_JPAD|L_CBUTTONS)
-                || (joyGetStickXInRange(i, -2, 1) < -1 && dword_CODE_bss_80069760[i] != 0))
+                || (MP_NATIVE_LEFT_STICK(i) && dword_CODE_bss_80069760[i] != 0))
                 direction = -1;
             else if (joyGetButtonsPressedThisFrame(i, R_JPAD|R_CBUTTONS)
-                || (joyGetStickXInRange(i, -2, 1) > 0 && dword_CODE_bss_80069760[i] != 0))
+                || (MP_NATIVE_RIGHT_STICK(i) && dword_CODE_bss_80069760[i] != 0))
                 direction = 1;
-            else if (joyGetButtonsPressedThisFrame(i, A_BUTTON|Z_TRIG|START_BUTTON))
+            else if (joyGetButtonsPressedThisFrame(i, A_BUTTON|Z_TRIG MP_NATIVE_CONFIRM_R |START_BUTTON))
             {
                 player_has_selected_char[i] = 1;
                 sndPlaySfx((struct ALBankAlt_s *)g_musicSfxBufferPtr, DOOR_METAL_CLOSE2_SFX, NULL);
@@ -5818,7 +5878,7 @@ void interface_menu11_mpcontrols(void)
             }
 #endif
 
-            if ((joyGetStickXInRange(i, -2, 1) == -1) || (joyGetStickXInRange(i, -2, 1) == 0))
+            if (MP_NATIVE_STICK_CENTER(i))
             {
                 dword_CODE_bss_80069760[i] = 1;
             }
@@ -8851,6 +8911,28 @@ void menu_init(void)
 
 Gfx * menu_jump_constructor_handler(Gfx *DL)
 {
+#if defined(GE_XBOX_NATIVE32)
+#ifndef GE_XBOX_MP_MENU_CANVAS_EMIT
+#define GE_XBOX_MP_MENU_CANVAS_EMIT 1
+#endif
+#if GE_XBOX_MP_MENU_CANVAS_EMIT
+    /* Multiplayer menus use a 440x330 N64 VI canvas. Unlike gameplay,
+     * menu_jump_constructor_handler never calls viSetupCurrentPlayerView,
+     * so the earlier canvas command in fr.c never ran for portraits.
+     * Carry these dimensions within the DL BEFORE its first scissor or
+     * viewport operation: the graphics worker must not sample VI globals. */
+    {
+        const s32 canvasW = viGetX();
+        const s32 canvasH = viGetY();
+        if ((canvasW == 440 && canvasH == 330) ||
+            (canvasW == 320 && canvasH == 240)) {
+            DL->words.w0 = ((u32)G_XBOX_MP_VI_CANVAS_EXT << 24);
+            DL->words.w1 = ((u32)(u16)canvasW << 16) | (u16)canvasH;
+            DL++;
+        }
+    }
+#endif
+#endif
 #ifdef PORT
     /* D335: under native widescreen the front end is 4:3 logical content;
      * pillarbox it (centred, undistorted) instead of stretching it to the

@@ -45,6 +45,7 @@
 #include "PR/R4300.h"
 #if defined(GE_XBOX_NATIVE32)
 #include "ge_native_platform.h"
+#include "ge_phase0_profile.h"
 #endif
 
 /**
@@ -644,6 +645,9 @@ void bossMainloop(void)
                                 nativeFirstFrame = 2;
                             }
 #endif
+#if defined(GE_XBOX_NATIVE32)
+                            geP0FrameBegin((int)g_StageNum);
+#endif
                             joyConsumeSamplesWrapper();
                             permit_stderr(0);
 
@@ -720,6 +724,9 @@ void bossMainloop(void)
                                 }
                             }
 
+#if defined(GE_XBOX_NATIVE32)
+                            geP0PhaseMark(GE_P0_LOGIC);
+#endif
 #ifdef PORT
                             /* D250: isolate DL-building cost (culling,
                              * animation, scene traversal) from gfx_run's
@@ -756,6 +763,9 @@ void bossMainloop(void)
                             }
 #endif
 
+#if defined(GE_XBOX_NATIVE32)
+                            geP0PhaseMark(GE_P0_RENDER);
+#endif
                             // Lets Visualise the Coverage Value used for Scilohete Anti-Ailising (edges)
                             // (done on the VI), also produces a cool looking linemode - providing AA is working.
                             if (get_debug_VisCVG_flag())
@@ -827,6 +837,9 @@ void bossMainloop(void)
                                 indycommHostSendDump(taskGrabBuffer, (u8*)0x80000000, 0x400000);
                             }
 
+#if defined(GE_XBOX_NATIVE32)
+                            geP0PhaseMark(GE_P0_PREP);
+#endif
 #ifdef PORT
                             /* D441 (census TOP-10 item 8): the reply message is a stack
                              * local; routing its address through the s32 rspReplyMsg
@@ -847,7 +860,14 @@ void bossMainloop(void)
                                 nativeFirstFrame = 0;
                             }
 #endif
+#if defined(GE_XBOX_NATIVE32)
+                            geP0ScopeStart(GE_P0_MEMA_DEFRAG);
+#endif
                             memaSingleDefragPass();
+#if defined(GE_XBOX_NATIVE32)
+                            geP0ScopeEnd(GE_P0_MEMA_DEFRAG);
+                            geP0FrameEnd();
+#endif
 #ifdef VERSION_EU
                             eu_sub_7f0c00a4();
 #endif
@@ -874,6 +894,9 @@ void bossMainloop(void)
         GENativePlatform_Trace("STAGE LEAVE stage=%d next=%d demo=%d tick=%d\n",
             (int)g_StageNum, (int)g_MainStageNum, (int)get_is_ramrom_flag(),
             (int)g_GlobalTimer);
+#endif
+#if defined(GE_XBOX_NATIVE32)
+        geP0StageExit((int)g_StageNum);
 #endif
         lvlUnloadStageTextData();
         stop_demo_playback();

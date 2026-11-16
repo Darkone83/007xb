@@ -5,6 +5,14 @@
 #include <string.h>
 #include "xb_ge_audio.h"
 #include "ge_native_audio.h"
+/* Phase 2: Avoid a redundant hardware cursor/zero-fill pass if the engine's
+ * own PCM submit/AI feedback has sampled the cursor during this millisecond.
+ * This affects only the periodic host service, never a producer submission
+ * or an AI length/queue read. DirectSoundDoWork still runs on every tick.
+ * 0 = original service path for immediate A/B/rollback. */
+#ifndef GE_XBOX_COALESCE_AUDIO_SERVICE_CURSOR
+#define GE_XBOX_COALESCE_AUDIO_SERVICE_CURSOR 1
+#endif
 extern "C" void mixerInit(void);
 
 #define GE_AUDIO_RATE 22050u
@@ -104,7 +112,17 @@ void GEAudio_Tick(void)
 {
     if(!s_running||!s_guard_ready)return;
     DirectSoundDoWork();
-    EnterCriticalSection(&s_guard);Clock();LeaveCriticalSection(&s_guard);
+    EnterCriticalSection(&s_guard);
+#if GE_XBOX_COALESCE_AUDIO_SERVICE_CURSOR
+    /* s_last_poll_ms is updated only after a successful Clock() cursor read.
+     * The guard serializes it with producer/AI reads. Only sub-ms cursor
+     * advancement is skipped; the next service pass catches up. PCM
+     * producer and AI feedback calls continue to sample fresh. */
+    if(GetTickCount()!=s_last_poll_ms)Clock();
+#else
+    Clock();
+#endif
+    LeaveCriticalSection(&s_guard);
 }
 int GEAudio_SubmitPCM(const short *pcm,GEAudioU32 frames)
 {

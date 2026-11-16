@@ -10,6 +10,23 @@ struct GfxClipParameters { bool z_is_from_0_to_1; bool invert_y; };
 enum FilteringMode { FILTER_NONE, FILTER_LINEAR, FILTER_THREE_POINT, FILTER_TRILINEAR };
 enum MipmapFilteringMode { MIPMAP_DISABLED, MIPMAP_NEAREST, MIPMAP_LINEAR };
 
+/* Native room packet: immutable original object-space vertices; the Xbox
+ * backend owns the GPU resources. Never allocate a GPU buffer on game thread. */
+struct GfxNativeRoomVertex {
+    float x,y,z;
+    float u0,v0;
+    uint32_t color;
+};
+struct GfxNativeRoomDraw {
+    unsigned room,revision,signature;
+    const void* command_address;
+    const struct GfxNativeRoomVertex* vertices; /* null on draw probe */
+    unsigned vertex_count;
+    float matrix[16]; /* original RSP modelview-projection, row-vector order */
+    float aspect_offset,aspect_scale;
+    unsigned cull_mode, texture_units;
+    float min_bound[3],max_bound[3]; /* object-space conservative AABB */
+};
 struct GfxRenderingAPI {
     const char* (*get_name)(void);
     int (*get_max_texture_size)(void);
@@ -49,5 +66,9 @@ struct GfxRenderingAPI {
     void (*set_mipmap_filter)(enum MipmapFilteringMode);
     void (*set_anisotropy_level)(int);
     int (*get_max_anisotropy_level)(void);
+    /* Optional: GPU-resident original-room packets. Creation returns false
+     * and never draws; a later draw call returns true only if submitted. */
+    bool (*native_room_draw)(const struct GfxNativeRoomDraw*);
+    bool (*native_room_prepare)(const struct GfxNativeRoomDraw*);
 };
 #endif

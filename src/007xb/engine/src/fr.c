@@ -1,4 +1,5 @@
 #include <ultra64.h>
+#include "include/gbi_extension.h" /* Xbox VI canvas opcode shared with Fast3D */
 #include "vi.h"
 #include "fr.h"
 #include <bondgame.h>
@@ -710,6 +711,19 @@ Gfx *viSetupCurrentPlayerView(Gfx *gdl)
         g_CurrentPlayer->viewports[g_ViBackIndex].vp.vtrans[1] = (g_ViBackData->viewy * 2) + (g_ViBackData->viewtop * 4);
     }
 
+#if defined(GE_XBOX_NATIVE32)
+#ifndef GE_XBOX_MP_VI_CANVAS_FIX
+#define GE_XBOX_MP_VI_CANVAS_FIX 1
+#endif
+#if GE_XBOX_MP_VI_CANVAS_FIX
+    /* The front end switches to 440x330, while gameplay uses 320x240.
+     * The renderer runs asynchronously, so carry the logical VI dimensions
+     * in the display list, before its viewport or scissor commands. */
+    gdl->words.w0 = ((u32)G_XBOX_MP_VI_CANVAS_EXT << 24);
+    gdl->words.w1 = (((u32)(u16)g_ViBackData->x) << 16) | (u16)g_ViBackData->y;
+    gdl++;
+#endif
+#endif
     // Make the RSP's viewport transform the current player's screen rectangle.
     gSPViewport(gdl++, OS_K0_TO_PHYSICAL(&g_CurrentPlayer->viewports[g_ViBackIndex]));
 

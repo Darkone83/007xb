@@ -1,4 +1,7 @@
 #include <ultra64.h>
+#if defined(GE_XBOX_NATIVE32)
+#include "ge_phase0_profile.h"
+#endif
 #include "mema.h"
 #include "deb.h"
 
@@ -126,12 +129,18 @@ memaspace *memaSearch(struct memaheap *heap)
 
     u32 min;
     s32 i;
+#if defined(GE_XBOX_NATIVE32)
+    geP0MemaSearchEntry();
+#endif
 
     // Do 124 passes over the list. This ensures the list is in order by the
 	// end. Though in most cases it's roughly in order anyway, and the excessive
 	// looping is just wasting CPU cycles. In reality this situation probably
 	// never occurs.
     for (i = 0; i < (ALLOCATIONS_LENGTH - 1); i++) {
+#if defined(GE_XBOX_NATIVE32)
+        geP0MemaSearchPass();
+#endif
         while (curr <= &heap->spaces[ALLOCATIONS_LENGTH - 2]) {
             if (curr->size == 0) {
                 return curr;

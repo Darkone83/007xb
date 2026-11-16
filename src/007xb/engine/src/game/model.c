@@ -20,6 +20,18 @@
 #include "random.h"
 #ifdef PORT
 #include "envflag.h"   /* cached getenv for hot-path probes */
+
+/* 007xb native32: US GoldenEye joint rotations are packed as 12-bit values.
+ * Keep the original reader as a fallback and a compile-time A/B control.
+ * This changes only bit extraction, never animation timing or joint math. */
+#if defined(GE_XBOX_NATIVE32)
+#ifndef GE_XBOX_FAST_ANIM_ANGLE12
+#define GE_XBOX_FAST_ANIM_ANGLE12 1
+#endif
+#else
+#define GE_XBOX_FAST_ANIM_ANGLE12 0
+#endif
+
 #endif
 
 
@@ -31,6 +43,17 @@ typedef struct ModelGroupMtxBuildArg {
 } ModelGroupMtxBuildArg;
 
 // forward declarations
+/* Optional native Xbox fast path for ROM-resident animation frame reads.
+ * On cache misses the ordinary romCopy + DMA-message path is unchanged. */
+#if defined(GE_XBOX_NATIVE32)
+#ifndef GE_XBOX_ANIM_DMA_BYPASS
+#define GE_XBOX_ANIM_DMA_BYPASS 1
+#endif
+#if GE_XBOX_ANIM_DMA_BYPASS
+extern int GE_XboxTryCopyCachedAnimFrame(unsigned cart,void *target,unsigned bytes);
+#endif
+#endif
+
 void modelSetAnimFrame2WithChrStuff(struct Model *model, f32 framea, f32 frameb, f32 frame2a, f32 frame2b);
 
 
@@ -1546,6 +1569,19 @@ u32 modelAnimReadBitsAsU16Angle(u8 *bitstream, u8 width, u32 bitOffset)
     u32 mask;
     u8 numbitsthisbyte;
     u8 remainingbits;
+
+#if GE_XBOX_FAST_ANIM_ANGLE12
+    /* Every shipped US animation in the ROM metadata uses 12 bits; the
+     * skeleton joint indices multiply width, giving bit offsets 0 or 4
+     * modulo 8.  Both cases require exactly two bytes.  The result is
+     * the original 12-bit field shifted to the upper bits of a u16. */
+    if (width == 12 && (bitOffset & 3u) == 0u)
+    {
+        const u8 *p = bitstream + (bitOffset >> 3);
+        const u32 pair = ((u32)p[0] << 8) | (u32)p[1];
+        return ((pair >> (4u - (bitOffset & 7u))) & 0xfffu) << 4;
+    }
+#endif
 
     remainingbits = width;
     value *= bitOffset / 8;
@@ -6034,7 +6070,10 @@ s32 loadAnimationFrame(ModelAnimation* anim, s32 frame, ModelSkeleton* unused)
         size = ((u32) (frameSize + 15) >> 4) * 16;
 
         // This copies one animation frame from ROM to the destination in RAM
-        romCopy((void* ) dest, (void* ) source, size);
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_ANIM_DMA_BYPASS
+        if (!GE_XboxTryCopyCachedAnimFrame((u32)source, (void *)dest, size))
+#endif
+            romCopy((void* ) dest, (void* ) source, size);
 
         // Increment this which serves nothing
         D_80036414->uselessPointer += 1;

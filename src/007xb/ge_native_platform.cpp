@@ -10,6 +10,18 @@
 #include <string.h>
 #include <time.h>
 
+/* Normal playtest mode: WARN/ERROR/FATAL only, with a single compile-time
+ * rollback switch. Does not alter the game's scheduler, RNG or error state. */
+#ifndef GE_XBOX_WARN_ERROR_ONLY
+#define GE_XBOX_WARN_ERROR_ONLY 1
+#endif
+/* Quiet mode wins even if a local build had verbose tracing enabled. */
+#if GE_NATIVE_TRACE_VERBOSE && !GE_XBOX_WARN_ERROR_ONLY
+#define GE_NATIVE_TRACE_OUTPUT_VERBOSE 1
+#else
+#define GE_NATIVE_TRACE_OUTPUT_VERBOSE 0
+#endif
+
 #if defined(XBOX) || defined(_XBOX)
 #include <xtl.h>
 #else
@@ -468,6 +480,54 @@ static void WriteLog(const char *message) {
     fputs(message, stderr); fputc('\n', stderr);
 #endif
 }
+#if GE_XBOX_WARN_ERROR_ONLY
+/* Legacy osSyncPrintf/stdio have no severity argument. Accept unmistakable
+ * warning/failure wording, suppress unclassified game debug chatter. The
+ * severity-tagged sysLogPrintf path below uses its actual numeric level. */
+static unsigned char QuietAsciiLower(unsigned char c) {
+    return c >= 'A' && c <= 'Z' ? (unsigned char)(c + ('a' - 'A')) : c;
+}
+static int QuietContains(const char *text, const char *needle) {
+    if (!text || !needle || !*needle) return 0;
+    for (const unsigned char *p = (const unsigned char *)text; *p; ++p) {
+        const unsigned char *x = p;
+        const unsigned char *y = (const unsigned char *)needle;
+        while (*x && *y && QuietAsciiLower(*x) == QuietAsciiLower(*y)) { ++x; ++y; }
+        if (!*y) return 1;
+    }
+    return 0;
+}
+static int QuietActionableText(const char *message) {
+    static const char *const terms[] = {
+        "error", "warn", "fatal", "assert", "failed", "failure", "invalid",
+        "corrupt", "overflow", "underflow", "overrun", "underrun",
+        "out of memory", "out of samples", "out of bounds", "not found",
+        "missing", "unknown", "unsupported", "runaway", "cannot",
+        "unable", "no free", "no valid", "stuck", "mismatch", "desync",
+        "bad pointer", "null pointer", "allocation failed", "dma not done"
+    };
+    for (unsigned i = 0; i < sizeof(terms) / sizeof(terms[0]); ++i)
+        if (QuietContains(message, terms[i])) return 1;
+    return 0;
+}
+/* Some profiling/status call sites used TraceIssue for persistence. Only
+ * exclude known routine record headers; preserve all other TraceIssue calls
+ * (including VIDEO PRESENT_FAILED, STARTUP FAILED, FATAL, replay mismatch). */
+static int QuietRoutineIssue(const char *format) {
+    if (!format) return 0;
+    static const char *const prefixes[] = {
+        "PH0 ", "PH0B ", "PH0E ",
+        "SCHED VI stage_enter=", "SCHED GFX_WORKER ",
+        "F3D PREP stage_enter=", "F3D TEX stage_enter=",
+        "NV2A PATH stage_enter=", "FRAME DIP "
+    };
+    for (unsigned i = 0; i < sizeof(prefixes) / sizeof(prefixes[0]); ++i) {
+        const size_t len = strlen(prefixes[i]);
+        if (strncmp(format, prefixes[i], len) == 0) return 1;
+    }
+    return 0;
+}
+#endif /* GE_XBOX_WARN_ERROR_ONLY */
 extern "C" void *geNativeStdStream(int index) {
     /* Opaque sentinels; engine-facing FILE never depends on the modern CRT's
      * FILE layout or __acrt_iob_func. Only these wrappers consume them. */
@@ -477,8 +537,13 @@ static int PrintStream(void *stream, const char *format, va_list args) {
     char buffer[2048];
     int n = Format(buffer, sizeof(buffer), format, args);
     const size_t actual = strlen(buffer);
-    if ((uintptr_t)stream >= 1u && (uintptr_t)stream <= 3u) WriteLog(buffer);
-    else if (!stream || fwrite(buffer, 1, actual, (FILE *)stream) != actual) return -1;
+    if ((uintptr_t)stream >= 1u && (uintptr_t)stream <= 3u) {
+#if GE_XBOX_WARN_ERROR_ONLY
+        if (QuietActionableText(buffer)) WriteLog(buffer);
+#else
+        WriteLog(buffer);
+#endif
+    } else if (!stream || fwrite(buffer, 1, actual, (FILE *)stream) != actual) return -1;
     return n >= 0 && (size_t)n < sizeof(buffer) ? n : -1;
 }
 extern "C" int geNativeFprintf(void *stream, const char *format, ...) {
@@ -495,12 +560,21 @@ extern "C" int geNativeSetvbuf(void *stream, char *buffer, int mode, size_t byte
     if ((uintptr_t)stream >= 1u && (uintptr_t)stream <= 3u) return 0;
     return stream ? setvbuf((FILE *)stream, buffer, mode, bytes) : -1;
 }
-extern "C" void sysLogPrintf(int, const char *fmt, ...) {
+extern "C" void sysLogPrintf(int level, const char *fmt, ...) {
+#if GE_XBOX_WARN_ERROR_ONLY
+    /* port/include/platform.h: ERROR=0, WARNING=1, NOTE=2, INFO=3, DEBUG=4. */
+    if (level > 1) return;
+#else
+    (void)level;
+#endif
     char buffer[1024]; va_list ap; va_start(ap, fmt); Format(buffer, sizeof(buffer), fmt, ap); va_end(ap);
     WriteLog(buffer);
 }
 extern "C" void osSyncPrintf(const char *fmt, ...) {
     char buffer[1024]; va_list ap; va_start(ap, fmt); Format(buffer, sizeof(buffer), fmt, ap); va_end(ap);
+#if GE_XBOX_WARN_ERROR_ONLY
+    if (!QuietActionableText(buffer)) return;
+#endif
     WriteLog(buffer);
 }
 extern "C" void sysFatalError(const char *fmt, ...) {
@@ -1053,7 +1127,7 @@ static int TraceWriteSync(const TraceRecord *record, const char *failure) {
     TraceUnlock();
     return ok;
 }
-#if GE_NATIVE_TRACE_VERBOSE
+#if GE_NATIVE_TRACE_OUTPUT_VERBOSE
 static void TraceWriterLoop(void) {
     for (;;) {
         int pending, stop;
@@ -1197,7 +1271,7 @@ static void InitTraceStorage(void) {
         TraceFailure("save path is too long", 0); TraceUnlock(); return;
     }
 #endif
-#if GE_NATIVE_TRACE_VERBOSE
+#if GE_NATIVE_TRACE_OUTPUT_VERBOSE
     unsigned long total = 0, available = 0;
     TraceMemory(&total, &available);
     char boot[512];
@@ -1223,12 +1297,17 @@ static int TraceV(const char *format, va_list args, int issue) {
     return TraceWriteSync(&record, failure);
 }
 extern "C" int GENativePlatform_TraceIssue(const char *format, ...) {
+#if GE_XBOX_WARN_ERROR_ONLY
+    /* Do not open/create the persistent trace for ordinary profiler/status
+     * snapshots. Return accepted as with suppressed routine tracing. */
+    if (QuietRoutineIssue(format)) return 1;
+#endif
     va_list args; va_start(args, format);
     int ok = TraceV(format, args, 1);
     va_end(args); return ok;
 }
 extern "C" int GENativePlatform_Trace(const char *format, ...) {
-#if GE_NATIVE_TRACE_VERBOSE
+#if GE_NATIVE_TRACE_OUTPUT_VERBOSE
     va_list args; va_start(args, format);
     int ok = TraceV(format, args, 0);
     va_end(args); return ok;
@@ -1237,7 +1316,7 @@ extern "C" int GENativePlatform_Trace(const char *format, ...) {
 #endif
 }
 extern "C" int GENativePlatform_TraceDeferred(const char *format, ...) {
-#if GE_NATIVE_TRACE_VERBOSE
+#if GE_NATIVE_TRACE_OUTPUT_VERBOSE
     if (!format || !s_locksReady || !GENativePlatform_TraceReady()) return 0;
     TraceRecord record;
     va_list args; va_start(args, format);
@@ -1270,7 +1349,7 @@ extern "C" int GENativePlatform_TraceDeferred(const char *format, ...) {
 #endif
 }
 extern "C" int GENativePlatform_TraceDeferredReady(void) {
-#if GE_NATIVE_TRACE_VERBOSE
+#if GE_NATIVE_TRACE_OUTPUT_VERBOSE
     if (!s_locksReady) return 0;
     TraceQueueLock();
     int ready = s_traceDeferredMode == TRACE_DEFERRED_ASYNC && GENativePlatform_TraceReady();
@@ -1281,7 +1360,7 @@ extern "C" int GENativePlatform_TraceDeferredReady(void) {
 #endif
 }
 extern "C" unsigned GENativePlatform_TraceDeferredDropped(void) {
-#if GE_NATIVE_TRACE_VERBOSE
+#if GE_NATIVE_TRACE_OUTPUT_VERBOSE
     if (!s_locksReady) return 0;
     TraceQueueLock();
     unsigned dropped = s_traceQueueDropped;
@@ -1302,7 +1381,7 @@ extern "C" const char *GENativePlatform_TracePath(void) { return s_tracePath; }
 extern "C" const char *GENativePlatform_TraceError(void) { return s_traceError; }
 
 extern "C" void geTracePrintf(const char *path, const char *fmt, ...) {
-#if GE_NATIVE_TRACE_VERBOSE
+#if GE_NATIVE_TRACE_OUTPUT_VERBOSE
     if (!path || !fmt) return;
 #if defined(XBOX) || defined(_XBOX)
     /* Legacy callers also use the checked persistent stream. A D: path

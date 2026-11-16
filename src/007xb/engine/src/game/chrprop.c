@@ -1,4 +1,7 @@
 #include <ultra64.h>
+#if defined(GE_XBOX_NATIVE32)
+#include "ge_phase0_profile.h"
+#endif
 #include <assert.h>
 #include <bondgame.h>
 #include <bondtypes.h>
@@ -82,6 +85,41 @@ PropRecord *g_OnScreenPropList[ONSCREEN_PROP_LIST_LEN];
  * Address 0x80071DF0.
 */
 PropRecord **g_LastOnScreenProp;
+
+/*
+ * The N64 renderer walks every onscreen prop for every visible room and each
+ * of the three object passes. On the Xbox, use a per-frame room-indexed view
+ * of the same depth-sorted list to avoid repeated full-list scans. Rendering
+ * order, passes and per-prop flags are evaluated exactly as before.
+ *
+ * This index is rebuilt after propsTick()/room visibility and before
+ * bgLevelRender(), when prop room membership is stable for the draw.
+ */
+#if defined(GE_XBOX_NATIVE32)
+#ifndef GE_XBOX_PROP_ROOM_BUCKET
+#define GE_XBOX_PROP_ROOM_BUCKET 1
+#endif
+#else
+#define GE_XBOX_PROP_ROOM_BUCKET 0
+#endif
+
+#if defined(GE_XBOX_NATIVE32)
+#ifndef GE_XBOX_BULLET_ROOM_QUEUE_SET
+#define GE_XBOX_BULLET_ROOM_QUEUE_SET 1
+#endif
+#else
+#define GE_XBOX_BULLET_ROOM_QUEUE_SET 0
+#endif
+
+#if GE_XBOX_PROP_ROOM_BUCKET
+#define GE_XBOX_PROP_ROOM_BUCKET_ROOMS 256
+static s16 s_PropRoomHead[GE_XBOX_PROP_ROOM_BUCKET_ROOMS];
+static s16 s_PropRoomTail[GE_XBOX_PROP_ROOM_BUCKET_ROOMS];
+static s16 s_PropRoomNext[ONSCREEN_PROP_LIST_LEN];
+static s16 s_PropRoomPrev[ONSCREEN_PROP_LIST_LEN];
+static s32 s_PropRoomBucketValid;
+static s32 s_PropRoomBucketPrepared;
+#endif
 
 /**
  * Count of onscreen props.
@@ -199,6 +237,148 @@ void modelGetAxisExtents(Model* model, f32* max, f32* min, s32 axis);
 // end forward declarations
 
 
+#if GE_XBOX_PROP_ROOM_BUCKET
+static void chrpropBuildRoomBuckets(s32 count)
+{
+    s32 i;
+    s32 room;
+    s32 last;
+    s32 first_rendered_room;
+    s32 roomids[PROPRECORD_STAN_ROOM_LEN];
+    s32 *rp;
+    PropRecord *prop;
+
+    s_PropRoomBucketValid = 0;
+    if (count < 0 || count >= ONSCREEN_PROP_LIST_LEN)
+    {
+        return;
+    }
+
+    for (i = 0; i < GE_XBOX_PROP_ROOM_BUCKET_ROOMS; i++)
+    {
+        s_PropRoomHead[i] = -1;
+        s_PropRoomTail[i] = -1;
+    }
+
+    for (i = 0; i < count; i++)
+    {
+        prop = g_OnScreenPropList[i];
+        first_rendered_room = -1;
+
+        if (prop == NULL)
+        {
+            continue;
+        }
+
+        chraiGetPropRoomIds(prop, roomids);
+        for (rp = roomids; *rp >= 0; rp++)
+        {
+            room = *rp;
+            /* Unrepresentable room: keep the original full-list path. */
+            if (room >= GE_XBOX_PROP_ROOM_BUCKET_ROOMS)
+            {
+                return;
+            }
+            if (getROOMID_isRendered(room))
+            {
+                first_rendered_room = room;
+                break;
+            }
+        }
+
+        if (first_rendered_room < 0)
+        {
+            continue;
+        }
+
+        last = s_PropRoomTail[first_rendered_room];
+        s_PropRoomNext[i] = -1;
+        s_PropRoomPrev[i] = (s16)last;
+        if (last < 0)
+        {
+            s_PropRoomHead[first_rendered_room] = (s16)i;
+        }
+        else
+        {
+            s_PropRoomNext[last] = (s16)i;
+        }
+        s_PropRoomTail[first_rendered_room] = (s16)i;
+    }
+    s_PropRoomBucketValid = 1;
+}
+#endif
+
+/* CPU indexing audit: this preserves the original *selection sort's swap
+ * order*, including equal depths and NaN/invalid-depth behavior. A normal
+ * qsort/mergesort changes draw order on ties and is not safe here.
+ * A fixed-size tournament tree queries the earliest maximum in O(log n),
+ * and only the two swapped slots are updated. No allocations or logging.
+ * Only very large visible lists use the tree: host benchmarks showed
+ * the original selection loop is faster for ordinary small lists. */
+#if defined(GE_XBOX_NATIVE32)
+#ifndef GE_XBOX_PROP_TOURNAMENT_SORT
+#define GE_XBOX_PROP_TOURNAMENT_SORT 1
+#endif
+#else
+#define GE_XBOX_PROP_TOURNAMENT_SORT 0
+#endif
+#if GE_XBOX_PROP_TOURNAMENT_SORT
+static s16 s_propDepthTournament[ONSCREEN_PROP_LIST_LEN * 4];
+static s16 chrpropDepthWinner(s16 left, s16 right)
+{
+    if (left < 0) return right;
+    if (right < 0) return left;
+    /* Strict > makes equal depths choose the earlier list position. */
+    return g_OnScreenPropList[right]->zDepth >
+           g_OnScreenPropList[left]->zDepth ? right : left;
+}
+static void chrpropDepthUpdate(s32 base, s32 index, s16 value)
+{
+    s32 node = base + index;
+    s_propDepthTournament[node] = value;
+    while (node > 1) {
+        node >>= 1;
+        s_propDepthTournament[node] = chrpropDepthWinner(
+            s_propDepthTournament[node * 2],
+            s_propDepthTournament[node * 2 + 1]);
+    }
+}
+static void chrpropDepthSort(s32 count)
+{
+    s32 i, base = 1;
+    while (base < count) base <<= 1;
+    for (i = 0; i < base; ++i) {
+        /* The original inner loop initializes its maximum to this exact
+         * threshold, and ignores NaNs and depths <= threshold. */
+        s_propDepthTournament[base + i] =
+            (i < count && g_OnScreenPropList[i]->zDepth > -4.2949673e9f)
+            ? (s16)i : (s16)-1;
+    }
+    for (i = base - 1; i > 0; --i) {
+        s_propDepthTournament[i] = chrpropDepthWinner(
+            s_propDepthTournament[i * 2],
+            s_propDepthTournament[i * 2 + 1]);
+    }
+    for (i = 0; i < count; ++i) {
+        s32 winner = s_propDepthTournament[1];
+        if (winner >= 0 && winner != i) {
+            PropRecord *old = g_OnScreenPropList[i];
+            g_OnScreenPropList[i] = g_OnScreenPropList[winner];
+            g_OnScreenPropList[winner] = old;
+        }
+        /* Position i leaves the unsorted suffix whether swapped or not. */
+        chrpropDepthUpdate(base, i, (s16)-1);
+        if (winner > i) {
+            /* The old slot i now occupies 'winner'. Its zDepth, including
+             * NaNs and the sentinel case, determines the next leaf value. */
+            chrpropDepthUpdate(base, winner,
+                g_OnScreenPropList[winner]->zDepth > -4.2949673e9f
+                ? (s16)winner : (s16)-1);
+        }
+    }
+}
+#endif /* GE_XBOX_PROP_TOURNAMENT_SORT */
+
 /**
  * Counts onscreen props.
  *
@@ -227,6 +407,9 @@ void chraiUpdateOnscreenPropCount(void)
     }
 
     g_OnScreenPropCount = count;
+#if defined(GE_XBOX_NATIVE32)
+    geP0VisibleProps((unsigned)count);
+#endif
     g_OnScreenPropList[count] = NULL;
 
     if(1)
@@ -239,6 +422,12 @@ void chraiUpdateOnscreenPropCount(void)
 
     g_LastOnScreenProp = (PropRecord *)&g_OnScreenPropList[count];
 
+#if GE_XBOX_PROP_TOURNAMENT_SORT
+    if (count >= 256 && count < ONSCREEN_PROP_LIST_LEN) {
+        chrpropDepthSort(count);
+    } else
+#endif
+    {
     for (i=0; i<count; i++)
     {
         phi_a0 = -1;
@@ -262,6 +451,13 @@ void chraiUpdateOnscreenPropCount(void)
             g_OnScreenPropList[phi_a0] = prop;
         }
     }
+    }
+#if GE_XBOX_PROP_ROOM_BUCKET
+    /* A later propsTickPlayer() may still change prop-room membership.
+     * Build lazily on first use in bgLevelRender() instead. */
+    s_PropRoomBucketValid = 0;
+    s_PropRoomBucketPrepared = 0;
+#endif
 }
 
 
@@ -490,6 +686,51 @@ Gfx *chrpropsRenderPass(Gfx *gdl, s32 roomid, s32 renderpass)
         }
     }
 
+
+#if GE_XBOX_PROP_ROOM_BUCKET
+    if (!s_PropRoomBucketPrepared)
+    {
+        s_PropRoomBucketPrepared = 1;
+        chrpropBuildRoomBuckets(g_OnScreenPropCount);
+    }
+    if (s_PropRoomBucketValid && roomid >= 0 && roomid < GE_XBOX_PROP_ROOM_BUCKET_ROOMS)
+    {
+        if (renderpass == 0 || renderpass == 2)
+        {
+            /* Original opaque passes walk the sorted list in reverse. */
+            for (i = s_PropRoomTail[roomid]; i >= 0; i = s_PropRoomPrev[i])
+            {
+                prop = g_OnScreenPropList[i];
+                if (renderpass == 0)
+                {
+                    flag = ((prop->flags & (PROPFLAG_00000020 | PROPFLAG_RENDERPOSTBG)) == 0);
+                }
+                else
+                {
+                    flag = ((prop->flags & (PROPFLAG_00000020 | PROPFLAG_RENDERPOSTBG)) == PROPFLAG_RENDERPOSTBG);
+                }
+                if (flag)
+                {
+                    gdl = chrpropRender(gdl, prop, 0);
+                }
+            }
+        }
+        else
+        {
+            /* Original alpha pass walks the sorted list forward. */
+            for (i = s_PropRoomHead[roomid]; i >= 0; i = s_PropRoomNext[i])
+            {
+                prop = g_OnScreenPropList[i];
+                if (prop->flags & PROPFLAG_00000020)
+                {
+                    gdl = chrpropRender(gdl, prop, 0);
+                }
+                gdl = chrpropRender(gdl, prop, 1);
+            }
+        }
+        return bgScissorCurrentPlayerViewDefault(gdl);
+    }
+#endif
 
     if ((renderpass == 0) || (renderpass == 2))
     {
@@ -755,9 +996,28 @@ s32 chrpropFindFirstBgHitInConnectedRooms(s32 startroom, coord3d *from, coord3d 
     s32 count;
     s32 curindex;
     s32 room;
+#if GE_XBOX_BULLET_ROOM_QUEUE_SET
+    u32 queued[8];
+    s32 use_queue_set;
+    u32 word;
+    u32 bit;
+#endif
 
     rooms[0] = startroom;
     count = 1;
+#if GE_XBOX_BULLET_ROOM_QUEUE_SET
+    /* Same FIFO order as the original duplicate scan. The fast membership
+     * set is valid for the N64's u8 room IDs; other IDs keep the old scan. */
+    use_queue_set = (startroom >= 0 && startroom < 256 && getMaxNumRooms() <= 256);
+    if (use_queue_set)
+    {
+        for (i = 0; i < 8; i++)
+        {
+            queued[i] = 0;
+        }
+        queued[startroom >> 5] |= (1u << (startroom & 31));
+    }
+#endif
 
     for (curindex = 0; curindex < count; curindex++)
     {
@@ -780,6 +1040,20 @@ s32 chrpropFindFirstBgHitInConnectedRooms(s32 startroom, coord3d *from, coord3d 
 
         for (i = 0; i < numneighbours; i++)
         {
+#if GE_XBOX_BULLET_ROOM_QUEUE_SET
+            if (use_queue_set && neighbours[i] >= 0 && neighbours[i] < 256)
+            {
+                word = (u32)neighbours[i] >> 5;
+                bit = 1u << (neighbours[i] & 31);
+                if ((queued[word] & bit) == 0)
+                {
+                    queued[word] |= bit;
+                    rooms[count] = (u8)neighbours[i];
+                    count++;
+                }
+                continue;
+            }
+#endif
             for (j = 0; j < count; j++)
             {
                 if (rooms[j] == neighbours[i])
@@ -792,6 +1066,14 @@ s32 chrpropFindFirstBgHitInConnectedRooms(s32 startroom, coord3d *from, coord3d 
             {
                 rooms[count] = neighbours[i];
                 count++;
+#if GE_XBOX_BULLET_ROOM_QUEUE_SET
+                if (use_queue_set)
+                {
+                    /* Preserve the original truncated u8 queue membership. */
+                    room = (u8)neighbours[i];
+                    queued[room >> 5] |= (1u << (room & 31));
+                }
+#endif
             }
         }
     }
@@ -3033,6 +3315,9 @@ void propsDefragRoomProps(void)
 	s32 i;
 	s32 j;
 	s32 k;
+#if defined(GE_XBOX_NATIVE32)
+    geP0ScopeStart(GE_P0_ROOM_DEFRAG);
+#endif
 
 	// Iterate rooms
 	for (i = 0; i < g_MaxNumRooms; i++)
@@ -3097,6 +3382,9 @@ void propsDefragRoomProps(void)
 			}
 		}
 	}
+#if defined(GE_XBOX_NATIVE32)
+    geP0ScopeEnd(GE_P0_ROOM_DEFRAG);
+#endif
 }
 
 

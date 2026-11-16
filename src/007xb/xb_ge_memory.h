@@ -55,6 +55,10 @@ public:
     bool OpenArchive(const XBArchive& index,const char* archivePath);
     bool OpenDefault(const XBArchive& index);
     bool Read(GEU32 cartAddress,void* dst,GEU32 size);
+    /* Xbox animation hot path: return true only when the requested byte span
+       is already resident in the immutable ROM cache. Never read from disk.
+       False means the caller must use ordinary cartridge DMA. */
+    bool ReadCachedAnimation(GEU32 cartAddress,void* dst,GEU32 size);
     GEU32 Bytes() const { return bytes_; }
     bool Ready() const { return file_ != 0; }
     const char* Source() const { return source_; }
@@ -67,6 +71,9 @@ private:
     bool SetError(const char* value);
     FILE* file_;
     GEU32 base_,bytes_;
+    /* Optional immutable animation-ROM cache (~1.41 MiB).  Owned by GECart,
+       released in Close(); NULL retains the original disk-backed reads. */
+    unsigned char* animCache_;
     char source_[128],error_[128];
 #if defined(XBOX) || defined(_XBOX)
     CRITICAL_SECTION lock_;

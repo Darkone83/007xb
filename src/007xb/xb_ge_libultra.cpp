@@ -240,6 +240,22 @@ static int NativeDMATargetWritable(uintptr_t address,unsigned bytes){
     }
 }
 #endif
+/* Synchronous, animation-only ROM cache read for model.c.  The generic
+ * romCopy operation immediately consumes the one DMA-completion message;
+ * this path returns the same bytes without constructing that message pair.
+ * Other DMA callers, cache misses, and all unrelated cartridge reads retain
+ * the original translation, queue, and error handling. */
+#if defined(GE_XBOX_NATIVE32)
+extern "C" int GE_XboxTryCopyCachedAnimFrame(unsigned cart,void* target,unsigned bytes){
+    if(!s_runtime || !target || !bytes)return 0;
+    if(!s_runtime->Cart().ReadCachedAnimation(cart,target,bytes))return 0;
+    /* Preserve the original DMA post-read RAW16 behavior, even though the
+       verified animation region never overlaps registered audio samples. */
+    if(!GEAsset32_SwapRaw16Dma(cart,target,bytes))
+        sysFatalError("Cached animation ROM fixup failed (addr=%08X size=%u)",cart,bytes);
+    return 1;
+}
+#endif
 static int DMARead(int dir,unsigned cart,void* target,unsigned bytes){
     if(!s_runtime||dir!=0||!target)return -1; /* OS_READ=0 */
     if(!bytes)return 0;

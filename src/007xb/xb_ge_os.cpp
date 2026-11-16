@@ -1,6 +1,15 @@
 #include "xb_ge_os.h"
 #include <string.h>
 #include <stddef.h>
+/* Phase 2: QPC frequency is fixed by the Xbox platform and does not vary
+ * between clock reads. Cache it at kernel init (before worker threads).
+ * 0 restores the original per-call QueryPerformanceFrequency path. */
+#ifndef GE_XBOX_CACHE_QPF
+#define GE_XBOX_CACHE_QPF 1
+#endif
+#if GE_XBOX_CACHE_QPF && (defined(XBOX) || defined(_XBOX))
+static unsigned long long s_geosCachedQpfHz=0;
+#endif
 #if !defined(GEOS_XBOX_AUDIO_PRIORITY_BOOST)
 /* Original AUDI_THREAD_ID=4 runs at priority 20 (MAIN=10). Default Win32
  * CreateThread priority loses that distinction on the single-core Xbox. */
@@ -231,9 +240,21 @@ int GEOSPostCritical(GEOSQueue* q,GEOSMesg msg){
 
 static GEOSU64 GEOSNowUs(){
 #if defined(XBOX) || defined(_XBOX)
-    LARGE_INTEGER freq,t;
-    if(!QueryPerformanceFrequency(&freq)||!QueryPerformanceCounter(&t)||freq.QuadPart<=0)return (GEOSU64)GetTickCount()*1000u;
-    GEOSU64 f=(GEOSU64)freq.QuadPart,v=(GEOSU64)t.QuadPart;
+    GEOSU64 f=0;
+#if GE_XBOX_CACHE_QPF
+    f=(GEOSU64)s_geosCachedQpfHz;
+#endif
+    /* Retain original fallback if QPF was unavailable during Init or the
+     * clock is consulted before Init. Do not change the tick conversion. */
+    if(!f){
+        LARGE_INTEGER freq;
+        if(!QueryPerformanceFrequency(&freq)||freq.QuadPart<=0)
+            return (GEOSU64)GetTickCount()*1000u;
+        f=(GEOSU64)freq.QuadPart;
+    }
+    LARGE_INTEGER t;
+    if(!QueryPerformanceCounter(&t))return (GEOSU64)GetTickCount()*1000u;
+    const GEOSU64 v=(GEOSU64)t.QuadPart;
     return (v/f)*1000000ull+(v%f)*1000000ull/f;
 #else
     struct timespec ts;
@@ -265,6 +286,13 @@ GEOSKernel::GEOSKernel():timersReady_(0),viQ_(0),viMsg_(0),viCount_(1),viDiv_(0)
 bool GEOSKernel::Init(unsigned hz){
     if(ready_)Shutdown();
     if(hz!=50&&hz!=60)return false;
+#if GE_XBOX_CACHE_QPF && (defined(XBOX) || defined(_XBOX))
+    /* No runtime worker can be active here. Query once before spawning the
+     * retrace and graphics threads; QPF is invariant during the process. */
+    LARGE_INTEGER qpf;
+    s_geosCachedQpfHz= (QueryPerformanceFrequency(&qpf) && qpf.QuadPart>0)
+        ?(unsigned long long)qpf.QuadPart:0;
+#endif
     gfxWorkerReady_=gfxWorkerFailed_=gfxBusy_=gfxStop_=0;
     memset(events_,0,sizeof(events_));
     viQ_=0;viMsg_=0;viCount_=1;viDiv_=0;

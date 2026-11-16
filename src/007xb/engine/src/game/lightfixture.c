@@ -59,6 +59,11 @@
  */
 
 #include <ultra64.h>
+#if defined(GE_XBOX_NATIVE32)
+#ifndef GE_XBOX_NATIVE_ROOM_BATCHES
+#define GE_XBOX_NATIVE_ROOM_BATCHES 1
+#endif
+#endif
 #include "lightfixture.h"
 #include "bg.h"
 #include "glass.h"
@@ -355,6 +360,9 @@ void redarken_lights_in_room(s32 room_index)
 }
 
 
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_NATIVE_ROOM_BATCHES
+extern void geNativeRoomBumpRevision(s32 room);
+#endif
 void darken_vertex_in_room(Vtx * vertex, s32 room_index)
 {
     s32 vtx_index;
@@ -372,6 +380,9 @@ void darken_vertex_in_room(Vtx * vertex, s32 room_index)
     vertex->v.cn[1] >>= 2;
     vertex->v.cn[2] >>= 2;
     vertex->v.cn[3] >>= 2;
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_NATIVE_ROOM_BATCHES
+    geNativeRoomBumpRevision(room_index);
+#endif
 
     cur_entry_darkened_light_table++;
 

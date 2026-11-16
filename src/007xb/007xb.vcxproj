@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ge_original_input.cpp" />
+    <ClCompile Include="ge_phase0_profile.cpp" />
     <ClCompile Include="gfx_cc.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="xb_archive.cpp" />
@@ -3340,6 +3341,7 @@
     <ClInclude Include="ge_native_error.h" />
     <ClInclude Include="ge_native_frame_stats.h" />
     <ClInclude Include="ge_native_gfx.h" />
+    <ClInclude Include="ge_native_input.h" />
     <ClInclude Include="ge_native_platform.h" />
     <ClInclude Include="ge_native_video.h" />
     <ClInclude Include="ge_nv2a_combiner.h" />
@@ -3349,6 +3351,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ge_original_input.h" />
+    <ClInclude Include="ge_original_sched_abi.h" />
+    <ClInclude Include="ge_phase0_profile.h" />
     <ClInclude Include="gfx_cc.h" />
     <ClInclude Include="gfx_rendering_api.h" />
     <ClInclude Include="xb_archive.h" />
@@ -3472,6 +3476,8 @@ MKDIR "$(OutDir)XISO"
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
+      <!-- Explicit Release /O2: do not depend on imported property defaults. -->
+      <Optimization>MaxSpeed</Optimization>
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -3489,6 +3495,10 @@ MKDIR "$(OutDir)XISO"
       <LanguageStandard>stdcpp17</LanguageStandard>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions</EnableEnhancedInstructionSet>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

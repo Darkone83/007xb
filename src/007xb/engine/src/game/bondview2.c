@@ -4930,13 +4930,22 @@ void bondviewApplyVertaTheta(void)
  * Perfect Dark method bmoveProcessInput.
 */
 #if defined(GE_XBOX_NATIVE32)
+#ifndef GE_XBOX_MP_HALO_ARM_FIX
+#define GE_XBOX_MP_HALO_ARM_FIX 1
+#endif
 static u8 g_NativeHaloArmed[4] = {0, 0, 0, 0};
+#if GE_XBOX_MP_HALO_ARM_FIX
+static u16 g_NativeHaloBlocked[4] = {0, 0, 0, 0};
+#endif
 
 void bondviewResetNativeControls(s32 playernum)
 {
     if (playernum >= 0 && playernum < 4)
     {
         g_NativeHaloArmed[playernum] = 0;
+#if GE_XBOX_MP_HALO_ARM_FIX
+        g_NativeHaloBlocked[playernum] = 0;
+#endif
         GEGameInput_ClearXboxEdges((unsigned)playernum);
     }
 }
@@ -4959,7 +4968,13 @@ static s32 nativeReadHaloInput(struct GEGameXboxState *input, s32 selected)
      * Neither joy.c's six-byte samples nor recorded button bits are changed. */
     allowed = GEGameInput_ReadXbox((unsigned)playernum, input);
     allowed = allowed && input->connected && selected
-        && g_CameraMode == CAMERAMODE_FP
+        /* Multiplayer uses a shared global camera mode during its
+         * per-player transition, but MoveBond() has already set this
+         * player's first-person camera to 0 before calling here. Using
+         * the global CAMERAMODE_FP gate could discard connected native
+         * inputs for every MP player while ordinary 1.x controls worked. */
+        && (getPlayerCount() >= 2 ? g_CurrentPlayer->cameramode == 0
+                                  : g_CameraMode == CAMERAMODE_FP)
         && g_CurrentPlayer->watch_animation_state == WATCH_ANIMATION_0x0
         && g_CurrentPlayer->bonddead == FALSE
         && g_bondviewForceDisarm <= 0
@@ -4969,6 +4984,9 @@ static s32 nativeReadHaloInput(struct GEGameXboxState *input, s32 selected)
     if (!allowed)
     {
         g_NativeHaloArmed[playernum] = 0;
+#if GE_XBOX_MP_HALO_ARM_FIX
+        g_NativeHaloBlocked[playernum] = 0;
+#endif
         if (selected) g_CurrentPlayer->insightaimmode = 0;
         return 0;
     }
@@ -4976,10 +4994,30 @@ static s32 nativeReadHaloInput(struct GEGameXboxState *input, s32 selected)
     {
         /* A/Start/X used in a menu or cutscene must not become an action on
          * the first gameplay tick. Release held buttons once to arm. */
+#if GE_XBOX_MP_HALO_ARM_FIX
+        if (getPlayerCount() >= 2)
+        {
+            /* An MP setup button may still be held as the swirl ends. It
+             * must not prevent movement/looking or become a game action.
+             * Only action buttons held at activation need release first. */
+            g_NativeHaloBlocked[playernum] = (u16)(input->buttons &
+                (GE_XBOX_RT|GE_XBOX_LT|GE_XBOX_X|GE_XBOX_Y|GE_XBOX_B|GE_XBOX_LTHUMB));
+        }
+        else
+#endif
         if (input->buttons != 0) return 0;
         g_NativeHaloArmed[playernum] = 1;
         input->pressed = 0;
     }
+#if GE_XBOX_MP_HALO_ARM_FIX
+    if (getPlayerCount() >= 2)
+    {
+        /* A real release removes its block; a later press passes normally. */
+        g_NativeHaloBlocked[playernum] &= (u16)input->buttons;
+        input->buttons &= ~(unsigned)g_NativeHaloBlocked[playernum];
+        input->pressed &= ~(unsigned)g_NativeHaloBlocked[playernum];
+    }
+#endif
     return 1;
 }
 
@@ -5051,6 +5089,7 @@ void bondviewProcessInput(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
     struct GEGameXboxState nativeXboxInput;
     s32 nativeHalo;
     s32 nativeHaloReady;
+    s32 nativeHaloLegacyFallback;
 #endif
 
     s8 player_joyGetStickX; // sp11F
@@ -5174,9 +5213,46 @@ void bondviewProcessInput(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
 #if defined(GE_XBOX_NATIVE32)
     /* Test the actual playback flag: check_ramrom_flags() returns a saved
      * slot number and can be zero even while a recording is active. */
-    nativeHalo = cur_player_get_control_type() == CONTROLLER_CONFIG_HALO
-        && get_is_ramrom_flag() == 0 && get_recording_ramrom_flag() == 0;
+    /* Multiplayer selection is stored in controlstyle_player[player].
+     * Use that authoritative choice instead of relying solely on a second
+     * player-local field whose initialization/respawn can overwrite it. The
+     * original single-player style and replay guards remain unchanged. */
+#ifndef GE_XBOX_MP_HALO_SELECTED_STYLE
+#define GE_XBOX_MP_HALO_SELECTED_STYLE 1
+#endif
+    {
+        const s32 pnum = get_cur_playernum();
+#if GE_XBOX_MP_HALO_SELECTED_STYLE
+        const s32 style = (getPlayerCount() >= 2 && pnum >= 0 && pnum < 4)
+            ? get_player_control_style(pnum) : cur_player_get_control_type();
+#else
+        const s32 style = cur_player_get_control_type();
+#endif
+        nativeHalo = style == CONTROLLER_CONFIG_HALO
+            && get_is_ramrom_flag() == 0 && get_recording_ramrom_flag() == 0;
+    }
     nativeHaloReady = nativeReadHaloInput(&nativeXboxInput, nativeHalo);
+    /* If the sideband is missing for an otherwise playable MP player, the
+     * old path previously produced an empty MoveData frame. Use the existing
+     * 1.x input mapping until sideband resumes; do not bypass camera locks. */
+    nativeHaloLegacyFallback = nativeHalo && !nativeHaloReady
+        && getPlayerCount() >= 2
+        && g_CurrentPlayer->cameramode == 0
+        && g_CurrentPlayer->watch_animation_state == WATCH_ANIMATION_0x0
+        && !g_CurrentPlayer->bonddead
+        && g_bondviewForceDisarm <= 0
+        && lvlGetControlsLockedFlag() == 0
+        && disablePlayerActionsWhenPausedOrInMpMenu()
+        && g_stopPlayFlag == 0 && g_gameOverFlag == 0
+        && !nativeXboxInput.connected;
+    if (nativeHaloLegacyFallback) {
+        static u8 s_mpHaloInputWarned[4] = {0, 0, 0, 0};
+        s32 pnum = get_cur_playernum();
+        if (pnum >= 0 && pnum < 4 && !s_mpHaloInputWarned[pnum]) {
+            s_mpHaloInputWarned[pnum] = 1;
+            fprintf(stderr, "WARNING MP HALO native sideband missing player=%d; legacy input fallback active\n", pnum);
+        }
+    }
 #endif
 
     if (g_CurrentPlayer->watch_animation_state == WATCH_ANIMATION_0x0
@@ -5188,9 +5264,13 @@ void bondviewProcessInput(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
                 && g_gameOverFlag == 0)))
     {
 #if defined(GE_XBOX_NATIVE32)
-        if (nativeHalo)
+        if (nativeHalo && nativeHaloReady)
         {
-            if (nativeHaloReady) nativeBuildHaloMove(&moveData, &nativeXboxInput);
+            nativeBuildHaloMove(&moveData, &nativeXboxInput);
+        }
+        else if (nativeHalo && !nativeHaloLegacyFallback)
+        {
+            /* Native Halo selected but camera/arming is not ready: no action. */
         }
         else
 #endif
@@ -9504,6 +9584,19 @@ Gfx *maybe_mp_interface(Gfx *gdl)
     s32 i;
     s32 total;
 
+#if defined(GE_XBOX_NATIVE32)
+    /* The gun render call below is deliberately skipped for cinematic
+     * cameras. Report impossible lingering intro state once per MP player. */
+    if (getPlayerCount() >= 2 && g_CameraMode == CAMERAMODE_FP &&
+        g_CurrentPlayer->cameramode == 1) {
+        static u8 s_mpViewGunWarned[4] = {0, 0, 0, 0};
+        const s32 pnum = get_cur_playernum();
+        if (pnum >= 0 && pnum < 4 && !s_mpViewGunWarned[pnum]) {
+            s_mpViewGunWarned[pnum] = 1;
+            fprintf(stderr, "WARNING MP GUN player=%d stuck in cinematic viewport; weapon draw bypassed\n", pnum);
+        }
+    }
+#endif
     if (g_CurrentPlayer->cameramode == 1)
     {
         bondviewIntroCameraTextTick();

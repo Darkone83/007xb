@@ -19,6 +19,51 @@ static GEOSContStatus s_status[4];
 static GEOSContPad s_pads[4];
 static GEGameXboxState s_xboxPads[4];
 static unsigned char s_connected=0;
+/* GoldenEye's joyGetControllerCount() stops at the first absent channel.
+ * XInput ports may contain holes (for example physical 1,2,4); publish a
+ * contiguous N64 player order while keeping physical device ownership and
+ * RT recovery in main.cpp unchanged. Both N64 and Halo views use this map. */
+#ifndef GE_XBOX_COMPACT_CONTROLLER_PORTS
+#if defined(GE_XBOX_NATIVE32)
+#define GE_XBOX_COMPACT_CONTROLLER_PORTS 1
+#else
+#define GE_XBOX_COMPACT_CONTROLLER_PORTS 0
+#endif
+#endif
+#if GE_XBOX_COMPACT_CONTROLLER_PORTS
+static unsigned NativePadCountUnlocked(void) {
+    unsigned count=0;
+    for(unsigned p=0;p<4u;++p)if(s_connected&(1u<<p))++count;
+    return count;
+}
+static unsigned PhysicalForPlayerUnlocked(unsigned player) {
+    unsigned next=0;
+    for(unsigned p=0;p<4u;++p)if(s_connected&(1u<<p)){
+        if(next++==player)return p;
+    }
+    return 4u;
+}
+static void CopyPlayerStatusUnlocked(GEOSContStatus* status) {
+    if(!status)return;
+    memset(status,0,sizeof(s_status));
+    for(unsigned player=0;player<4u;++player)status[player].error_code=8;
+    for(unsigned player=0;player<4u;++player){
+        const unsigned p=PhysicalForPlayerUnlocked(player);
+        if(p>=4u)break;
+        status[player]=s_status[p];
+    }
+}
+static void CopyPlayerPadsUnlocked(GEOSContPad* pads) {
+    if(!pads)return;
+    memset(pads,0,sizeof(s_pads));
+    for(unsigned player=0;player<4u;++player)pads[player].error_code=8;
+    for(unsigned player=0;player<4u;++player){
+        const unsigned p=PhysicalForPlayerUnlocked(player);
+        if(p>=4u)break;
+        pads[player]=s_pads[p];
+    }
+}
+#endif
 extern "C" void GEGameInput_Reset(void){
 #if defined(XBOX) || defined(_XBOX)
     /* Called once before the game scheduler and input threads start. */
@@ -94,8 +139,15 @@ extern "C" int GEGameInput_ReadXbox(unsigned port,GEGameXboxState* out){
     if(!out)return 0;
     if(port>=4){memset(out,0,sizeof(*out));return 0;}
     LockInput();
-    *out=s_xboxPads[port];
-    s_xboxPads[port].pressed=0;
+#if GE_XBOX_COMPACT_CONTROLLER_PORTS
+    const unsigned physical=PhysicalForPlayerUnlocked(port);
+#else
+    const unsigned physical=port;
+#endif
+    if(physical<4u){
+        *out=s_xboxPads[physical];
+        s_xboxPads[physical].pressed=0;
+    } else memset(out,0,sizeof(*out));
     const int connected=out->connected;
     UnlockInput();
     return connected;
@@ -103,19 +155,33 @@ extern "C" int GEGameInput_ReadXbox(unsigned port,GEGameXboxState* out){
 extern "C" void GEGameInput_ClearXboxEdges(unsigned port){
     if(port>=4)return;
     LockInput();
-    s_xboxPads[port].pressed=0;
+#if GE_XBOX_COMPACT_CONTROLLER_PORTS
+    const unsigned physical=PhysicalForPlayerUnlocked(port);
+#else
+    const unsigned physical=port;
+#endif
+    if(physical<4u)s_xboxPads[physical].pressed=0;
     UnlockInput();
 }
 extern "C" int osContInit(void*,unsigned char* mask,GEOSContStatus* status){
     LockInput();
+#if GE_XBOX_COMPACT_CONTROLLER_PORTS
+    if(mask)*mask=(unsigned char)((1u<<NativePadCountUnlocked())-1u);
+    CopyPlayerStatusUnlocked(status);
+#else
     if(mask)*mask=s_connected;
     if(status)memcpy(status,s_status,sizeof(s_status));
+#endif
     UnlockInput();
     return 0;
 }
 extern "C" int osContReset(void*,GEOSContStatus* status){
     LockInput();
+#if GE_XBOX_COMPACT_CONTROLLER_PORTS
+    CopyPlayerStatusUnlocked(status);
+#else
     if(status)memcpy(status,s_status,sizeof(s_status));
+#endif
     UnlockInput();
     return 0;
 }
@@ -128,11 +194,19 @@ extern "C" int osContStartQuery(void* q){
 }
 extern "C" void osContGetReadData(GEOSContPad* pads){
     LockInput();
+#if GE_XBOX_COMPACT_CONTROLLER_PORTS
+    CopyPlayerPadsUnlocked(pads);
+#else
     if(pads)memcpy(pads,s_pads,sizeof(s_pads));
+#endif
     UnlockInput();
 }
 extern "C" void osContGetQuery(GEOSContStatus* status){
     LockInput();
+#if GE_XBOX_COMPACT_CONTROLLER_PORTS
+    CopyPlayerStatusUnlocked(status);
+#else
     if(status)memcpy(status,s_status,sizeof(s_status));
+#endif
     UnlockInput();
 }

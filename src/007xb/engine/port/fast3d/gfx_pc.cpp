@@ -15,12 +15,17 @@
 #include <PR/gbi.h>
 #include "gbiex.h" /* GE's G_TRI4 + PD extension opcodes (see header) */
 
+#if defined(GE_XBOX_NATIVE32) && (G_XBOX_MP_VI_CANVAS_EXT == G_FLOATVTX_EXT || G_XBOX_MP_VI_CANVAS_EXT == 0x46 || (G_XBOX_MP_VI_CANVAS_EXT >= 0x48 && G_XBOX_MP_VI_CANVAS_EXT <= 0x4B))
+#error Xbox VI canvas opcode conflicts with an existing Fast3D extension
+#endif
+
 #include "platform.h"
 #include "portaddr.h"   /* Stage B: arena windows */
 #include "envflag.h"
 #include "ge_native_platform.h"
 #include "ge_native_buffer.h"
 #include "ge_native_gfx.h"
+#include "ge_phase0_profile.h"
 
 #include "gfx_pc.h"
 #include "gfx_cc.h"
@@ -44,12 +49,27 @@ uintptr_t gfxFramebuffer;
 #define SCALE_3_8(VAL_) (((VAL_) << 5) | ((VAL_) << 2) | ((VAL_) >> 1))
 #define SCALE_8_3(VAL_) ((VAL_) / 0x24)
 
-// SCREEN_WIDTH and SCREEN_HEIGHT are defined in the headerfile
-#define HALF_SCREEN_WIDTH (SCREEN_WIDTH / 2.f)
-#define HALF_SCREEN_HEIGHT (SCREEN_HEIGHT / 2.f)
-
-#define RATIO_X (gfx_current_dimensions.width / (float)SCREEN_WIDTH)
-#define RATIO_Y (gfx_current_dimensions.height / (float)SCREEN_HEIGHT)
+// Native Xbox menus use a 440x330 VI canvas; gameplay uses 320x240.
+// Carry this per graphics task (not by reading live game-thread globals).
+#ifndef GE_XBOX_MP_PORTRAIT_FULL_VIEWPORT
+#define GE_XBOX_MP_PORTRAIT_FULL_VIEWPORT 1
+#endif
+#ifndef GE_XBOX_MP_VI_CANVAS_FIX
+#define GE_XBOX_MP_VI_CANVAS_FIX 1
+#endif
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_MP_VI_CANVAS_FIX
+static uint32_t s_xboxLogicalWidth = SCREEN_WIDTH;
+static uint32_t s_xboxLogicalHeight = SCREEN_HEIGHT;
+#define GE_LOGICAL_WIDTH (s_xboxLogicalWidth)
+#define GE_LOGICAL_HEIGHT (s_xboxLogicalHeight)
+#else
+#define GE_LOGICAL_WIDTH SCREEN_WIDTH
+#define GE_LOGICAL_HEIGHT SCREEN_HEIGHT
+#endif
+#define HALF_SCREEN_WIDTH (GE_LOGICAL_WIDTH / 2.f)
+#define HALF_SCREEN_HEIGHT (GE_LOGICAL_HEIGHT / 2.f)
+#define RATIO_X (gfx_current_dimensions.width / (float)GE_LOGICAL_WIDTH)
+#define RATIO_Y (gfx_current_dimensions.height / (float)GE_LOGICAL_HEIGHT)
 
 #define MAX_BUFFERED 256
 #define MAX_LIGHTS 4
@@ -68,6 +88,19 @@ uintptr_t gfxFramebuffer;
 #define TEXTURE_CACHE_MAX_SIZE GE_NV2A_TEXTURE_CACHE_SLOTS
 #else
 #define TEXTURE_CACHE_MAX_SIZE 256
+#endif
+
+/* Phase 5D: keep the original hash/key/eviction semantics while removing the
+ * O(allocated texture slots) scan on every texture-cache MISS. A fixed free
+ * bitmap chooses the same lowest-index unused slot as the original scan, and
+ * an intrusive LRU list gives the same oldest non-pinned victim. No new GPU
+ * texture storage or dynamic memory is allocated. 0 restores the old scan. */
+#ifndef GE_XBOX_FAST3D_TEXTURE_LRU_O1
+#if defined(GE_XBOX_NATIVE32)
+#define GE_XBOX_FAST3D_TEXTURE_LRU_O1 1
+#else
+#define GE_XBOX_FAST3D_TEXTURE_LRU_O1 0
+#endif
 #endif
 
 #define C0(pos, width) ((cmd->words.w0 >> (pos)) & ((1U << width) - 1))
@@ -92,6 +125,54 @@ int gfx_rdp_affine = 0;
 int gfx_fog_vertex = 0;
 }
 
+#ifndef GE_XBOX_NATIVE_ROOM_BATCHES
+#define GE_XBOX_NATIVE_ROOM_BATCHES 1
+#endif
+/* Phase 6C: GPU homogeneous clipping is appropriate for the restricted
+ * unfogged, opaque room subset. 0 restores the conservative 6B whole-AABB
+ * near/far test. Hardware clip is never enabled for effects requiring the
+ * original RSP's specially interpolated fog/shade behavior. */
+#ifndef GE_XBOX_ROOM_GPU_CLIP
+#define GE_XBOX_ROOM_GPU_CLIP 0
+#endif
+/* Cold GPU packet creation can stall visible frames. Keep the original
+ * one-upload-per-frame default even though the packet table is larger. */
+#ifndef GE_XBOX_ROOM_UPLOADS_PER_FRAME
+#define GE_XBOX_ROOM_UPLOADS_PER_FRAME 1u
+#endif
+/* Frontend and backend must use the same metadata/packet capacity. */
+#ifndef GE_XBOX_ROOM_PACKET_RECORDS
+#define GE_XBOX_ROOM_PACKET_RECORDS 128u
+#endif
+#if GE_XBOX_ROOM_PACKET_RECORDS != 48 && GE_XBOX_ROOM_PACKET_RECORDS != 128
+#error GE_XBOX_ROOM_PACKET_RECORDS must be 48 or 128
+#endif
+/* In the CURRENT port G_COL stores a vertex_colors pointer, but the
+ * G_VTX processing path reads colors directly from its source Vtx and
+ * nowhere reads that pointer. Do not invalidate the entire room when the
+ * no-op table pointer is set. 0 restores 6B's conservative exclusion. */
+#ifndef GE_XBOX_ROOM_ALLOW_GCOL
+#define GE_XBOX_ROOM_ALLOW_GCOL 0
+#endif
+/* These snapshots are written on G_VTX, then read ONLY inside an original
+ * background-room display-list scope. No GPU resources belong to this side. */
+struct NativeRoomRawSlot {
+    float x,y,z;
+    uint32_t materialColor;
+    unsigned room,revision,matrixStamp;
+    bool valid;
+};
+static NativeRoomRawSlot s_roomRawSlot[MAX_VERTICES];
+static int s_roomScope=-1;
+static unsigned s_roomRevision=0;
+static bool s_roomHasColorOverride=false;
+static uintptr_t s_roomPrimaryStart=0u;
+static uintptr_t s_roomPrimaryEnd=0u;
+static const Gfx* s_roomAttemptedStart=0;
+static const Gfx* s_roomAttemptedUntil=0;
+static uint32_t geRoomMix32(uint32_t h,uint32_t v) {
+    return (h ^ v)*16777619u;
+}
 struct LoadedVertex {
     float x, y, z, w;
     float u, v;
@@ -123,6 +204,68 @@ extern "C" void geNativeFast3DTextureCacheCounters(unsigned* capacity,
 #define TEXTURE_CACHE_BUCKETS (TEXTURE_CACHE_MAX_SIZE * 2)
 static uint16_t gfx_texture_buckets[TEXTURE_CACHE_BUCKETS];
 static uint16_t gfx_texture_next[TEXTURE_CACHE_MAX_SIZE];
+
+#if GE_XBOX_FAST3D_TEXTURE_LRU_O1
+/* Cache IDs are 1-based in both the hash chains and LRU list; zero is null.
+ * The free bitmap uses physical slot indices so reinsertion chooses the same
+ * lowest unused slot as the original linear scan, even after a cache clear. */
+static uint16_t gfx_texture_lru_prev[TEXTURE_CACHE_MAX_SIZE];
+static uint16_t gfx_texture_lru_next[TEXTURE_CACHE_MAX_SIZE];
+static uint16_t gfx_texture_lru_oldest=0,gfx_texture_lru_newest=0;
+static uint32_t gfx_texture_unused[(TEXTURE_CACHE_MAX_SIZE+31u)/32u];
+
+static void gfx_texture_lru_unlink(unsigned index) {
+    const uint16_t prev=gfx_texture_lru_prev[index];
+    const uint16_t next=gfx_texture_lru_next[index];
+    if(prev)gfx_texture_lru_next[prev-1u]=next;
+    else gfx_texture_lru_oldest=next;
+    if(next)gfx_texture_lru_prev[next-1u]=prev;
+    else gfx_texture_lru_newest=prev;
+    gfx_texture_lru_prev[index]=gfx_texture_lru_next[index]=0;
+}
+static void gfx_texture_lru_append(unsigned index) {
+    const uint16_t id=(uint16_t)(index+1u);
+    gfx_texture_lru_prev[index]=gfx_texture_lru_newest;
+    gfx_texture_lru_next[index]=0;
+    if(gfx_texture_lru_newest)
+        gfx_texture_lru_next[gfx_texture_lru_newest-1u]=id;
+    else gfx_texture_lru_oldest=id;
+    gfx_texture_lru_newest=id;
+}
+static void gfx_texture_lru_touch(unsigned index) {
+    if(gfx_texture_lru_newest==(uint16_t)(index+1u))return;
+    gfx_texture_lru_unlink(index);
+    gfx_texture_lru_append(index);
+}
+static void gfx_texture_lru_invalidate(unsigned index) {
+    gfx_texture_lru_unlink(index);
+    gfx_texture_unused[index>>5]|=(uint32_t)1u<<(index&31u);
+}
+static TextureCacheNode* gfx_texture_take_unused() {
+    for(unsigned word=0;word<sizeof(gfx_texture_unused)/sizeof(gfx_texture_unused[0]);++word) {
+        uint32_t bits=gfx_texture_unused[word];
+        if(!bits)continue;
+        unsigned bit=0;
+        while(!(bits&1u)){bits>>=1;++bit;}
+        gfx_texture_unused[word]&=~((uint32_t)1u<<bit);
+        return &gfx_texture_cache[word*32u+bit];
+    }
+    return 0;
+}
+static TextureCacheNode* gfx_texture_oldest_except(const TextureCacheNode* pinned) {
+    for(uint16_t id=gfx_texture_lru_oldest;id;id=gfx_texture_lru_next[id-1u]) {
+        TextureCacheNode* node=&gfx_texture_cache[id-1u];
+        if(node!=pinned)return node;
+    }
+    return 0;
+}
+static void gfx_texture_lru_clear() {
+    gfx_texture_lru_oldest=gfx_texture_lru_newest=0;
+    memset(gfx_texture_unused,0,sizeof(gfx_texture_unused));
+    for(unsigned i=0;i<gfx_texture_cache_used;++i)
+        gfx_texture_unused[i>>5]|=(uint32_t)1u<<(i&31u);
+}
+#endif
 
 static unsigned gfx_texture_bucket(const TextureCacheKey& key) {
     uintptr_t h=(uintptr_t)key.texture_addr;
@@ -206,6 +349,14 @@ static struct RSP {
 
     const struct NormalColor *vertex_colors; //[MAX_VERTEX_COLORS];
 } rsp;
+
+static unsigned geRoomMatrixStamp() {
+    uint32_t h=2166136261u;
+    const uint8_t *bytes=(const uint8_t*)rsp.MP_matrix;
+    for(unsigned n=0;n<sizeof(rsp.MP_matrix);++n)h=geRoomMix32(h,bytes[n]);
+    return h;
+}
+
 
 struct RawTexMetadata {
     uint16_t width, height;
@@ -420,6 +571,7 @@ static uint64_t s_perf_batches = 0, s_perf_tris = 0;
 
 static void gfx_flush(void) {
     if (buf_vbo_len > 0) {
+        GE_P0E_SCOPE(GE_P0E_SUBMIT);
         s_perf_batches++;
         s_perf_tris += buf_vbo_num_tris;
         gfx_rapi->draw_triangles(buf_vbo, buf_vbo_len, buf_vbo_num_tris);
@@ -713,12 +865,18 @@ static void gfx_texture_invalidate(TextureCacheNode* node) {
         rdp.textures_changed[i]=true;
     }
     gfx_texture_unlink(node);
+#if GE_XBOX_FAST3D_TEXTURE_LRU_O1
+    gfx_texture_lru_invalidate((unsigned)(node-gfx_texture_cache));
+#endif
     node->used=false;
 }
 
 void gfx_texture_cache_clear() {
     gfx_flush();
     for (unsigned i=0;i<gfx_texture_cache_used;++i) gfx_texture_cache[i].used=false;
+#if GE_XBOX_FAST3D_TEXTURE_LRU_O1
+    gfx_texture_lru_clear();
+#endif
     memset(gfx_texture_buckets,0,sizeof(gfx_texture_buckets));
     memset(gfx_texture_next,0,sizeof(gfx_texture_next));
     rdp.textures_changed[0]=rdp.textures_changed[1]=true;
@@ -734,6 +892,9 @@ static void gfx_texture_cache_release() {
         gfx_rapi->delete_texture(gfx_texture_cache[i].second.texture_id);
     gfx_texture_cache_used=0;
     gfx_texture_cache_clock=0;
+#if GE_XBOX_FAST3D_TEXTURE_LRU_O1
+    gfx_texture_lru_clear();
+#endif
 }
 
 extern "C" int gfx_texture_cache_count(void) {
@@ -751,6 +912,9 @@ static bool gfx_texture_cache_lookup(int i,const TextureCacheKey& key) {
         if(n->first==key) {
             ++s_texCacheHits;
             n->last_use=++gfx_texture_cache_clock;
+#if GE_XBOX_FAST3D_TEXTURE_LRU_O1
+            gfx_texture_lru_touch((unsigned)(n-gfx_texture_cache));
+#endif
             gfx_rapi->select_texture(i,n->second.texture_id,n->second.linear_filter);
             gfx_rapi->set_sampler_parameters(i,n->second.linear_filter,n->second.cms,n->second.cmt,rdp.tex_lod);
             rendering_state.textures[i]=n;
@@ -759,17 +923,21 @@ static bool gfx_texture_cache_lookup(int i,const TextureCacheKey& key) {
     }
     ++s_texCacheMisses;
     TextureCacheNode* slot=0;
-    TextureCacheNode* oldest=0;
     /* Triangle setup imports unit 0 before unit 1. Preserve the other unit's
      * selected texture while allocating/reusing an ID: invalidating it here
      * would only mark it dirty after that unit's import pass has completed. */
     const TextureCacheNode* pinned=rendering_state.textures[1-i];
+#if GE_XBOX_FAST3D_TEXTURE_LRU_O1
+    slot=gfx_texture_take_unused();
+#else
+    TextureCacheNode* oldest=0;
     for (unsigned j=0;j<gfx_texture_cache_used;++j) {
         TextureCacheNode* n=&gfx_texture_cache[j];
         if(n==pinned) continue;
         if(!n->used && !slot) slot=n;
         if(n->used && (!oldest || n->last_use<oldest->last_use)) oldest=n;
     }
+#endif
     if(!slot && gfx_texture_cache_used<TEXTURE_CACHE_MAX_SIZE) {
         slot=&gfx_texture_cache[gfx_texture_cache_used++];
         if(gfx_texture_cache_used>s_texCachePeakAllocated)
@@ -780,9 +948,19 @@ static bool gfx_texture_cache_lookup(int i,const TextureCacheKey& key) {
     if(!slot) {
         ++s_texCacheEvictions;
         gfx_flush();
+#if GE_XBOX_FAST3D_TEXTURE_LRU_O1
+        slot=gfx_texture_oldest_except(pinned);
+#else
         slot=oldest;
+#endif
         if(!slot) sysFatalError("Xbox texture cache corrupt");
         gfx_texture_invalidate(slot);
+#if GE_XBOX_FAST3D_TEXTURE_LRU_O1
+        /* Invalidation put the victim in the free bitmap; consume that slot
+         * before linking the freshly imported image into the LRU. */
+        gfx_texture_unused[(unsigned)(slot-gfx_texture_cache)>>5]&=
+            ~((uint32_t)1u<<((unsigned)(slot-gfx_texture_cache)&31u));
+#endif
     }
     const uint32_t id=slot->second.texture_id;
     memset(&slot->second,0,sizeof(slot->second));
@@ -791,6 +969,9 @@ static bool gfx_texture_cache_lookup(int i,const TextureCacheKey& key) {
     const unsigned index=(unsigned)(slot-gfx_texture_cache);
     gfx_texture_next[index]=gfx_texture_buckets[bucket];
     gfx_texture_buckets[bucket]=(uint16_t)(index+1u);
+#if GE_XBOX_FAST3D_TEXTURE_LRU_O1
+    gfx_texture_lru_append(index);
+#endif
     gfx_rapi->select_texture(i,id,false);
     gfx_rapi->set_sampler_parameters(i,false,0,0,rdp.tex_lod);
     rendering_state.textures[i]=slot;
@@ -1181,6 +1362,7 @@ static uint32_t gfx_palette_hash(uint8_t siz,uint8_t palette_index) {
 }
 
 static void import_texture(int i, int tile, bool importReplacement) {
+    GE_P0E_SCOPE(GE_P0E_IMPORT);
     LoadedTexture& loaded_texture = rdp.loaded_texture[rdp.texture_tile[tile].tmem];
     const uint8_t fmt = rdp.texture_tile[tile].fmt;
     const uint8_t siz = rdp.texture_tile[tile].siz;
@@ -2133,8 +2315,24 @@ static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* verti
         return; /* D146 */
     }
 
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_NATIVE_ROOM_BATCHES
+    const bool nativeRoomSource=(s_roomScope>=0 && !s_roomHasColorOverride &&
+        !(rsp.geometry_mode&(G_LIGHTING|G_TEXTURE_GEN)));
+    const unsigned nativeRoomMatrixStamp=nativeRoomSource?geRoomMatrixStamp():0u;
+#endif
     for (size_t i = 0; i < n_vertices; i++, dest_index++) {
         const Vtx* v = &vertices[i];
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_NATIVE_ROOM_BATCHES
+        NativeRoomRawSlot &raw=s_roomRawSlot[dest_index];
+        raw.valid=nativeRoomSource;
+        if(nativeRoomSource) {
+            raw.x=(float)v->v.ob[0];raw.y=(float)v->v.ob[1];raw.z=(float)v->v.ob[2];
+            raw.materialColor=((uint32_t)v->v.cn[3]<<24)|((uint32_t)v->v.cn[0]<<16)|
+                              ((uint32_t)v->v.cn[1]<<8)|((uint32_t)v->v.cn[2]);
+            raw.room=(unsigned)s_roomScope;raw.revision=s_roomRevision;
+            raw.matrixStamp=nativeRoomMatrixStamp;
+        }
+#endif
         struct LoadedVertex* d = &rsp.loaded_vertices[dest_index];
         geTriVertexInvalidated((unsigned)dest_index);
 
@@ -2462,11 +2660,27 @@ struct GEPreparedTriangleState {
     struct GfxClipParameters clip_parameters;
 };
 static GEPreparedTriangleState s_ge_prepared_tri;
+/* A complete native room packet replaces a TRI run, but the original material
+ * commands remain authoritative. Probe one TRI to run material setup only;
+ * if the native backend declines, replay that TRI normally. */
+static bool s_roomNativePrepareOnly=false;
 #ifndef GE_XBOX_FAST3D_MATERIAL_CACHE
 #define GE_XBOX_FAST3D_MATERIAL_CACHE 1
 #endif
 static unsigned s_ge_tri_state_generation=1;
 static unsigned s_ge_tri_preparations=0, s_ge_tri_reuses=0;
+/* Phase 5F: two triangles of the same RDP rectangle share one material.
+ * Only gfx_draw_rectangle() enables the second-half window, after confirming
+ * that the first half actually completed material preparation. Never cache
+ * across different rectangles or across the temporary RDP viewport/geometry
+ * restoration, and never affect ordinary 3D triangles. */
+#ifndef GE_XBOX_FAST3D_RECT_PAIR_MATERIAL
+#define GE_XBOX_FAST3D_RECT_PAIR_MATERIAL 1
+#endif
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_FAST3D_RECT_PAIR_MATERIAL
+static bool s_ge_rect_second_half=false;
+#endif
+
 #ifndef GE_XBOX_FAST3D_VERTEX_CACHE
 #define GE_XBOX_FAST3D_VERTEX_CACHE 1
 #endif
@@ -2517,7 +2731,130 @@ extern "C" unsigned geNativeFast3DTriSetupCacheEnabled(void) {
 #endif
 }
 
+/* PH5A BEGIN: Conservative engine-wide portal/scissor early reject.
+ * Frustum outcodes above catch triangles entirely outside [-w,+w].  Portal
+ * scissors can be much smaller: rejecting a triangle before RDP material
+ * preparation avoids texture import, shader setup, vertex packing and D3D
+ * submission for pixels the Xbox can never show.  Never skip DL commands,
+ * viewport transitions or geometry that intersects any clip boundary.
+ *
+ * Enable for Xbox builds only; 0 is a byte-for-byte behavior A/B fallback.
+ */
+#ifndef GE_XBOX_FAST3D_EARLY_SCISSOR_REJECT
+#define GE_XBOX_FAST3D_EARLY_SCISSOR_REJECT 1
+#endif
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_FAST3D_EARLY_SCISSOR_REJECT
+static unsigned s_ge_early_scissor_rejects=0;
+extern "C" unsigned geNativeFast3DEarlyScissorRejects(void) {
+    return s_ge_early_scissor_rejects;
+}
+static bool geEarlyScissorReject(const LoadedVertex *a,
+                                  const LoadedVertex *b,
+                                  const LoadedVertex *c) {
+    /* Lazy state cache. Recalculate the four homogeneous clip boundaries
+     * ONLY when a viewport, portal scissor or output dimension changes,
+     * not for every triangle. Rect helpers can modify the RDP structures
+     * directly, so checking the values is safer than an opcode-only epoch. */
+    static bool cached=false, active=false;
+    static struct XYWidthHeight lastViewport,lastScissor;
+    static unsigned lastWidth=0,lastHeight=0;
+    static float left=0,right=0,bottom=0,top=0;
+    if (fbActive)return false; /* offscreen framebuffer paths unchanged */
+    if (!cached || lastWidth!=gfx_current_dimensions.width ||
+        lastHeight!=gfx_current_dimensions.height ||
+        memcmp(&lastViewport,&rdp.viewport,sizeof(lastViewport)) ||
+        memcmp(&lastScissor,&rdp.scissor,sizeof(lastScissor))) {
+        cached=true;active=false;
+        lastViewport=rdp.viewport;lastScissor=rdp.scissor;
+        lastWidth=gfx_current_dimensions.width;
+        lastHeight=gfx_current_dimensions.height;
+        /* The Xbox backend maps clip vertices into a top-left D3D viewport.
+         * gfx_pc stores viewport and scissor in bottom-left pixel coords;
+         * NDC x/y therefore map with the SAME + sign on both axes.
+         * If driver clamping might be required, preserve the original path. */
+        if (rdp.viewport.width && rdp.viewport.height &&
+            rdp.scissor.width && rdp.scissor.height &&
+            rdp.viewport.x >= 0 && rdp.viewport.y >= 0 &&
+            (float)rdp.viewport.x+(float)rdp.viewport.width <= (float)lastWidth &&
+            (float)rdp.viewport.y+(float)rdp.viewport.height <= (float)lastHeight) {
+            const float vx=(float)rdp.viewport.x,vy=(float)rdp.viewport.y;
+            const float vw=(float)rdp.viewport.width,vh=(float)rdp.viewport.height;
+            /* Two physical pixels of guard on EVERY side: only wholly
+             * invisible geometry outside the enlarged portal is rejected. */
+            const float pad=2.0f;
+            const float sx0=(float)rdp.scissor.x-pad;
+            const float sx1=(float)rdp.scissor.x+(float)rdp.scissor.width+pad;
+            const float sy0=(float)rdp.scissor.y-pad;
+            const float sy1=(float)rdp.scissor.y+(float)rdp.scissor.height+pad;
+            /* A full-screen scissor or a 1-pixel edge inset needs no test. */
+            if (!(sx0<=vx && sx1>=vx+vw && sy0<=vy && sy1>=vy+vh)) {
+                left=2.0f*(sx0-vx)/vw-1.0f;
+                right=2.0f*(sx1-vx)/vw-1.0f;
+                bottom=2.0f*(sy0-vy)/vh-1.0f;
+                top=2.0f*(sy1-vy)/vh-1.0f;
+                active=ge_gfx_isfinite(left) && ge_gfx_isfinite(right) &&
+                    ge_gfx_isfinite(bottom) && ge_gfx_isfinite(top);
+            }
+        }
+    }
+    if (!active)return false;
+    /* No reject across or behind the eye plane. Clip/Fog/FVF behavior
+     * stays with the original near-plane and backend implementations. */
+    if (!(a->w>0.0f && b->w>0.0f && c->w>0.0f))return false;
+    /* Inclusive clip math in homogeneous coordinates. Only when all three
+     * vertices lie beyond the SAME plane is the entire triangle invisible.
+     * Test finiteness only on a prospective rejection: most triangles pass. */
+    const bool outside=
+        (a->x<left*a->w && b->x<left*b->w && c->x<left*c->w) ||
+        (a->x>right*a->w && b->x>right*b->w && c->x>right*c->w) ||
+        (a->y<bottom*a->w && b->y<bottom*b->w && c->y<bottom*c->w) ||
+        (a->y>top*a->w && b->y>top*b->w && c->y>top*c->w);
+    if (!outside)return false;
+    return ge_gfx_isfinite(a->w) && ge_gfx_isfinite(b->w) && ge_gfx_isfinite(c->w) &&
+        ge_gfx_isfinite(a->x) && ge_gfx_isfinite(b->x) && ge_gfx_isfinite(c->x) &&
+        ge_gfx_isfinite(a->y) && ge_gfx_isfinite(b->y) && ge_gfx_isfinite(c->y);
+}
+#endif /* GE_XBOX_FAST3D_EARLY_SCISSOR_REJECT */
+/* PH5A END */
+
+/* PH5B: compare the projected triangle orientation without reciprocal-W.
+ * (x1/w1-x2/w2)*(y3/w3-y2/w2)-(y1/w1-y2/w2)*(x3/w3-x2/w2)
+ * has the sign of the numerator below when all W are positive. Mixed/zero W,
+ * nonfinite values and near-degenerate orientations must use the original
+ * divisions and exact N64-facing tests, including the negative-W sign rule.
+ * Does not alter the submitted vertex coordinates, clipping or draw order. */
+#ifndef GE_XBOX_FAST3D_HOMOGENEOUS_BACKFACE
+#define GE_XBOX_FAST3D_HOMOGENEOUS_BACKFACE 1
+#endif
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_FAST3D_HOMOGENEOUS_BACKFACE
+static bool geTryHomogeneousBackface(const struct LoadedVertex *v1,
+                                     const struct LoadedVertex *v2,
+                                     const struct LoadedVertex *v3,
+                                     float *crossOut) {
+    const float w1=v1->w, w2=v2->w, w3=v3->w;
+    /* Avoid catastrophic precision loss when multiplying tiny/huge W. */
+    if (!(w1>0.0001f && w2>0.0001f && w3>0.0001f) ||
+        !ge_gfx_isfinite(w1) || !ge_gfx_isfinite(w2) || !ge_gfx_isfinite(w3) ||
+        !ge_gfx_isfinite(v1->x) || !ge_gfx_isfinite(v1->y) ||
+        !ge_gfx_isfinite(v2->x) || !ge_gfx_isfinite(v2->y) ||
+        !ge_gfx_isfinite(v3->x) || !ge_gfx_isfinite(v3->y))return false;
+    const float abx=v1->x*w2-v2->x*w1;
+    const float aby=v1->y*w2-v2->y*w1;
+    const float cbx=v3->x*w2-v2->x*w3;
+    const float cby=v3->y*w2-v2->y*w3;
+    const float term1=abx*cby,term2=aby*cbx;
+    const float numerator=term1-term2;
+    const float magnitude=fabsf(term1)+fabsf(term2);
+    /* Sign only. Treat cancellation as uncertain and compute the old result. */
+    if (!ge_gfx_isfinite(numerator) || !ge_gfx_isfinite(magnitude) ||
+        !(magnitude>0.0f) || !(fabsf(numerator)>magnitude*0.00001f))return false;
+    *crossOut=numerator;
+    return true;
+}
+#endif
+
 static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bool is_rect) {
+    GE_P0E_SCOPE(GE_P0E_TRIANGLE);
     /* D75D: only real model triangles (all indices < MAX_VERTICES); the
      * fullscreen-quad helpers use indices MAX_VERTICES+0..3 and would skew maxtri. */
     if (vtx1_idx < MAX_VERTICES && vtx2_idx < MAX_VERTICES && vtx3_idx < MAX_VERTICES) {
@@ -2530,7 +2867,7 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
     struct LoadedVertex* v3 = &rsp.loaded_vertices[vtx3_idx];
     struct LoadedVertex* v_arr[3] = { v1, v2, v3 };
 
-    if ((rsp.extra_geometry_mode & G_NO_CLIPPING_EXT) == 0) {
+    if (!s_roomNativePrepareOnly && (rsp.extra_geometry_mode & G_NO_CLIPPING_EXT) == 0) {
         /* D233: the outcode bits set in gfx_sp_vertex (x<-w / x>w / y<-w /
          * y>w / z>w) are only valid half-space tests when w>0. A vertex
          * that has crossed behind the camera plane (w<0) flips the sense of
@@ -2557,17 +2894,24 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
         }
     }
 
-    if ((rsp.geometry_mode & G_CULL_BOTH) != 0) {
-        float dx1 = v1->x / (v1->w) - v2->x / (v2->w);
-        float dy1 = v1->y / (v1->w) - v2->y / (v2->w);
-        float dx2 = v3->x / (v3->w) - v2->x / (v2->w);
-        float dy2 = v3->y / (v3->w) - v2->y / (v2->w);
-        float cross = dx1 * dy2 - dy1 * dx2;
-
-        if ((v1->w < 0) ^ (v2->w < 0) ^ (v3->w < 0)) {
-            // If one vertex lies behind the eye, negating cross will give the correct result.
-            // If all vertices lie behind the eye, the triangle will be rejected anyway.
-            cross = -cross;
+    if (!s_roomNativePrepareOnly && (rsp.geometry_mode & G_CULL_BOTH) != 0) {
+        float cross;
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_FAST3D_HOMOGENEOUS_BACKFACE
+        const bool geFastBackface=geTryHomogeneousBackface(v1,v2,v3,&cross);
+#else
+        const bool geFastBackface=false;
+#endif
+        if (!geFastBackface) {
+            /* Original projected-divide path for all uncertain geometries. */
+            float dx1 = v1->x / (v1->w) - v2->x / (v2->w);
+            float dy1 = v1->y / (v1->w) - v2->y / (v2->w);
+            float dx2 = v3->x / (v3->w) - v2->x / (v2->w);
+            float dy2 = v3->y / (v3->w) - v2->y / (v2->w);
+            cross = dx1 * dy2 - dy1 * dx2;
+            if ((v1->w < 0) ^ (v2->w < 0) ^ (v3->w < 0)) {
+                // Preserve original mixed-sign W behavior.
+                cross = -cross;
+            }
         }
 
         // If inverted culling is requested, negate the cross
@@ -2595,6 +2939,16 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
         }
     }
 
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_FAST3D_EARLY_SCISSOR_REJECT
+    /* Before material setup (texture conversion/shader lookup), preserve
+     * full state execution for uncertain cases and for diagnostic probes. */
+    if (!s_roomNativePrepareOnly && !is_rect && !(rsp.extra_geometry_mode & G_NO_CLIPPING_EXT) &&
+        !tri_dbg() && geEarlyScissorReject(v1,v2,v3)) {
+        ++s_ge_early_scissor_rejects;
+        return;
+    }
+#endif
+
     /* Respect the original N64 state-update ordering. All non-geometry DL
      * opcodes advance a generation in gfx_run_dl; the frame and render targets
      * also invalidate it. Imported texture or viewport dirtiness is checked
@@ -2603,8 +2957,21 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
     static int geTriProbes=-1;
     if (geTriProbes<0)
         geTriProbes=(getenv("GE_D172")!=NULL || getenv("GE_D229")!=NULL) ? 1 : 0;
+    /* A rectangle temporarily overrides RDP viewport/geometry. Preserve
+     * forced setup for its first triangle, but the immediately following
+     * triangle can reuse that *same* prepared material if the first half
+     * reached the end of material setup and no texture/viewport flag changed.
+     * The prepared state's generation remains zero, so it cannot leak into
+     * the next rectangle or ordinary geometry. */
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_FAST3D_RECT_PAIR_MATERIAL
+    const bool rectForcesSetup = is_rect && !s_ge_rect_second_half;
+    const bool generationDiffers = !is_rect &&
+        s_ge_prepared_tri.generation!=s_ge_tri_state_generation;
+    const bool triNeedsSetup = rectForcesSetup || geTriProbes || generationDiffers ||
+#else
     const bool triNeedsSetup = is_rect || geTriProbes ||
         s_ge_prepared_tri.generation!=s_ge_tri_state_generation ||
+#endif
         (s_ge_prepared_tri.comb &&
          ((s_ge_prepared_tri.comb->used_textures[0] && rdp.textures_changed[0]) ||
           (s_ge_prepared_tri.comb->used_textures[1] && rdp.textures_changed[1]))) ||
@@ -2614,6 +2981,7 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
     const bool triNeedsSetup = true;
 #endif
     if (triNeedsSetup) {
+    GE_P0E_SCOPE(GE_P0E_MATERIAL);
     bool depth_test = ((rsp.geometry_mode & G_ZBUFFER) == G_ZBUFFER || (rdp.other_mode_l & G_ZS_PRIM) == G_ZS_PRIM) &&
                       ((rdp.other_mode_h & G_CYC_1CYCLE) == G_CYC_1CYCLE || (rdp.other_mode_h & G_CYC_2CYCLE) == G_CYC_2CYCLE);
     bool depth_update = (rdp.other_mode_l & Z_UPD) == Z_UPD;
@@ -3019,6 +3387,9 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
     } else {
         ++s_ge_tri_reuses;
     }
+    /* Native packet contains this triangle; probing prepares RDP state only.
+     * Backend draw must succeed before any command in the run is skipped. */
+    if(s_roomNativePrepareOnly)return;
     const GEPreparedTriangleState &s=s_ge_prepared_tri;
     const bool use_alpha=s.use_alpha, use_fog=s.use_fog;
     const bool use_grayscale=s.use_grayscale, use_modulate=s.use_modulate;
@@ -3068,6 +3439,8 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
     struct LoadedVertex* emit_v[6] = { v1, v2, v3, NULL, NULL, NULL };
     int n_out_tris = 1;
     struct LoadedVertex nc_vtx[2];
+    {
+    GE_P0E_SCOPE(GE_P0E_CLIP);
     if (nearclip_on && !is_rect && (rsp.extra_geometry_mode & G_NO_CLIPPING_EXT) == 0) {
         const float NEAR_EPS = 1e-4f;
         float d[3];
@@ -3127,10 +3500,13 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
             }
         }
     }
+    } /* PH0E clip scope: no changes to emitted geometry. */
     const int n_emit_verts = n_out_tris * 3;
     if (buf_vbo_num_tris + n_out_tris > MAX_BUFFERED) {
         gfx_flush(); // buf_vbo holds MAX_BUFFERED triangles; make room for 1-2
     }
+    {
+    GE_P0E_SCOPE(GE_P0E_PACK);
     for (int i = 0; i < n_emit_verts; i++) {
         struct LoadedVertex* vi = emit_v[i];
 #if defined(GE_XBOX_NATIVE32) && GE_XBOX_FAST3D_VERTEX_CACHE
@@ -3340,6 +3716,7 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
 #endif
     }
 
+    } /* PH0E packed vertex output. */
     buf_vbo_num_tris += n_out_tris;
     if (buf_vbo_num_tris >= MAX_BUFFERED) {
         gfx_flush();
@@ -3386,6 +3763,395 @@ static void gfx_sp_geometry_mode(uint32_t clear, uint32_t set) {
     rsp.geometry_mode |= set;
 }
 
+
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_NATIVE_ROOM_BATCHES
+/* Batch-level eligibility is checked ONCE for a sequence of triangles, not
+ * for each triangle like Phase 5E. The packet is stored by the graphics
+ * thread, and every rendering command between packets runs unchanged. */
+/* Geometry-run admission threshold: older 6B required >=6 opcodes AND
+ * >=16 triangles, excluding many normal short TRI4 runs. Eight triangles
+ * across at least two commands still amortize a resident draw, while single
+ * triangles/short runs continue through software. Disable the 8-triangle
+ * policy to restore the original 6B admission filter. */
+#ifndef GE_XBOX_NATIVE_ROOM_SHORT_RUNS
+#define GE_XBOX_NATIVE_ROOM_SHORT_RUNS 0
+#endif
+#ifndef GE_XBOX_ROOM_COLD_PREFLIGHT
+#define GE_XBOX_ROOM_COLD_PREFLIGHT 1
+#endif
+
+static GfxNativeRoomVertex s_roomBuildVerts[1024u];
+/* Frontend cache stores ONLY metadata for a resident packet; warm frames do
+ * not walk or repack the triangle run. GPU resources live in the backend. */
+struct NativeRoomMeta {
+    const Gfx* source;
+    unsigned room,revision,signature,commands,vertices;
+    unsigned cullMode,textureUnits;
+    float min_bound[3],max_bound[3];
+    bool valid;
+};
+enum { GE_ROOM_FRONT_META_SLOTS = GE_XBOX_ROOM_PACKET_RECORDS };
+static NativeRoomMeta s_roomFrontMeta[GE_ROOM_FRONT_META_SLOTS];
+static unsigned s_roomFrontMetaClock=0;
+static unsigned s_roomFrontBuildsFrame=0;
+/* Lightweight cumulative diagnostics at RUN boundaries, not per triangle.
+ * Indexes: begin, runs, short, material, vertex, near, uploaded, backend.
+ * Read by the Back-button overlay once per 120-frame window; never logged. */
+enum { ROOM_STAT_BEGIN, ROOM_STAT_RUN, ROOM_STAT_SHORT,
+       ROOM_STAT_MATERIAL, ROOM_STAT_VERTEX, ROOM_STAT_NEAR,
+       ROOM_STAT_UPLOADED, ROOM_STAT_BACKEND, ROOM_STAT_COUNT };
+static unsigned s_roomHWStats[ROOM_STAT_COUNT]={0};
+/* Ineligible static material packets stay on the original Fast3D path.
+ * Direct-mapped failure entries avoid probing unchanged room DLs repeatedly. */
+struct NativeRoomRejected {
+    const Gfx* source;
+    unsigned room,revision,commands,material;
+};
+static NativeRoomRejected s_roomRejected[128];
+static unsigned geRoomRejectStamp() {
+    uint32_t h=geRoomMix32(2166136261u,(uint32_t)rdp.combine_mode);
+    h=geRoomMix32(h,(uint32_t)(rdp.combine_mode>>32));
+    h=geRoomMix32(h,(uint32_t)rdp.other_mode_h);
+    h=geRoomMix32(h,(uint32_t)rdp.other_mode_l);
+    h=geRoomMix32(h,(uint32_t)rsp.geometry_mode);
+    return geRoomMix32(h,rdp.first_tile_index);
+}
+static NativeRoomRejected* geRoomRejectSlot(const Gfx* begin) {
+    return &s_roomRejected[((uintptr_t)begin>>4u)&127u];
+}
+static unsigned geRoomIndices(const Gfx *cmd,unsigned index[12]) {
+    const uint32_t opcode=cmd->words.w0>>24;
+    if(opcode==(uint8_t)G_TRI1) {
+        index[0]=(cmd->words.w1>>16&255u)/10u;
+        index[1]=(cmd->words.w1>>8&255u)/10u;
+        index[2]=(cmd->words.w1&255u)/10u;
+        return 3u;
+    }
+    if(opcode==(uint8_t)G_TRI4) {
+        unsigned total=0u;
+        for(unsigned k=0;k<4u;++k) {
+            unsigned x=(cmd->words.w1>>(8u*k))&15u;
+            unsigned y=(cmd->words.w1>>(8u*k+4u))&15u;
+            unsigned z=(cmd->words.w0>>(4u*k))&15u;
+            if(x||y||z) {index[total++]=x;index[total++]=y;index[total++]=z;}
+        }
+        return total;
+    }
+    return 0u;
+}
+static bool geRoomNativeMaterialOK() {
+    if(s_roomScope<0 || s_roomHasColorOverride || fbActive || tri_dbg() ||
+       !gfx_rapi->native_room_draw || !gfx_rapi->native_room_prepare ||
+       (rsp.geometry_mode & (G_LIGHTING|G_TEXTURE_GEN|G_TEXTURE_GEN_LINEAR)) ||
+       (rsp.extra_geometry_mode & G_NO_CLIPPING_EXT))return false;
+    const GEPreparedTriangleState &m=s_ge_prepared_tri;
+    if(m.generation!=s_ge_tri_state_generation || !m.comb ||
+       m.use_alpha || m.use_fog || m.use_grayscale || m.use_modulate ||
+       m.tm || m.num_inputs>1 || m.used_textures[1] ||
+       m.wrap_s[0] || m.wrap_t[0] ||
+       m.clip_parameters.invert_y || m.clip_parameters.z_is_from_0_to_1)return false;
+    if(m.num_inputs==1 && m.comb->shader_input_mapping[0][0]!=G_CCMUX_SHADE)return false;
+    if(m.used_textures[0] && (!m.tex_width[0] || !m.tex_height[0]))return false;
+    return true;
+}
+static unsigned geRoomPacketSignature(unsigned commands) {
+    const GEPreparedTriangleState &m=s_ge_prepared_tri;
+    /* One packet remains reusable under camera motion, but never when UV
+     * derivation or the effective RDP material changes. */
+    uint32_t signature=geRoomMix32(2166136261u,commands);
+    signature=geRoomMix32(signature,m.tex_width[0]);
+    signature=geRoomMix32(signature,m.tex_height[0]);
+    signature=geRoomMix32(signature,(uint32_t)rdp.other_mode_h);
+    signature=geRoomMix32(signature,(uint32_t)rsp.texture_scaling_factor.s);
+    signature=geRoomMix32(signature,(uint32_t)rsp.texture_scaling_factor.t);
+    signature=geRoomMix32(signature,(uint32_t)rdp.combine_mode);
+    signature=geRoomMix32(signature,(uint32_t)(rdp.combine_mode>>32));
+    if(m.used_textures[0]) {
+        const unsigned tile=rdp.first_tile_index+gfx_lod_tile_offset(0);
+        signature=geRoomMix32(signature,rdp.texture_tile[tile].uls);
+        signature=geRoomMix32(signature,rdp.texture_tile[tile].ult);
+        signature=geRoomMix32(signature,(unsigned)rdp.texture_tile[tile].shifts);
+        signature=geRoomMix32(signature,(unsigned)rdp.texture_tile[tile].shiftt);
+    }
+    return signature;
+}
+static bool geRoomBuildPacket(const Gfx *begin,unsigned commands,
+                             GfxNativeRoomDraw *packet) {
+    if(!packet || !commands || commands>256u || !geRoomNativeMaterialOK())return false;
+    const unsigned stamp=geRoomMatrixStamp();
+    unsigned total=0;
+    float minX=0,minY=0,minZ=0,maxX=0,maxY=0,maxZ=0;
+    const GEPreparedTriangleState &m=s_ge_prepared_tri;
+    for(unsigned c=0;c<commands;++c) {
+        unsigned indices[12];const unsigned count=geRoomIndices(&begin[c],indices);
+        if(!count || total+count>1024u)return false;
+        for(unsigned n=0;n<count;++n) {
+            unsigned idx=indices[n];
+            if(idx>=MAX_VERTICES)return false;
+            const NativeRoomRawSlot &raw=s_roomRawSlot[idx];
+            if(!raw.valid || raw.room!=(unsigned)s_roomScope ||
+               raw.revision!=s_roomRevision || raw.matrixStamp!=stamp)return false;
+            GfxNativeRoomVertex &v=s_roomBuildVerts[total++];
+            v.x=raw.x;v.y=raw.y;v.z=raw.z;
+            v.color=raw.materialColor;
+            v.u0=v.v0=0.0f;
+            if(m.used_textures[0]) {
+                const LoadedVertex &lv=rsp.loaded_vertices[idx];
+                float u=lv.u/32.0f,vv=lv.v/32.0f;
+                const unsigned tile=rdp.first_tile_index+gfx_lod_tile_offset(0);
+                const int sh=rdp.texture_tile[tile].shifts,sv=rdp.texture_tile[tile].shiftt;
+                if(sh) {if(sh<=10)u/=(float)(1<<sh);else u*=(float)(1<<(16-sh));}
+                if(sv) {if(sv<=10)vv/=(float)(1<<sv);else vv*=(float)(1<<(16-sv));}
+                u-=rdp.texture_tile[tile].uls/4.0f;
+                vv-=rdp.texture_tile[tile].ult/4.0f;
+                if(!(rdp.other_mode_h&G_TP_PERSP)){u*=0.5f;vv*=0.5f;}
+                if((rdp.other_mode_h&(3u<<G_MDSFT_TEXTFILT))!=G_TF_POINT){u+=0.5f;vv+=0.5f;}
+                v.u0=u/(float)m.tex_width[0];v.v0=vv/(float)m.tex_height[0];
+            }
+            if(total==1){minX=maxX=v.x;minY=maxY=v.y;minZ=maxZ=v.z;}
+            else {
+                if(v.x<minX)minX=v.x;if(v.x>maxX)maxX=v.x;
+                if(v.y<minY)minY=v.y;if(v.y>maxY)maxY=v.y;
+                if(v.z<minZ)minZ=v.z;if(v.z>maxZ)maxZ=v.z;
+            }
+        }
+    }
+#if GE_XBOX_NATIVE_ROOM_SHORT_RUNS
+    if(total<24u)return false; /* >=8 triangles, room-only persistent packets */
+#else
+    if(total<48u)return false; /* original 6B minimum 16 triangles */
+#endif
+    packet->room=(unsigned)s_roomScope;
+    packet->revision=s_roomRevision;
+    packet->signature=geRoomPacketSignature(commands);
+    packet->command_address=begin;
+    packet->vertices=s_roomBuildVerts;
+    packet->vertex_count=total;
+    memcpy(packet->matrix,rsp.MP_matrix,sizeof(packet->matrix));
+    packet->aspect_offset=rsp.aspect_ofs;
+    packet->aspect_scale=rsp.aspect_scale/gfx_current_dimensions.aspect_ratio;
+    switch(rsp.geometry_mode&G_CULL_BOTH) {
+        case G_CULL_FRONT:packet->cull_mode=1u;break;
+        case G_CULL_BACK:packet->cull_mode=2u;break;
+        case G_CULL_BOTH:return false;
+        default:packet->cull_mode=0u;break;
+    }
+    packet->texture_units=m.used_textures[0]?1u:0u;
+    for(unsigned i=0;i<3;++i){packet->min_bound[i]=i==0?minX:i==1?minY:minZ;
+        packet->max_bound[i]=i==0?maxX:i==1?maxY:maxZ;}
+    return true;
+}
+static NativeRoomMeta* geRoomFindMeta(const Gfx* begin,unsigned commands,
+                                      unsigned signature) {
+    for(unsigned i=0;i<GE_ROOM_FRONT_META_SLOTS;++i) {
+        NativeRoomMeta &e=s_roomFrontMeta[i];
+        if(e.valid && e.source==begin && e.commands==commands &&
+           e.room==(unsigned)s_roomScope && e.revision==s_roomRevision &&
+           e.signature==signature)return &e;
+    }
+    return 0;
+}
+#if GE_XBOX_ROOM_COLD_PREFLIGHT
+static NativeRoomMeta* geRoomFindMetaCandidate(const Gfx* begin,unsigned commands) {
+    /* Material signature is not prepared yet. Any possibly warm packet must
+     * proceed through the original material validation and exact lookup. */
+    for(unsigned i=0;i<GE_ROOM_FRONT_META_SLOTS;++i) {
+        NativeRoomMeta &e=s_roomFrontMeta[i];
+        if(e.valid && e.source==begin && e.commands==commands &&
+           e.room==(unsigned)s_roomScope && e.revision==s_roomRevision)
+            return &e;
+    }
+    return 0;
+}
+#endif
+static void geRoomCopyMeta(GfxNativeRoomDraw &packet,const NativeRoomMeta &e) {
+    packet.room=e.room;packet.revision=e.revision;packet.signature=e.signature;
+    packet.command_address=e.source;packet.vertices=0;
+    packet.vertex_count=e.vertices;packet.cull_mode=e.cullMode;
+    packet.texture_units=e.textureUnits;
+    memcpy(packet.min_bound,e.min_bound,sizeof(e.min_bound));
+    memcpy(packet.max_bound,e.max_bound,sizeof(e.max_bound));
+    memcpy(packet.matrix,rsp.MP_matrix,sizeof(packet.matrix));
+    packet.aspect_offset=rsp.aspect_ofs;
+    packet.aspect_scale=rsp.aspect_scale/gfx_current_dimensions.aspect_ratio;
+}
+static void geRoomRememberMeta(const GfxNativeRoomDraw &packet,unsigned commands) {
+    NativeRoomMeta *e=0;
+    for(unsigned i=0;i<GE_ROOM_FRONT_META_SLOTS;++i)if(!s_roomFrontMeta[i].valid) {
+        e=&s_roomFrontMeta[i];break;
+    }
+    if(!e) {e=&s_roomFrontMeta[(s_roomFrontMetaClock++)%GE_ROOM_FRONT_META_SLOTS];}
+    e->source=(const Gfx*)packet.command_address;e->commands=commands;
+    e->room=packet.room;e->revision=packet.revision;
+    e->signature=packet.signature;
+    e->vertices=packet.vertex_count;e->cullMode=packet.cull_mode;
+    e->textureUnits=packet.texture_units;
+    memcpy(e->min_bound,packet.min_bound,sizeof(e->min_bound));
+    memcpy(e->max_bound,packet.max_bound,sizeof(e->max_bound));
+    e->valid=true;
+}
+static bool geRoomFrontProjectionSafe(const GfxNativeRoomDraw &packet) {
+#if GE_XBOX_ROOM_GPU_CLIP
+    /* Frontend still validates material and exact vertex provenance. The
+     * fixed-function Xbox clipper receives original homogeneous W through
+     * the world/view/projection matrix. Avoid room-AABB false negatives: the
+     * player is commonly *inside* this box. */
+    (void)packet;
+    return true;
+#else
+    for(unsigned k=0;k<8u;++k) {
+        const float x=(k&1u)?packet.max_bound[0]:packet.min_bound[0];
+        const float y=(k&2u)?packet.max_bound[1]:packet.min_bound[1];
+        const float z=(k&4u)?packet.max_bound[2]:packet.min_bound[2];
+        const float w=x*packet.matrix[3]+y*packet.matrix[7]+z*packet.matrix[11]+packet.matrix[15];
+        const float pz=x*packet.matrix[2]+y*packet.matrix[6]+z*packet.matrix[10]+packet.matrix[14];
+        if(!(w>0.005f && pz > -w+0.005f && pz < w-0.005f))return false;
+    }
+    return true;
+#endif
+}
+static bool geRoomNativeRun(Gfx *begin,unsigned count) {
+    ++s_roomHWStats[ROOM_STAT_RUN];
+    if(s_roomScope<0 || !s_roomRevision ||
+       (rsp.geometry_mode&(G_LIGHTING|G_TEXTURE_GEN)) ||
+       s_roomHasColorOverride || !gfx_rapi->native_room_draw ||
+       !gfx_rapi->native_room_prepare) {
+        ++s_roomHWStats[ROOM_STAT_MATERIAL];return false;
+    }
+#if GE_XBOX_NATIVE_ROOM_SHORT_RUNS
+    if(count<2u){++s_roomHWStats[ROOM_STAT_SHORT];return false;}
+#else
+    if(count<6u){++s_roomHWStats[ROOM_STAT_SHORT];return false;}
+#endif
+    unsigned triCount=0;
+    for(unsigned c=0;c<count;++c) {
+        unsigned idx[12];
+        triCount+=geRoomIndices(begin+c,idx)/3u;
+    }
+#if GE_XBOX_NATIVE_ROOM_SHORT_RUNS
+    if(triCount<8u){++s_roomHWStats[ROOM_STAT_SHORT];return false;}
+#else
+    if(triCount<16u){++s_roomHWStats[ROOM_STAT_SHORT];return false;}
+#endif
+    const unsigned rejectStamp=geRoomRejectStamp();
+    NativeRoomRejected *reject=geRoomRejectSlot(begin);
+    if(reject->source==begin && reject->room==(unsigned)s_roomScope &&
+       reject->revision==s_roomRevision && reject->commands==count &&
+       reject->material==rejectStamp){++s_roomHWStats[ROOM_STAT_MATERIAL];return false;}
+#if GE_XBOX_ROOM_COLD_PREFLIGHT
+    /* Phase 6E: first ask the backend whether ANY cold packet can be built
+     * on this graphics task. In 6D, only one task out of eight may upload,
+     * and the fixed 1 MiB/128-record cache may become permanently full.
+     * No need to material-probe or rebuild a failed packet in those cases.
+     * Potentially warm packets still run the full exact-identity validation. */
+    GfxNativeRoomDraw earlyCapacity;
+    memset(&earlyCapacity,0,sizeof(earlyCapacity));
+    earlyCapacity.vertex_count=triCount*3u;
+    NativeRoomMeta *potentialWarm=0;
+    if(!gfx_rapi->native_room_prepare(&earlyCapacity)) {
+        potentialWarm=geRoomFindMetaCandidate(begin,count);
+        if(!potentialWarm) {
+            ++s_roomHWStats[ROOM_STAT_BACKEND];return false;
+        }
+    }
+#endif
+    /* Probe a single original triangle for material setup only. Every RDP
+     * command surrounding the run is still executed by the interpreter. */
+    unsigned first[12];const unsigned n=geRoomIndices(begin,first);
+    if(n<3u || first[0]>=MAX_VERTICES || first[1]>=MAX_VERTICES ||
+       first[2]>=MAX_VERTICES){++s_roomHWStats[ROOM_STAT_VERTEX];return false;}
+    s_roomNativePrepareOnly=true;
+    gfx_sp_tri1((uint8_t)first[0],(uint8_t)first[1],(uint8_t)first[2],false);
+    s_roomNativePrepareOnly=false;
+    if(!geRoomNativeMaterialOK()) {
+        ++s_roomHWStats[ROOM_STAT_MATERIAL];
+        reject->source=begin;reject->room=(unsigned)s_roomScope;
+        reject->revision=s_roomRevision;reject->commands=count;
+        reject->material=rejectStamp;
+        return false;
+    }
+    const unsigned signature=geRoomPacketSignature(count);
+    const unsigned stamp=geRoomMatrixStamp();
+    NativeRoomMeta *warm=0;
+#if GE_XBOX_ROOM_COLD_PREFLIGHT
+    if(potentialWarm && potentialWarm->signature==signature)warm=potentialWarm;
+    else
+#endif
+        warm=geRoomFindMeta(begin,count,signature);
+    if(warm) {
+        const NativeRoomRawSlot &firstRaw=s_roomRawSlot[first[0]];
+        if(firstRaw.valid && firstRaw.room==(unsigned)s_roomScope &&
+           firstRaw.revision==s_roomRevision && firstRaw.matrixStamp==stamp) {
+            GfxNativeRoomDraw packet;
+            geRoomCopyMeta(packet,*warm);
+            /* No flush or backend state work for camera-near packets. The
+             * original software clipping path remains authoritative. */
+            if(!geRoomFrontProjectionSafe(packet)) {
+                ++s_roomHWStats[ROOM_STAT_NEAR];return false;
+            }
+            /* Query resident VBs before making a draw barrier. */
+            if(gfx_rapi->native_room_prepare(&packet)) {
+                gfx_flush();
+                if(gfx_rapi->native_room_draw(&packet))return true;
+                ++s_roomHWStats[ROOM_STAT_BACKEND];
+                return false;
+            }
+        }
+        /* Only an actual backend eviction or stale vertex-slot stamp
+         * invalidates the frontend metadata. */
+        warm->valid=false;
+    }
+    if(s_roomFrontBuildsFrame>=GE_XBOX_ROOM_UPLOADS_PER_FRAME){++s_roomHWStats[ROOM_STAT_BACKEND];return false;}
+    unsigned total=0u;
+    for(unsigned c=0;c<count;++c) {
+        unsigned indices[12];const unsigned nVerts=geRoomIndices(begin+c,indices);
+        if(!nVerts){++s_roomHWStats[ROOM_STAT_VERTEX];return false;}
+        total+=nVerts;
+        if(total>1024u){++s_roomHWStats[ROOM_STAT_VERTEX];return false;}
+        for(unsigned i=0;i<nVerts;++i) {
+            if(indices[i]>=MAX_VERTICES){++s_roomHWStats[ROOM_STAT_VERTEX];return false;}
+            const NativeRoomRawSlot &raw=s_roomRawSlot[indices[i]];
+            if(!raw.valid || raw.room!=(unsigned)s_roomScope ||
+               raw.revision!=s_roomRevision || raw.matrixStamp!=stamp) {
+                ++s_roomHWStats[ROOM_STAT_VERTEX];return false;
+            }
+        }
+    }
+#if GE_XBOX_NATIVE_ROOM_SHORT_RUNS
+    if(total<24u){++s_roomHWStats[ROOM_STAT_SHORT];return false;}
+#else
+    if(total<48u){++s_roomHWStats[ROOM_STAT_SHORT];return false;}
+#endif
+    GfxNativeRoomDraw packet;
+    if(!geRoomBuildPacket(begin,count,&packet)) {
+        ++s_roomHWStats[ROOM_STAT_VERTEX];return false;
+    }
+    if(!geRoomFrontProjectionSafe(packet)) {
+        ++s_roomHWStats[ROOM_STAT_NEAR];return false;
+    }
+    ++s_roomFrontBuildsFrame;
+    if(gfx_rapi->native_room_prepare(&packet)) {
+        ++s_roomHWStats[ROOM_STAT_UPLOADED];
+        geRoomRememberMeta(packet,count);
+    } else ++s_roomHWStats[ROOM_STAT_BACKEND];
+    /* First frame always executes the original TRI run. */
+    return false;
+}
+
+#endif
+
+#if defined(GE_XBOX_NATIVE32)
+/* A fixed-layout C boundary. Always defined even in a rollback build. */
+extern "C" void geNativeRoomPipelineCounters(unsigned out[8]) {
+    if(!out)return;
+#if GE_XBOX_NATIVE_ROOM_BATCHES
+    for(unsigned i=0;i<ROOM_STAT_COUNT;++i)out[i]=s_roomHWStats[i];
+#else
+    for(unsigned i=0;i<8u;++i)out[i]=0u;
+#endif
+}
+#endif
+
 static inline void gfx_update_aspect_mode(void) {
     const uint32_t side = rsp.aspect_mode & G_ASPECT_CENTER_EXT;
 
@@ -3423,8 +4189,8 @@ static void gfx_adjust_viewport_or_scissor(XYWidthHeight* area, bool preserve_as
     // (both are the bottom-up Y value of the mapped region's TOP edge) --
     // this reduces to the untouched original formula when crop is off.
     const bool crop = g_safe_area_crop_enabled && !g_split_screen && !window_space && g_gpSafeHeight > 0.0f;
-    const float safeTop = crop ? g_gpSafeTop : (float)SCREEN_HEIGHT;
-    const float safeHeight = crop ? g_gpSafeHeight : (float)SCREEN_HEIGHT;
+    const float safeTop = crop ? g_gpSafeTop : (float)GE_LOGICAL_HEIGHT;
+    const float safeHeight = crop ? g_gpSafeHeight : (float)GE_LOGICAL_HEIGHT;
     const float ratioY = gfx_current_dimensions.height / safeHeight;
 
     // D246 (findings.md): a consistent, exactly-1-logical-unit gap at the
@@ -3441,7 +4207,7 @@ static void gfx_adjust_viewport_or_scissor(XYWidthHeight* area, bool preserve_as
     // fixed 1-unit margin from both edges rather than trying to force
     // content to reach a boundary it may never actually be drawn to.
     const float safeLeft = (g_safe_area_crop_enabled && !g_split_screen && !window_space) ? 1.0f : 0.0f;
-    const float safeWidth = (g_safe_area_crop_enabled && !g_split_screen && !window_space) ? (float)SCREEN_WIDTH - 2.0f : (float)SCREEN_WIDTH;
+    const float safeWidth = (g_safe_area_crop_enabled && !g_split_screen && !window_space) ? (float)GE_LOGICAL_WIDTH - 2.0f : (float)GE_LOGICAL_WIDTH;
     const float ratioX = gfx_current_dimensions.width / safeWidth;
 
     float x1 = (area->x - safeLeft) * ratioX;
@@ -3487,7 +4253,7 @@ static void gfx_adjust_viewport_or_scissor(XYWidthHeight* area, bool preserve_as
  * bottom). Top-left origin, window pixel units -- matches SDL mouse coords
  * and gfx_current_game_window_viewport's documented convention. */
 extern "C" void gfx_get_ui_screen_rect(int32_t *outX, int32_t *outY, int32_t *outW, int32_t *outH) {
-    struct XYWidthHeight area = { 0, (int16_t)SCREEN_HEIGHT, (uint32_t)SCREEN_WIDTH, (uint32_t)SCREEN_HEIGHT };
+    struct XYWidthHeight area = { 0, (int16_t)GE_LOGICAL_HEIGHT, (uint32_t)GE_LOGICAL_WIDTH, (uint32_t)GE_LOGICAL_HEIGHT };
     gfx_adjust_viewport_or_scissor(&area, false, true);   /* D510: the overlay is window-space */
     *outX = area.x;
     *outY = area.y;
@@ -3510,7 +4276,7 @@ static void gfx_calc_and_set_viewport(const Vp_t* viewport) {
     /* Cache the raw (pre window-scale) viewport bounds for the safe-area
      * crop above -- guard against a degenerate/zero-height viewport so a
      * later divide can't ever see one. */
-    if (height >= 0.9f * (float)SCREEN_HEIGHT) {
+    if (height >= 0.9f * (float)GE_LOGICAL_HEIGHT) {
         g_gpSafeTop = y;
         g_gpSafeHeight = height;
     } else if (height > 1.0f && g_gpSafeHeight <= 0.0f) {
@@ -3520,7 +4286,7 @@ static void gfx_calc_and_set_viewport(const Vp_t* viewport) {
          * viewport has been seen yet, seed the standard centred 220-line band
          * (VIEWPORT_HEIGHT_DEFAULT_NTSC) around this viewport's centre. */
         const float centre = y - height * 0.5f;
-        const float bandH = 220.0f * (float)SCREEN_HEIGHT / 240.0f;
+        const float bandH = 220.0f * (float)GE_LOGICAL_HEIGHT / 240.0f;
         g_gpSafeTop = centre + bandH * 0.5f;
         g_gpSafeHeight = bandH;
     }
@@ -3604,8 +4370,8 @@ static void gfx_dp_set_scissor(uint32_t mode, uint32_t ulx, uint32_t uly, uint32
             width -= edge - x;
             x = edge;
         }
-        if (x + width > (float)SCREEN_WIDTH - edge) {
-            width = (float)SCREEN_WIDTH - edge - x;
+        if (x + width > (float)GE_LOGICAL_WIDTH - edge) {
+            width = (float)GE_LOGICAL_WIDTH - edge - x;
         }
         if (width < 0.0f) {
             width = 0.0f;
@@ -3630,7 +4396,7 @@ static void gfx_dp_set_texture_image(uint32_t format, uint32_t size, uint32_t wi
     rdp.texture_to_load.tex_flags = tex_flags;
 }
 
-static void gfx_dp_set_tile(uint8_t fmt, uint32_t siz, uint32_t line, uint32_t tmem, uint8_t tile, uint32_t palette,
+static bool gfx_dp_set_tile(uint8_t fmt, uint32_t siz, uint32_t line, uint32_t tmem, uint8_t tile, uint32_t palette,
                             uint32_t cmt, uint32_t maskt, uint32_t shiftt, uint32_t cms, uint32_t masks,
                             uint32_t shifts) {
     // OTRTODO:
@@ -3677,12 +4443,13 @@ static void gfx_dp_set_tile(uint8_t fmt, uint32_t siz, uint32_t line, uint32_t t
         rdp.textures_changed[0] = true;
         rdp.textures_changed[1] = true;
     }
+    return !same; /* PH5C: preserve original writes, report actual change. */
 }
 
-static void gfx_dp_set_tile_size(uint8_t tile, uint16_t uls, uint16_t ult, uint16_t lrs, uint16_t lrt) {
+static bool gfx_dp_set_tile_size(uint8_t tile, uint16_t uls, uint16_t ult, uint16_t lrs, uint16_t lrt) {
     auto& tt = rdp.texture_tile[tile];
     if (tt.uls == uls && tt.ult == ult && tt.lrs == lrs && tt.lrt == lrt) {
-        return;   /* D474: unchanged tile size -- no re-import, no batch break */
+        return false;   /* D474: unchanged tile size -- no re-import, no batch break */
     }
     tt.uls = uls;
     tt.ult = ult;
@@ -3692,6 +4459,7 @@ static void gfx_dp_set_tile_size(uint8_t tile, uint16_t uls, uint16_t ult, uint1
     tt.height = (lrt - ult + 4) / 4;
     rdp.textures_changed[0] = true;
     rdp.textures_changed[1] = true;
+    return true;
 }
 
 static void gfx_dp_load_tlut(uint8_t tile, uint32_t uls, uint32_t ult, uint32_t lrs, uint32_t lrt) {
@@ -3956,7 +4724,7 @@ static void gfx_draw_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lr
     ur->w = 1.0f;
 
     // The coordinates for texture rectangle shall bypass the viewport setting
-    struct XYWidthHeight default_viewport = { 0, (int16_t)SCREEN_HEIGHT, (uint32_t)SCREEN_WIDTH, (uint32_t)SCREEN_HEIGHT };
+    struct XYWidthHeight default_viewport = { 0, (int16_t)GE_LOGICAL_HEIGHT, (uint32_t)GE_LOGICAL_WIDTH, (uint32_t)GE_LOGICAL_HEIGHT };
     struct XYWidthHeight viewport_saved = rdp.viewport;
     uint32_t geometry_mode_saved = rsp.geometry_mode;
 
@@ -3966,8 +4734,22 @@ static void gfx_draw_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lr
     rdp.viewport_or_scissor_changed = true;
     rsp.geometry_mode = 0;
 
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_FAST3D_RECT_PAIR_MATERIAL
+    const unsigned prepBeforeFirstHalf=s_ge_tri_preparations;
+    s_ge_rect_second_half=false;
+#endif
     gfx_sp_tri1(MAX_VERTICES + 0, MAX_VERTICES + 1, MAX_VERTICES + 3, true);
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_FAST3D_RECT_PAIR_MATERIAL
+    /* If the first half was rejected before setup, the second must prepare
+     * normally. No state commands execute between these two triangle calls.
+     * Dirty texture/viewport flags and diagnostic probes still force setup. */
+    s_ge_rect_second_half=(s_ge_tri_preparations!=prepBeforeFirstHalf) &&
+        !GENativePlatform_HasFatalError();
+#endif
     gfx_sp_tri1(MAX_VERTICES + 1, MAX_VERTICES + 2, MAX_VERTICES + 3, true);
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_FAST3D_RECT_PAIR_MATERIAL
+    s_ge_rect_second_half=false;
+#endif
 
     rsp.geometry_mode = geometry_mode_saved;
     rdp.viewport = viewport_saved;
@@ -4228,6 +5010,9 @@ static void gfx_sp_vertex_float(size_t n_vertices, size_t dest_index, const Port
         const PortFloatVtx* v = &vertices[i];
         struct LoadedVertex* d = &rsp.loaded_vertices[dest_index];
         geTriVertexInvalidated((unsigned)dest_index);
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_NATIVE_ROOM_BATCHES
+        s_roomRawSlot[dest_index].valid=false;
+#endif
         float x = gfx_adjust_x_for_aspect_ratio(v->x, v->w);
         float y = v->y, z = v->z, w = v->w;
         d->u = v->s * (float)rsp.texture_scaling_factor.s / 65536.0f;
@@ -4295,8 +5080,75 @@ static bool nativeDLPop(Gfx *&command,Gfx *&start,bool &bounded) {
     command=parent.command;start=parent.start;bounded=parent.bounded;
     return true;
 }
+/* Phase 0D: the N64 command stream is classified before the interpreter's
+ * main opcode switch. Use one 256-bit lookup instead of a second sparse
+ * switch for whether a command dirties the prepared triangle material.
+ * Exact same clean opcodes, including TRI4, VTX, matrix, calls and no-ops.
+ * No command skipping or change to display-list order. A/B: set to 0. */
+#ifndef GE_XBOX_FAST3D_OPCODE_STATE_MASK
+#define GE_XBOX_FAST3D_OPCODE_STATE_MASK 1
+#endif
+/* PH5C: do not invalidate cached triangle material for idempotent texture
+ * tile or combine commands. All commands still execute in original order. */
+#ifndef GE_XBOX_FAST3D_EQUIVALENT_STATE_SKIP
+#define GE_XBOX_FAST3D_EQUIVALENT_STATE_SKIP 1
+#endif
+#if GE_XBOX_PHASE0_PROFILE && GE_XBOX_PHASE0E_PROFILE
+/* One mutually-exclusive opcode class per command. Child scopes move time
+ * from that opcode into material/texture/clip/packing/backend submission. */
+static int geP0EOpcodeCategory(uint32_t opcode) {
+    switch(opcode) {
+        case (uint8_t)G_TRI1: case (uint8_t)G_TRI4:
+            return GE_P0E_TRIANGLE;
+        case G_VTX: case G_FLOATVTX_EXT:
+            return GE_P0E_VERTEX;
+        case G_MTX: case (uint8_t)G_POPMTX:
+            return GE_P0E_MATRIX;
+        case G_SETTIMG: case G_SETTIMG_FB_EXT: case G_SETTILE:
+        case G_SETTILESIZE: case G_LOADBLOCK: case G_LOADTILE:
+        case G_LOADTLUT: case G_INVALTEXCACHE_EXT:
+            return GE_P0E_TEXTURE_STATE;
+        case G_TEXRECT: case G_TEXRECTFLIP:
+        case G_TEXRECT_WIDE_EXT: case G_IMAGERECT_EXT:
+        case G_FILLRECT: case G_FILLRECT_WIDE_EXT:
+            return GE_P0E_RECT;
+        case G_DL: case (uint8_t)G_ENDDL:
+        case G_SPNOOP: case G_NOOP:
+        case G_XBOX_MP_VI_CANVAS_EXT: /* viewport/scissor metadata */
+        case G_RDPPIPESYNC: case G_RDPFULLSYNC:
+        case G_RDPLOADSYNC: case G_RDPTILESYNC:
+            return GE_P0E_CONTROL;
+        default: return GE_P0E_STATE;
+    }
+}
+#endif
 static void gfx_run_dl(Gfx* cmd) {
     NativeDLGuard depthGuard;
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_NATIVE_ROOM_BATCHES
+    s_roomScope=-1;s_roomRevision=0;s_roomHasColorOverride=false;
+    s_roomPrimaryStart=s_roomPrimaryEnd=0u;
+    s_roomAttemptedStart=s_roomAttemptedUntil=0;
+    s_roomFrontBuildsFrame=0;
+    memset(s_roomRawSlot,0,sizeof(s_roomRawSlot));
+#endif
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_FAST3D_OPCODE_STATE_MASK
+    static uint32_t geCleanDLMask[8] = { 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u };
+    static bool geCleanDLMaskReady = false;
+    if (!geCleanDLMaskReady) {
+        static const uint8_t geCleanDLCommands[] = {
+            (uint8_t)G_TRI1, (uint8_t)G_TRI4, (uint8_t)G_VTX,
+            (uint8_t)G_FLOATVTX_EXT, (uint8_t)G_MTX, (uint8_t)G_POPMTX,
+            (uint8_t)G_DL, (uint8_t)G_ENDDL, (uint8_t)G_SPNOOP,
+            (uint8_t)G_NOOP, (uint8_t)G_COL,
+            (uint8_t)G_XBOX_MP_VI_CANVAS_EXT, 0x49u, 0x4au, 0x4bu
+        };
+        for (unsigned i = 0; i < sizeof(geCleanDLCommands); ++i) {
+            const unsigned op = geCleanDLCommands[i];
+            geCleanDLMask[op >> 5] |= (uint32_t)1u << (op & 31u);
+        }
+        geCleanDLMaskReady = true;
+    }
+#endif
     bool boundedTask=nativeDLInTask(cmd);
     if(!cmd) {
         GENativePlatform_SetError("Invalid or recursively cyclic display list");
@@ -4325,7 +5177,47 @@ static void gfx_run_dl(Gfx* cmd) {
             }
         }
         uint32_t opcode = cmd->words.w0 >> 24;
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_NATIVE_ROOM_BATCHES
+        if(s_roomScope>=0 && !boundedTask &&
+           (!s_roomAttemptedStart ||
+            (uintptr_t)cmd<(uintptr_t)s_roomAttemptedStart ||
+            (uintptr_t)cmd>=(uintptr_t)s_roomAttemptedUntil) &&
+           s_roomPrimaryStart && s_roomPrimaryEnd>s_roomPrimaryStart &&
+           (uintptr_t)cmd>=s_roomPrimaryStart &&
+           (uintptr_t)cmd<s_roomPrimaryEnd &&
+           (opcode==(uint8_t)G_TRI1 || opcode==(uint8_t)G_TRI4)) {
+            unsigned count=0;
+            while(count<32u &&
+                (uintptr_t)&cmd[count]<s_roomPrimaryEnd) {
+                const unsigned next=(unsigned)(cmd[count].words.w0>>24);
+                if(next!=(uint8_t)G_TRI1 && next!=(uint8_t)G_TRI4)break;
+                ++count;
+            }
+            const bool residentDrawn=geRoomNativeRun(cmd,count);
+            if(residentDrawn) {
+                if(s_nativeCommandBudget<count-1u) {
+                    GENativePlatform_SetError("Native room packet exceeded DL command budget");
+                    s_nativeGfxFailed=1;return;
+                }
+                s_nativeCommandBudget-=count-1u;
+                cmd+=count;continue;
+            }
+            s_roomAttemptedStart=cmd;
+            s_roomAttemptedUntil=cmd+count;
+        }
+#endif
 #if defined(GE_XBOX_NATIVE32)
+#if GE_XBOX_FAST3D_EQUIVALENT_STATE_SKIP
+        const bool geEquivalentStateCommand = (opcode == G_SETTILE ||
+            opcode == G_SETTILESIZE || opcode == G_SETCOMBINE);
+#else
+        const bool geEquivalentStateCommand = false;
+#endif
+#if GE_XBOX_FAST3D_OPCODE_STATE_MASK
+        if ((geCleanDLMask[opcode >> 5] & ((uint32_t)1u << (opcode & 31u))) == 0u &&
+            !geEquivalentStateCommand)
+            geTriStateInvalidated();
+#else
         switch (opcode) {
             case (uint8_t)G_TRI1:
             case (uint8_t)G_TRI4:
@@ -4340,10 +5232,11 @@ static void gfx_run_dl(Gfx* cmd) {
             case G_COL:
                 break;
             default:
-                geTriStateInvalidated();
+                if (!geEquivalentStateCommand)geTriStateInvalidated();
                 break;
         }
-#endif
+#endif /* GE_XBOX_FAST3D_OPCODE_STATE_MASK */
+#endif /* GE_XBOX_NATIVE32 */
         if(boundedTask) {
             const unsigned slots=(opcode==0x48 || opcode==G_FILLRECT_WIDE_EXT)?2u:
                 ((opcode==G_TEXRECT || opcode==G_TEXRECTFLIP ||
@@ -4355,7 +5248,53 @@ static void gfx_run_dl(Gfx* cmd) {
             }
         }
         // gfx_print_cmd(cmd);
+#if GE_XBOX_PHASE0_PROFILE && GE_XBOX_PHASE0E_PROFILE
+        const int p0eOpCategory=geP0EOpcodeCategory(opcode);
+        geP0ECommandNote(p0eOpCategory);
+#endif
+        { /* PH0E: scope exits correctly on G_DL/ENDDL continue or error return. */
+        GE_P0E_SCOPE(p0eOpCategory);
         switch (opcode) {
+#if defined(GE_XBOX_NATIVE32)
+            case G_XBOX_MP_VI_CANVAS_EXT: { /* N64 logical VI canvas, submitted by viSetupCurrentPlayerView. */
+#if GE_XBOX_MP_VI_CANVAS_FIX
+                const uint32_t w = ((uint32_t)cmd->words.w1 >> 16) & 0xffffu;
+                const uint32_t h = (uint32_t)cmd->words.w1 & 0xffffu;
+                /* Fail conservatively on corrupt custom commands. */
+                if ((w == 320u && h == 240u) || (w == 440u && h == 330u)) {
+                    const bool canvasChanged = (w != s_xboxLogicalWidth || h != s_xboxLogicalHeight);
+                    if (canvasChanged) gfx_flush();
+                    s_xboxLogicalWidth = w;
+                    s_xboxLogicalHeight = h;
+                    if (canvasChanged) rdp.viewport_or_scissor_changed = true;
+#if GE_XBOX_MP_PORTRAIT_FULL_VIEWPORT
+                    /* The title/menu DL does not run viSetupCurrentPlayerView().
+                     * Changing the logical canvas alone left rdp.viewport as
+                     * the previous split-screen gameplay viewport (or the
+                     * previous 320x240 viewport). 2D rectangles override
+                     * that viewport temporarily, but the 3D portrait quads
+                     * don't. Reset both rects at the start of EACH 440x330
+                     * menu DL, even when its canvas dimensions are unchanged.
+                     * Subsequent panel scissors still take effect normally. */
+                    if (w == 440u && h == 330u) {
+                        struct XYWidthHeight full = {0, (int16_t)h, w, h};
+                        gfx_adjust_viewport_or_scissor(&full);
+                        struct XYWidthHeight fullScissor = {0, (int16_t)h, w, h};
+                        gfx_adjust_viewport_or_scissor(&fullScissor, rsp.aspect_mode != 0);
+                        if (memcmp(&rdp.viewport, &full, sizeof(full)) != 0 ||
+                            memcmp(&rdp.scissor, &fullScissor, sizeof(fullScissor)) != 0) {
+                            if (!canvasChanged) gfx_flush();
+                            rdp.viewport = full;
+                            rdp.scissor = fullScissor;
+                            rdp.viewport_or_scissor_changed = true;
+                        }
+                    }
+#endif
+                }
+#endif
+                break;
+            }
+#endif
             case 0x48: { /* User-authorized Nintendo-slot logo, game-owned timing. */
                 float radians,scale;
                 const uint32_t r=(uint32_t)cmd[0].words.w1;
@@ -4367,6 +5306,34 @@ static void gfx_run_dl(Gfx* cmd) {
                 break;
             }
                 // RSP commands:
+#if defined(GE_XBOX_NATIVE32)
+            case 0x49: /* Primary room begin, emitted by bg.c only. */
+#if GE_XBOX_NATIVE_ROOM_BATCHES
+                ++s_roomHWStats[ROOM_STAT_BEGIN];
+                s_roomScope=(int)(cmd->words.w0&0xffffu);
+                s_roomRevision=0;
+                s_roomHasColorOverride=false;
+                s_roomPrimaryStart=(uintptr_t)seg_addr(cmd->words.w1);
+                s_roomPrimaryEnd=0u;
+#endif
+                break;
+            case 0x4b: /* Current source generation for GPU cache invalidation. */
+#if GE_XBOX_NATIVE_ROOM_BATCHES
+                s_roomRevision=(unsigned)(cmd->words.w0&0xffffffu);
+                if(s_roomPrimaryStart && cmd->words.w1 &&
+                   cmd->words.w1<4u*1024u*1024u)
+                    s_roomPrimaryEnd=s_roomPrimaryStart+(uintptr_t)cmd->words.w1;
+#endif
+                break;
+            case 0x4a: /* End primary-room scope. */
+#if GE_XBOX_NATIVE_ROOM_BATCHES
+                s_roomScope=-1;
+                s_roomRevision=0;
+                s_roomHasColorOverride=false;
+                s_roomPrimaryStart=s_roomPrimaryEnd=0u;
+#endif
+                break;
+#endif
             case G_SPNOOP: /* Original Fast3D SP no-op (0x00), one Gfx slot. */
                 break;
             case G_NOOP: /* 0xc0. GE's gbi_extension.h also names this slot
@@ -4459,6 +5426,9 @@ static void gfx_run_dl(Gfx* cmd) {
                 gfx_sp_set_other_mode(C0(8, 8) + 32, C0(0, 8), (uint64_t)cmd->words.w1 << 32);
                 break;
             case G_COL:
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_NATIVE_ROOM_BATCHES && !GE_XBOX_ROOM_ALLOW_GCOL
+                s_roomHasColorOverride=true;
+#endif
                 gfx_sp_set_vertex_colors(C0(0, 16) / 4, (NormalColor *)seg_addr(cmd->words.w1));
                 break;
 
@@ -4482,13 +5452,25 @@ static void gfx_run_dl(Gfx* cmd) {
             case G_LOADTILE:
                 gfx_dp_load_tile(C1(24, 3), C0(12, 12), C0(0, 12), C1(12, 12), C1(0, 12));
                 break;
-            case G_SETTILE:
-                gfx_dp_set_tile(C0(21, 3), C0(19, 2), C0(9, 9), C0(0, 9), C1(24, 3), C1(20, 4), C1(18, 2), C1(14, 4),
-                                C1(10, 4), C1(8, 2), C1(4, 4), C1(0, 4));
+            case G_SETTILE: {
+                const bool changed=gfx_dp_set_tile(C0(21, 3), C0(19, 2), C0(9, 9), C0(0, 9), C1(24, 3), C1(20, 4), C1(18, 2), C1(14, 4),
+                                                   C1(10, 4), C1(8, 2), C1(4, 4), C1(0, 4));
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_FAST3D_EQUIVALENT_STATE_SKIP
+                if (changed)geTriStateInvalidated();
+#else
+                (void)changed;
+#endif
                 break;
-            case G_SETTILESIZE:
-                gfx_dp_set_tile_size(C1(24, 3), C0(12, 12), C0(0, 12), C1(12, 12), C1(0, 12));
+            }
+            case G_SETTILESIZE: {
+                const bool changed=gfx_dp_set_tile_size(C1(24, 3), C0(12, 12), C0(0, 12), C1(12, 12), C1(0, 12));
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_FAST3D_EQUIVALENT_STATE_SKIP
+                if (changed)geTriStateInvalidated();
+#else
+                (void)changed;
+#endif
                 break;
+            }
             case G_LOADTLUT:
                 gfx_dp_load_tlut(C1(24, 3), C0(14, 10), C0(2, 10), C1(14, 10), C1(2, 10));
                 break;
@@ -4508,6 +5490,9 @@ static void gfx_run_dl(Gfx* cmd) {
                 gfx_dp_set_grayscale_color(C1(24, 8), C1(16, 8), C1(8, 8), C1(0, 8));
                 break;
             case G_SETCOMBINE: {
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_FAST3D_EQUIVALENT_STATE_SKIP
+                const uint64_t previousCombine=rdp.combine_mode;
+#endif
 #ifdef PORT
                 /* D172 probe (env-gated, inert): log every SETCOMBINE with the
                  * cycle-type active at that moment. Particle records
@@ -4536,6 +5521,9 @@ static void gfx_run_dl(Gfx* cmd) {
                                         alpha_comb(C0(12, 3), C1(12, 3), C0(9, 3), C1(9, 3)),
                                         color_comb(C0(5, 4), C1(24, 4), C0(0, 5), C1(6, 3)),
                                         alpha_comb(C1(21, 3), C1(3, 3), C1(18, 3), C1(0, 3)));
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_FAST3D_EQUIVALENT_STATE_SKIP
+                if (rdp.combine_mode!=previousCombine)geTriStateInvalidated();
+#endif
                 break;
             }
             // G_SETPRIMCOLOR, G_CCMUX_PRIMITIVE, G_ACMUX_PRIMITIVE, is used by Goddard
@@ -4684,6 +5672,7 @@ static void gfx_run_dl(Gfx* cmd) {
                 return;
             }
         }
+        } /* PH0E: end opcode scope. */
         ++cmd;
     }
 }
@@ -4905,12 +5894,15 @@ extern "C" void gfx_run(Gfx* commands) {
                                             !game_renders_to_framebuffer);
     gfx_rapi->start_frame();
     gfx_rapi->start_draw_to_framebuffer(game_renders_to_framebuffer ? game_framebuffer : 0,
-                                        (float)gfx_current_dimensions.height / SCREEN_HEIGHT);
+                                        (float)gfx_current_dimensions.height / GE_LOGICAL_HEIGHT);
     gfx_rapi->clear_framebuffer(true, false);
     rdp.viewport_or_scissor_changed = true;
     rendering_state.viewport = {};
     rendering_state.scissor = {};
     const uint64_t perf_tpre = perf_t0 ? gfx_perf_now_ns() : 0;
+    const unsigned long long p0DLStart=geP0BStart();
+    { /* Root covers exactly the PH0B DL region; nested exclusive buckets. */
+    GE_P0E_SCOPE(GE_P0E_DISPATCH);
     gfx_run_dl(commands);
     {
         Gfx* overlay = optionsOverlayEmit();
@@ -4922,6 +5914,8 @@ extern "C" void gfx_run(Gfx* commands) {
         }
     }
     gfx_flush();
+    } /* PH0E root */
+    geP0BEnd(GE_P0B_DL,p0DLStart);
     const uint64_t perf_t1 = perf_t0 ? gfx_perf_now_ns() : 0;
     gfxFramebuffer = 0;
 
@@ -5113,7 +6107,7 @@ extern "C" void gfx_copy_framebuffer(int fb_dst, int fb_src, int left, int top, 
 }
 
 extern "C" void gfx_reset_framebuffer(void) {
-    gfx_rapi->start_draw_to_framebuffer(0, (float)gfx_current_dimensions.height / SCREEN_HEIGHT);
+    gfx_rapi->start_draw_to_framebuffer(0, (float)gfx_current_dimensions.height / GE_LOGICAL_HEIGHT);
 
 }
 
@@ -5141,6 +6135,12 @@ extern "C" int geNativeGfxInit(GfxWindowManagerAPI *window,GfxRenderingAPI *rend
     gfx_set_output_aspect(0.0f);
     return tex_upload_buffer!=0;
 }
+#if defined(GE_XBOX_NATIVE32)
+extern "C" int getPlayerCount(void);
+#ifndef GE_XBOX_MP_SPLIT_LAYOUT_FIX
+#define GE_XBOX_MP_SPLIT_LAYOUT_FIX 1
+#endif
+#endif
 extern "C" int geNativeGfxFrame(void *commands,unsigned bytes) {
     s_nativeMaxDLDepth=0;
     if(!commands || !bytes || (bytes&7u) || bytes>8u*1024u*1024u ||
@@ -5150,6 +6150,15 @@ extern "C" int geNativeGfxFrame(void *commands,unsigned bytes) {
     s_nativeCommandBudget=1000000u;s_nativeDLDepth=0;s_nativeGfxFailed=0;
     s_nativeTaskBegin=(Gfx *)commands;
     s_nativeTaskEnd=(Gfx *)((uint8_t *)commands+bytes);
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_MP_VI_CANVAS_FIX
+    s_xboxLogicalWidth = SCREEN_WIDTH;
+    s_xboxLogicalHeight = SCREEN_HEIGHT;
+#endif
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_MP_SPLIT_LAYOUT_FIX
+    /* Port's split-screen flag existed but was never wired in the Xbox
+     * renderer. Do not apply the one-player edge/crop rule to MP scissors. */
+    gfx_set_split_screen(getPlayerCount() >= 2);
+#endif
     gfx_start_frame();
     gfx_run((Gfx *)commands);
     gfx_end_frame();

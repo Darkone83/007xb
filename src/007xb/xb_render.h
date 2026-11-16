@@ -2,6 +2,7 @@
 #define XB_RENDER_H
 #include <xtl.h>
 #include "xb_logo.h"
+#include "xb_native_mesh.h"
 
 // Pre-transformed 2D vertices: avoids any D3DX runtime dependencies.
 struct XBScreenVertex { float x, y, z, rhw; DWORD colour; };
@@ -20,7 +21,7 @@ public:
     void DrawCelLogo(IDirect3DDevice8* d, const XBLogo& referenceLogo,
                      int width, int height, float radians, float alpha,
                      bool depthAvailable, float zoom = 1.0f);
-    bool HasCelMesh() const { return celVB_ != 0; }
+    bool HasCelMesh() const { return celMesh_.Ready(); }
     void DrawText(IDirect3DDevice8* d, float x, float y, float scale, const char* message, DWORD colour);
 private:
     XBRenderer(const XBRenderer&);
@@ -29,7 +30,7 @@ private:
     XBScreenVertex* chars_;
     // 8192 x/y float pairs; reused while drawing to avoid reprojection per edge.
     float* projected_;
-    IDirect3DVertexBuffer8* celVB_;
+    XBNativeMesh celMesh_;
     bool celBuildFailed_;
     bool CreateCelVB(IDirect3DDevice8* d);
 };

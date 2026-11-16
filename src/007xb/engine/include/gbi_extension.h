@@ -2,6 +2,12 @@
 #    define _GBI_EXT_H_
 #include <PR/gbi.h>
 
+/* Xbox-only Fast3D logical VI canvas command, one Gfx slot.
+ * w0 high byte = opcode; w1 = logical width (16) | logical height (16).
+ * Keep distinct from 0x47 (G_FLOATVTX_EXT), 0x48 (logo), and 0x49-0x4B
+ * (native-room packet metadata). Only emitted by GE_XBOX_NATIVE32. */
+#define G_XBOX_MP_VI_CANVAS_EXT 0x4C
+
 #define TRI4_Ext
 
 /**

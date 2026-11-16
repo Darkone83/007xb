@@ -1621,12 +1621,40 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
     renderdata = *(ModelRenderData *)&D_80035CC0;
 #endif
  
-    for (handnum = 0; handnum != 2; handnum++) 
+#if defined(GE_XBOX_NATIVE32)
+    /* MP weapon triage: report a suppressed *expected* viewmodel once per
+     * player. Keep the N64 visibility rules intact (switch/reload are real).
+     * Logs are warnings so the quiet playtest build retains them. */
+    static u8 s_mpMissingGunWarned[4] = {0, 0, 0, 0};
+    static u8 s_mpEmptyGunDrawWarned[4] = {0, 0, 0, 0};
+#endif
+    for (handnum = 0; handnum != 2; handnum++)
     {
         struct hand *handptr = &g_CurrentPlayer->hands[handnum];
         s32 item = get_item_in_hand_or_watch_menu(handnum);
+#if defined(GE_XBOX_NATIVE32)
+        if (handnum == GUNRIGHT && getPlayerCount() >= 2 && g_CurrentPlayer->cameramode == 0) {
+            const s32 playernum = get_cur_playernum();
+            if (playernum >= 0 && playernum < 4 && !s_mpMissingGunWarned[playernum] &&
+                item != ITEM_UNARMED && item != ITEM_FIST &&
+                handptr->weapon_action_state == GUN_ANIM_STATE_IDLE &&
+                handptr->field_87F == 0) {
+                s_mpMissingGunWarned[playernum] = 1;
+                fprintf(stderr,
+                    "WARNING MP GUN gated player=%d item=%d header=%d show=%d hide=%d hand_item=%d invisible=%d no_item=%d action=%d\n",
+                    playernum, (s32)item,
+                    get_ptr_weapon_model_header_line(item) != NULL,
+                    bondwalkItemCheckBitflags(item, WEAPONSTATBITFLAG_SHOW_FIRST_PERSON) != 0,
+                    bondwalkItemCheckBitflags(item, WEAPONSTATBITFLAG_HIDE_FIRST_PERSON_HAND) != 0,
+                    (s32)g_CurrentPlayer->hand_item[handnum],
+                    (s32)g_CurrentPlayer->hand_invisible[handnum],
+                    (s32)Gun_hand_without_item(handnum),
+                    (s32)handptr->weapon_action_state);
+            }
+        }
+#endif
  
-        if (handptr->field_87F == 0) 
+        if (handptr->field_87F == 0)
         {
             continue;
         }
@@ -1711,6 +1739,21 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
 #endif
         subdraw(&renderdata, HAND_WEAPON_MODEL(handptr));
         gdl = renderdata.gdl;
+#if defined(GE_XBOX_NATIVE32)
+        if (handnum == GUNRIGHT && getPlayerCount() >= 2 &&
+            g_CurrentPlayer->cameramode == 0) {
+            const s32 playernum = get_cur_playernum();
+            if (playernum >= 0 && playernum < 4 && !s_mpEmptyGunDrawWarned[playernum] &&
+                (renderdata.gdl - dvm_before) <= 2) {
+                s_mpEmptyGunDrawWarned[playernum] = 1;
+                fprintf(stderr,
+                    "WARNING MP GUN empty draw player=%d item=%d commands=%ld model=%p\n",
+                    playernum, (s32)item,
+                    (long)(renderdata.gdl - dvm_before),
+                    (void *)HAND_WEAPON_MODEL(handptr));
+            }
+        }
+#endif
 #ifdef PORT
         {
             static int dvmr = -1;

@@ -31,7 +31,7 @@ static XBScreenVertex SVertex(float x, float y, DWORD col)
     XBScreenVertex v = {x, y, 0.5f, 1.0f, col};
     return v;
 }
-XBRenderer::XBRenderer() : lines_(0), chars_(0), projected_(0), celVB_(0), celBuildFailed_(false) {}
+XBRenderer::XBRenderer() : lines_(0), chars_(0), projected_(0), celBuildFailed_(false) {}
 
 bool XBRenderer::Init()
 {
@@ -45,7 +45,7 @@ bool XBRenderer::Init()
 }
 void XBRenderer::Shutdown()
 {
-    if (celVB_) { celVB_->Release(); celVB_ = 0; }
+    celMesh_.Reset();
     if (lines_) free(lines_);
     if (chars_) free(chars_);
     if (projected_) free(projected_);
@@ -111,26 +111,17 @@ static short CelSigned16(const unsigned char* b)
 
 bool XBRenderer::CreateCelVB(IDirect3DDevice8* d)
 {
-    if (celVB_) return true;
+    if (celMesh_.Ready()) return true;
     if (celBuildFailed_ || !d) return false;
-    // 7,170 triangles x 3 x 16 bytes ~336 KB. Stays resident on NV2A.
-    const UINT bytes = (UINT)(XB_CEL_TRIANGLES * 3u * sizeof(XBCelVertex));
-    HRESULT hr = d->CreateVertexBuffer(bytes, D3DUSAGE_WRITEONLY, XB_CEL_FVF,
-                                        D3DPOOL_MANAGED, &celVB_);
-    if (FAILED(hr) || !celVB_) {
-        celVB_ = 0;
-        hr = d->CreateVertexBuffer(bytes, D3DUSAGE_WRITEONLY, XB_CEL_FVF,
-                                   D3DPOOL_DEFAULT, &celVB_);
-    }
-    if (FAILED(hr) || !celVB_) { celBuildFailed_ = true; return false; }
-
-    XBCelVertex* out = 0;
-    hr = celVB_->Lock(0, bytes, (BYTE**)&out, 0);
-    if (FAILED(hr) || !out) {
-        celVB_->Release(); celVB_ = 0;
+    // 7,170 triangles x 3 x 16 bytes ~336 KiB. Built once on the
+    // graphics thread, then transformed entirely by the Xbox NV2A.
+    void* mapped = 0;
+    if (!celMesh_.BeginBuild(d, XB_CEL_TRIANGLES * 3u,
+                             sizeof(XBCelVertex), XB_CEL_FVF, &mapped)) {
         celBuildFailed_ = true;
         return false;
     }
+    XBCelVertex* out = (XBCelVertex*)mapped;
     // All geometry work occurs exactly once at boot. No runtime SVG/OBJ
     // triangulation, no per-frame dynamic vertex allocation or CPU transforms.
     const unsigned char* b = XB_CEL_TRI_BYTES;
@@ -145,7 +136,7 @@ bool XBRenderer::CreateCelVB(IDirect3DDevice8* d)
         }
         b += 19;
     }
-    celVB_->Unlock();
+    if (!celMesh_.EndBuild()) { celBuildFailed_ = true; return false; }
     return true;
 }
 
@@ -206,9 +197,7 @@ void XBRenderer::DrawCelLogo(IDirect3DDevice8* d, const XBLogo& logo,
     d->SetRenderState(D3DRS_ALPHABLENDENABLE, alpha < 0.999f ? TRUE : FALSE);
     d->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
     d->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-    d->SetStreamSource(0, celVB_, sizeof(XBCelVertex));
-    d->DrawPrimitive(D3DPT_TRIANGLELIST, 0, XB_CEL_TRIANGLES);
-    d->SetStreamSource(0, 0, 0);
+    celMesh_.DrawTriangles(d);
     d->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
     d->SetRenderState(D3DRS_ZENABLE, FALSE);
     d->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);

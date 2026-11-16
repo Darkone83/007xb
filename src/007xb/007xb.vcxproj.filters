@@ -748,6 +748,9 @@
     <ClCompile Include="engine\port\fast3d\gfx_pc.cpp">
       <Filter>Fast3D</Filter>
     </ClCompile>
+    <ClCompile Include="ge_phase0_profile.cpp">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="engine\assets\animationtable_data.h">
@@ -1693,6 +1696,15 @@
       <Filter>Xbox host</Filter>
     </ClInclude>
     <ClInclude Include="ge_native_frame_stats.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="ge_native_input.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="ge_original_sched_abi.h">
+      <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="ge_phase0_profile.h">
       <Filter>Xbox host</Filter>
     </ClInclude>
   </ItemGroup>
