@@ -29,6 +29,8 @@ void GEGameInput_UpdateXbox(unsigned port,int connected,unsigned short buttons,
                             int stickX,int stickY,const struct GEGameXboxState*);
 int GEGameInput_ReadXbox(unsigned port,struct GEGameXboxState*);
 void GEGameInput_ClearXboxEdges(unsigned port);
+/* Host thread: captures physical input, releases its lock, then publishes LAN. */
+void GEGameInput_PublishLanPhysical(void);
 
 #ifdef __cplusplus
 }

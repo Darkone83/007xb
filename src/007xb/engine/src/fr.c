@@ -1,4 +1,7 @@
 #include <ultra64.h>
+#if defined(GE_XBOX_NATIVE32)
+#include "ge_lan_game.h"
+#endif
 #include "include/gbi_extension.h" /* Xbox VI canvas opcode shared with Fast3D */
 #include "vi.h"
 #include "fr.h"
@@ -801,6 +804,16 @@ Gfx *viFillScreen(Gfx *gdl)
 
 Gfx *viSetupScreensForNumPlayers(Gfx *gdl)
 {
+#if defined(GE_XBOX_NATIVE32)
+    if (GE_LanGameActive()) {
+        gDPSetCycleType(gdl++, G_CYC_FILL);
+        gDPSetScissor(gdl++, G_SC_NON_INTERLACE, 0, 0, viGetX(), viGetY());
+        gDPSetFillColor(gdl++, ((GPACK_RGBA5551(0,0,0,1) << 16) | GPACK_RGBA5551(0,0,0,1)));
+        gDPFillRectangle(gdl++, 0, 0, viGetX() - 1, viGetY() - 1);
+        gDPPipeSync(gdl++);
+        return gdl;
+    }
+#endif
     gDPSetCycleType(gdl++, G_CYC_FILL);
     gDPSetScissor(gdl++, G_SC_NON_INTERLACE, 0, 0, viGetX(), viGetY());
     gDPSetFillColor(gdl++, ((GPACK_RGBA5551(0,0,0,1) << 16) | GPACK_RGBA5551(0,0,0,1)));

@@ -1,4 +1,7 @@
 #include <ultra64.h>
+#if defined(GE_XBOX_NATIVE32)
+#include "ge_lan_game.h"
+#endif
 #include <memp.h>
 #include "bondview.h"
 #include <PR/os.h>
@@ -36,7 +39,11 @@ void zbufAllocate(void)
     {
         z_buffer_width = SCREEN_WIDTH;
 
-        if (getPlayerCount() == 1)
+        if (getPlayerCount() == 1
+#if defined(GE_XBOX_NATIVE32)
+            || GE_LanGameActive()
+#endif
+        )
         {
             z_buffer_height = SCREEN_HEIGHT;
         }
@@ -75,6 +82,9 @@ Gfx *zbufInit(Gfx *gdl) {
     } else {
         phi_a3 = 0;
     }
+#if defined(GE_XBOX_NATIVE32)
+    if (GE_LanGameActive()) phi_a3 = 0;
+#endif
     test = (z_buffer - phi_a3);
     test = test & ~0x3F;
     gDPPipeSync(gdl++);

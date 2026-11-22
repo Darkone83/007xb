@@ -7,6 +7,12 @@
  * Keep distinct from 0x47 (G_FLOATVTX_EXT), 0x48 (logo), and 0x49-0x4B
  * (native-room packet metadata). Only emitted by GE_XBOX_NATIVE32. */
 #define G_XBOX_MP_VI_CANVAS_EXT 0x4C
+/* Three-slot native backdrop command: slot 0 holds the I8 source pointer,
+ * slot 1 holds packed top/bottom RGB, slot 2 signed x offset. */
+#define G_XBOX_GUNBARREL_BG_EXT 0x4D
+/* One-slot, render-thread-only LAN presentation ownership. w1 is 0 or 1.
+ * Game simulation still builds every player's view in the same order. */
+#define G_XBOX_LAN_VIEW_EXT 0x4E
 
 #define TRI4_Ext
 

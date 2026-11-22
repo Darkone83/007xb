@@ -12,6 +12,18 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ge_original_input.cpp" />
+    <ClCompile Include="ge_lan.cpp">
+      <!-- The Xbox CRT has no desktop C++ exception runtime. -->
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <AdditionalOptions>%(AdditionalOptions) /EHs-c- /EHa- /EHr-</AdditionalOptions>
+    </ClCompile>
+    <ClCompile Include="ge_lan_platform.cpp">
+      <!-- The Xbox CRT has no desktop C++ exception runtime. -->
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <AdditionalOptions>%(AdditionalOptions) /EHs-c- /EHa- /EHr-</AdditionalOptions>
+    </ClCompile>
     <ClCompile Include="ge_phase0_profile.cpp" />
     <ClCompile Include="gfx_cc.cpp" />
     <ClCompile Include="main.cpp" />
@@ -111,6 +123,19 @@
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <AdditionalOptions>/J /utf-8 %(AdditionalOptions)</AdditionalOptions>
       <ObjectFileName>$(IntDir)engine_port_src_drawdistgameplay.obj</ObjectFileName>
+      <CompileAs>CompileAsC</CompileAs>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
+    </ClCompile>
+    <ClCompile Include="engine\port\src\ge_lan_game.c">
+      <AdditionalIncludeDirectories>$(ProjectDir)engine\port\shim;$(ProjectDir)engine\port\include;$(ProjectDir)engine\include;$(ProjectDir)engine\include\PR;$(ProjectDir)engine\src;$(ProjectDir)engine\src\game;$(ProjectDir)engine\src\libultra;$(ProjectDir)engine\src\libultra\audio;$(ProjectDir)engine;$(ProjectDir).;$(ProjectDir)engine\port\fast3d;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>PORT=1;GE_XBOX_NATIVE32=1;_LANGUAGE_C=1;AVOID_UB=1;PAL=0;VERSION_US;LANG_US;REFRESH_NTSC;LEFTOVERDEBUG;LEFTOVERSPECTRUM;BUGFIX_R0;BYTEMATCH;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ForcedIncludeFiles>$(ProjectDir)engine\port\include\ge_xbox_compat.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <IntrinsicFunctions>false</IntrinsicFunctions>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <AdditionalOptions>/J /utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <ObjectFileName>$(IntDir)engine_port_src_ge_lan_game.obj</ObjectFileName>
       <CompileAs>CompileAsC</CompileAs>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
     </ClCompile>
@@ -3128,6 +3153,7 @@
     <ClInclude Include="engine\include\unused.h" />
     <ClInclude Include="engine\port\fast3d\gbiex.h" />
     <ClInclude Include="engine\port\fast3d\ge_native_buffer.h" />
+    <ClInclude Include="engine\port\fast3d\ge_native_run_cache.h" />
     <ClInclude Include="engine\port\fast3d\gfx_api.h" />
     <ClInclude Include="engine\port\fast3d\gfx_pc.h" />
     <ClInclude Include="engine\port\fast3d\gfx_screen_config.h" />
@@ -3430,6 +3456,9 @@
     <OutDir>$(ProjectDir)$(Configuration)\</OutDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
+  <PropertyGroup>
+    <GELanNetworkLibrary Condition="'$(GELanNetworkLibrary)' == ''">xnet.lib</GELanNetworkLibrary>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -3452,7 +3481,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>xboxkrnl.lib;libcmtd.lib;xapilibd.lib;d3d8d.lib;d3dx8d.lib;dsound.lib</AdditionalDependencies>
+      <AdditionalDependencies>xboxkrnl.lib;libcmtd.lib;xapilibd.lib;d3d8d.lib;d3dx8d.lib;dsound.lib;$(GELanNetworkLibrary)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <BaseAddress>
       </BaseAddress>
@@ -3505,7 +3534,7 @@ MKDIR "$(OutDir)XISO"
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>xboxkrnl.lib;libcmt.lib;xapilib.lib;d3d8.lib;d3dx8.lib;dsound.lib;xgraphics.lib</AdditionalDependencies>
+      <AdditionalDependencies>xboxkrnl.lib;libcmt.lib;xapilib.lib;d3d8.lib;d3dx8.lib;dsound.lib;xgraphics.lib;$(GELanNetworkLibrary)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <BaseAddress>
       </BaseAddress>

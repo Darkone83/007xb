@@ -117,6 +117,24 @@ const XBArchiveEntry* XBArchive::Find(const char* name) const
         if (strcmp(entries_[i].name, name) == 0) return &entries_[i];
     return 0;
 }
+XB_U32 XBArchive::ContentFingerprint() const
+{
+    if(!file_)return 0u;
+    XB_U32 hash=2166136261u;
+    // Explicit bytes avoid structure padding/host endianness. Offsets are
+    // intentionally excluded: changing file offsets preserves compatibility.
+    for(int i=0;i<count_;++i) {
+        const XBArchiveEntry& e=entries_[i];
+        for(unsigned j=0;j<64u && e.name[j];++j)
+            hash=(hash^(unsigned char)e.name[j])*16777619u;
+        hash=(hash^0u)*16777619u;
+        const XB_U32 values[3]={e.size,e.crc,e.flags};
+        for(unsigned k=0;k<3u;++k)
+            for(unsigned shift=0;shift<32u;shift+=8u)
+                hash=(hash^((values[k]>>shift)&255u))*16777619u;
+    }
+    return hash ? hash : 1u;
+}
 bool XBArchive::Read(const XBArchiveEntry* e, XB_U32 offset, void* dst, XB_U32 bytes)
 {
     if (!file_ || !e || (!dst && bytes)) return Fail("Archive not open/read arguments invalid");

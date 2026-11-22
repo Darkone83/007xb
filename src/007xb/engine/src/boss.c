@@ -46,6 +46,8 @@
 #if defined(GE_XBOX_NATIVE32)
 #include "ge_native_platform.h"
 #include "ge_phase0_profile.h"
+#include "ge_native_video.h"
+#include "ge_lan_game.h"
 #endif
 
 /**
@@ -419,10 +421,25 @@ void bossMainloop(void)
         toggleFlag = 0;
         pendingGfx = 0;
 #if defined(GE_XBOX_NATIVE32)
+        /* The previous stage's graphics replies have all drained here.
+         * Flush its render-thread spike history and set the next stage tag.
+         * Without this call, CINE GPU/GPUFRAME never reach the trace file. */
+        GENativeVideo_TraceStage((int)g_StageNum);
         nativeFirstFrame = 1;
         GENativePlatform_Trace("STAGE BEGIN stage=%d\n", (int)g_StageNum);
 #endif
 
+#if defined(GE_XBOX_NATIVE32)
+        if (!GE_LanGameStageBegin((int)g_StageNum)) {
+            /* Rejected/cancelled START: no stage allocation or local tick. */
+            g_StageNum = LEVELID_TITLE;
+            g_MainStageNum = LEVELID_NONE;
+            continue;
+        }
+#endif
+#if defined(GE_XBOX_NATIVE32)
+        if (!GE_LanGameActive())
+#endif
         test_if_recording_demos_this_stage_load(g_StageNum, lvlGetSelectedDifficulty());
         if (g_DebugAndUpdateStageFlag)
         {
@@ -546,6 +563,9 @@ void bossMainloop(void)
             }
         }
 
+#if defined(GE_XBOX_NATIVE32)
+        if (GE_LanGameActive()) localSelectedNumPlayers = (s32)GE_LanGamePlayerCount();
+#endif
         init_player_data_ptrs_construct_viewports(localSelectedNumPlayers);
         dynInitMemory();
         joyCheckStatusThreadSafe();
@@ -556,6 +576,10 @@ void bossMainloop(void)
         lvlStageLoad(g_StageNum);
         viInitBuffers();
         debmenuRefresh();
+#if defined(GE_XBOX_NATIVE32)
+        if (GE_LanGameActive()) GE_LanGameStageLoaded();
+        else
+#endif
         waitForNextFrame();
         speedgraphMarkerCommit();
 
@@ -605,15 +629,35 @@ void bossMainloop(void)
     */
 #endif
 
+#if defined(GE_XBOX_NATIVE32)
+                    /* A network wait is not a game frame: leave joy samples,
+                     * all clocks, player order and both RNGs untouched. */
+                    if (GE_LanGameActive() && g_MainStageNum < 0 && pendingGfx < 2U) {
+                        if (GE_LanGameBeginTick() <= 0) break;
+                    }
+#endif
                     mainTickElapsed = (u32) (osGetCount() - copy_of_osgetcount_value_1);
-                    if (mainTickElapsed < MAIN_LOOP_TICK_INTERVAL)
+                    if (
+#if defined(GE_XBOX_NATIVE32)
+                        !GE_LanGameActive() &&
+#endif
+                        mainTickElapsed < MAIN_LOOP_TICK_INTERVAL)
                     {
-                        // nothing to do.
+#if defined(GE_XBOX_NATIVE32)
+                        /* A VI was delivered, but the game's tick threshold
+                         * has not elapsed. No graphics work was requested. */
+                        geP0CineSkip(GE_CINE_WAIT_TICK);
+#endif
                     }
                     else
                     {
                         if (g_MainStageNum < 0 && pendingGfx < 2U)
                         {
+#if defined(GE_XBOX_NATIVE32)
+                            if (GE_LanGameActive()) {
+                                /* Fixed delta was installed by the tick gate. */
+                            } else
+#endif
                             if (get_is_ramrom_flag())
                             {
 #if defined(GE_XBOX_NATIVE32)
@@ -623,6 +667,9 @@ void bossMainloop(void)
                                  * these paths consume the global gameplay RNG. */
                                 if (iterate_ramrom_entries_handle_camera_out() == 0)
                                 {
+                                    /* Intentional wait for authored demo
+                                     * packet deadline, not a GPU stall. */
+                                    geP0CineSkip(GE_CINE_WAIT_DEMO);
                                     break; /* OS_SC_RETRACE_MSG only */
                                 }
 #else
@@ -871,11 +918,23 @@ void bossMainloop(void)
 #ifdef VERSION_EU
                             eu_sub_7f0c00a4();
 #endif
+#if defined(GE_XBOX_NATIVE32)
+                            GE_LanGameEndTick();
+#endif
                             toggleFlag ^= 1;
 
                             speedgraphMarkerHandler(0x10000);
                             if(1);
                         }
+#if defined(GE_XBOX_NATIVE32)
+                        else if (g_MainStageNum < 0 && pendingGfx >= 2U)
+                        {
+                            /* VI arrived, but both outstanding graphics
+                             * tasks were still pending. Preserve this reason
+                             * separately from render/CPU timings. */
+                            geP0CineSkip(GE_CINE_WAIT_GFX);
+                        }
+#endif
                     }
                 }
                 break;

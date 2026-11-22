@@ -4,15 +4,15 @@
 #include <stdint.h>
 #include <string.h>
 #include "xb_ge_fast3d.h"
-#if !defined(GE_XBOX_BACKEND_STATS_ABI) || GE_XBOX_BACKEND_STATS_ABI != 2
-#error Update xb_ge_fast3d.h to the RXDK-compatible stats ABI v2 before compiling ge_native_frame_stats.h.
+#if !defined(GE_XBOX_BACKEND_STATS_ABI) || GE_XBOX_BACKEND_STATS_ABI != 3
+#error Update xb_ge_fast3d.h to the RXDK-compatible stats ABI v3 before compiling ge_native_frame_stats.h.
 #endif
 
 /* Render-thread-only timing. These are CPU wall-clock intervals, including
  * driver waits, not GPU timer-query results. All addresses remain native32;
  * 64-bit integers are used only to accumulate clocks/counters without wrap. */
 struct GEFramePerfWindow {
-    unsigned frames,gaps,over35ms,over50ms,over100ms;
+    unsigned frames,gaps,over28ms,over35ms,over50ms,over100ms;
     uint64_t gapUs,workUs,presentUs,taskUs;
     uint64_t drawCalls,batches,inputTriangles,outputTriangles,uploadBytes;
     unsigned uploads,shaderCreates;
@@ -69,6 +69,9 @@ struct GEFramePerf {
         if(hasLastPresent && end>=lastPresentUs) {
             const unsigned gap=Elapsed(lastPresentUs,end);
             ++window.gaps;window.gapUs+=gap;
+            /* A missed 60 Hz present is ~33.3ms, below the old 35ms
+             * dip threshold. Count it on the quick-look HUD. */
+            if(gap>28000u)++window.over28ms;
             if(gap>35000u)++window.over35ms;
             if(gap>50000u)++window.over50ms;
             if(gap>100000u)++window.over100ms;

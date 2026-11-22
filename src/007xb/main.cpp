@@ -13,6 +13,7 @@
 #include "ge_native_video.h"
 #include "ge_native_error.h"
 #include "ge_phase0_profile.h"
+#include "ge_lan.h"
 /* The host pumps controller USB + DirectSound on the main thread. At 1 ms
  * it made ~1000 XInput/DirectSoundDoWork/GetCurrentPosition/Lock calls per
  * second, starving a single-core 733 MHz Xbox between original game ticks.
@@ -330,6 +331,7 @@ static void ShowError(const char *message) {
 static const char *StartEngine(void) {
     if(!s_video.HasDepth())return "NATIVE ENGINE REQUIRES A D16 OR D24S8 DEPTH BUFFER";
     if(!s_archive.Open("D:\\data\\007xb_assets.dat"))return s_archive.Error();
+    GE_LanSetContentFingerprint(s_archive.ContentFingerprint());
     if(!(s_logo.LoadLoose("D:\\data\\darkone83.lines") ||
          s_logo.LoadArchive(s_archive,"branding/darkone83.lines")))return s_logo.Error();
     if(!s_runtime.Init(s_archive,"D:\\data\\007xb_assets.dat"))return s_runtime.Error();
@@ -347,6 +349,7 @@ static const char *StartEngine(void) {
     GEOSInstallAudioRunner(RunAudio,0);
     GEOSInstallDPRunner(RunDP,0);
     PollInput();
+    GEGameInput_PublishLanPhysical();
     /* Original init.c creates the scheduler, game and audio threads and
        initializes the original memory pools. There is exactly one entry. */
     GENativeVideo_BootStep("STARTING ORIGINAL ENGINE");
@@ -359,6 +362,9 @@ void __cdecl main(void) {
     if(!s_video.Init())for(;;)Sleep(1000);
     if(!s_draw.Init())for(;;)Sleep(1000);
     StartInput();
+    /* Optional LAN errors are reported in the LAN menu; local play remains
+     * available. Initialize synchronization before any game thread starts. */
+    GE_LanInit(0u);
     const char *error=StartEngine();
     /* Startup can return an error without entering sysFatalError. Record it
      * once when storage is armed; the display loop must never repeat it. */
@@ -367,6 +373,8 @@ void __cdecl main(void) {
     for(;;) {
         geP0HostBegin();
         PollInput();
+        GEGameInput_PublishLanPhysical();
+        GE_LanService();
         geP0HostInputDone();
         GEAudio_Tick();
         geP0RetraceDrops(s_runtime.OS().DroppedRetraces());

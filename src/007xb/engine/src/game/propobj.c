@@ -10,6 +10,9 @@
 #include "porttick.h" /* D486 */
 #endif
 #include <ultra64.h>
+#if defined(GE_XBOX_NATIVE32)
+#include "ge_lan_game.h"
+#endif
 #include <math.h>
 #ifdef PORT
 #include <stdio.h>  /* D202/M-65 diag probe only (doorSndProbe); remove with it */
@@ -12820,6 +12823,9 @@ s32 sub_GAME_7F053894(coord3d *pos, f32 low, f32 high)
 
     for (index = 0; index < count; index++)
     {
+#if defined(GE_XBOX_NATIVE32)
+        if (GE_LanGameActive() && !GE_LanGameIsLocalPlayer(index)) continue;
+#endif
         prop  = g_playerPointers[index]->prop;
         diffx = prop->pos.x - pos->x;
         diffy = prop->pos.y - pos->y;

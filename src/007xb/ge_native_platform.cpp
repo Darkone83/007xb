@@ -923,6 +923,16 @@ static void TraceMemory(unsigned long *total, unsigned long *available) {
     *available = page > 0 && freePages > 0 ? (unsigned long)page * (unsigned long)freePages : 0u;
 #endif
 }
+extern "C" int GENativePlatform_QueryPhysicalMemory(uint32_t *totalBytes,
+                                                      uint32_t *availableBytes) {
+    unsigned long total=0, available=0;
+    if (!totalBytes || !availableBytes) return 0;
+    TraceMemory(&total,&available);
+    if (!total) return 0;
+    *totalBytes=(uint32_t)(total > 0xfffffffful ? 0xfffffffful : total);
+    *availableBytes=(uint32_t)(available > 0xfffffffful ? 0xfffffffful : available);
+    return 1;
+}
 static unsigned long TraceMilliseconds(void) {
 #if defined(XBOX) || defined(_XBOX)
     return GetTickCount();

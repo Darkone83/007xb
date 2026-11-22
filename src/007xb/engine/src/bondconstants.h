@@ -1869,6 +1869,11 @@ typedef enum MENU
     MENU_SWITCH_SCREENS,
     MENU_DISPLAY_CAST,
     MENU_SPECTRUM_EMU,
+    /* Append native LAN screens; original menu IDs remain unchanged. */
+    MENU_MP_CONNECTION,
+    MENU_MP_LAN_SELECT,
+    MENU_MP_LAN_BROWSER,
+    MENU_MP_LAN_LOBBY,
     MENU_MAX
 } MENU;
 

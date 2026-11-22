@@ -1,5 +1,8 @@
 #include "ge_original_input.h"
 #include "xb_ge_libultra.h"
+#if defined(GE_XBOX_NATIVE32)
+#include "ge_lan_game.h"
+#endif
 #include <string.h>
 #if defined(XBOX) || defined(_XBOX)
 #include <xtl.h>
@@ -136,6 +139,9 @@ extern "C" void GEGameInput_UpdateXbox(unsigned port,int connected,
     UnlockInput();
 }
 extern "C" int GEGameInput_ReadXbox(unsigned port,GEGameXboxState* out){
+#if defined(GE_XBOX_NATIVE32)
+    if(GE_LanGameActive())return GE_LanGameReadXbox(port,out);
+#endif
     if(!out)return 0;
     if(port>=4){memset(out,0,sizeof(*out));return 0;}
     LockInput();
@@ -153,6 +159,9 @@ extern "C" int GEGameInput_ReadXbox(unsigned port,GEGameXboxState* out){
     return connected;
 }
 extern "C" void GEGameInput_ClearXboxEdges(unsigned port){
+#if defined(GE_XBOX_NATIVE32)
+    if(GE_LanGameActive()){GE_LanGameClearXboxEdges(port);return;}
+#endif
     if(port>=4)return;
     LockInput();
 #if GE_XBOX_COMPACT_CONTROLLER_PORTS
@@ -210,3 +219,44 @@ extern "C" void osContGetQuery(GEOSContStatus* status){
 #endif
     UnlockInput();
 }
+
+#if defined(GE_XBOX_NATIVE32)
+/* Called by the host service thread after PollInput. The round pins the
+ * first physical pad; removal cannot compact another controller into it.
+ * Never call the LAN core while holding the input lock. */
+extern "C" void GEGameInput_PublishLanPhysical(void)
+{
+    static unsigned owner=4u;
+    static unsigned previousLegacy=0,previousNative=0;
+    static int wasMatch=0;
+    GE_LanPlayerInput input;
+    const int inMatch=GE_LanIsMatch();
+    unsigned physical;
+    memset(&input,0,sizeof(input));
+    LockInput();
+    physical=owner;
+    if(!inMatch || !wasMatch){
+        for(physical=0;physical<4u;++physical)
+            if(s_connected&(1u<<physical))break;
+        if(physical!=owner){previousLegacy=0;previousNative=0;}
+        owner=physical;
+    }
+    if(physical<4u && (s_connected&(1u<<physical))){
+        const GEOSContPad &pad=s_pads[physical];
+        const GEGameXboxState &native=s_xboxPads[physical];
+        input.buttons=pad.button;
+        input.pressed=(unsigned short)(pad.button&~previousLegacy);
+        input.stick_x=pad.stick_x;input.stick_y=pad.stick_y;
+        input.native_buttons=(unsigned short)native.buttons;
+        input.native_pressed=(unsigned short)(native.buttons&~previousNative);
+        input.move_x=(signed char)native.move_x;input.move_y=(signed char)native.move_y;
+        input.look_x=(signed char)native.look_x;input.look_y=(signed char)native.look_y;
+        input.connected=pad.error_code==0;
+        input.native_connected=native.connected?1:0;
+    }
+    previousLegacy=input.buttons;previousNative=input.native_buttons;
+    wasMatch=inMatch;
+    UnlockInput();
+    GE_LanPublishLocalInput(&input);
+}
+#endif

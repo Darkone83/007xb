@@ -4,9 +4,20 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Keep the original cel-shaded geometry, palette, and spin timing.
+// Fog and background mist have been removed; lighting is the sole effect.
+#ifndef D83_INTRO_LIGHTING
+#define D83_INTRO_LIGHTING 1
+#endif
+
 #define XB_FVF (D3DFVF_XYZRHW | D3DFVF_DIFFUSE)
+#if D83_INTRO_LIGHTING
+#define XB_CEL_FVF (D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_DIFFUSE)
+struct XBCelVertex { float x, y, z, nx, ny, nz; DWORD diffuse; };
+#else
 #define XB_CEL_FVF (D3DFVF_XYZ | D3DFVF_DIFFUSE)
 struct XBCelVertex { float x, y, z; DWORD diffuse; };
+#endif
 
 #define MAX_LINES 16384
 #define CHAR_VERT_CAP 4096
@@ -19,6 +30,7 @@ static void State(IDirect3DDevice8* d)
     d->SetVertexShader(XB_FVF);
     d->SetRenderState(D3DRS_ZENABLE, FALSE);
     d->SetRenderState(D3DRS_LIGHTING, FALSE);
+    d->SetRenderState(D3DRS_FOGENABLE, FALSE);
     d->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
     d->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
     d->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_DIFFUSE);
@@ -109,12 +121,80 @@ static short CelSigned16(const unsigned char* b)
     return (short)u;
 }
 
+#if D83_INTRO_LIGHTING
+// Single mesh pass, fixed-function NV2A lighting: no extra draw and no
+// per-frame traversal of the 7,170-triangle model. The key light sweeps
+// through world space as the logo rotates, creating real face/edge highlights.
+static void ConfigureIntroLights(IDirect3DDevice8* d, float radians)
+{
+    D3DMATERIAL8 material;
+    memset(&material, 0, sizeof(material));
+    material.Diffuse.r = material.Diffuse.g = material.Diffuse.b = 1.0f;
+    material.Diffuse.a = 1.0f;
+    material.Ambient = material.Diffuse;
+    // Specular is deliberately independent of the original per-face palette.
+    // It adds a restrained pale-pink glint rather than painting the mesh white.
+    material.Specular.r = 0.90f;
+    material.Specular.g = 0.80f;
+    material.Specular.b = 1.00f;
+    material.Specular.a = 1.0f;
+    material.Power = 20.0f;
+    d->SetMaterial(&material);
+
+    d->SetRenderState(D3DRS_COLORVERTEX, TRUE);
+    d->SetRenderState(D3DRS_DIFFUSEMATERIALSOURCE, D3DMCS_COLOR1);
+    d->SetRenderState(D3DRS_AMBIENTMATERIALSOURCE, D3DMCS_COLOR1);
+    d->SetRenderState(D3DRS_SPECULARMATERIALSOURCE, D3DMCS_MATERIAL);
+    d->SetRenderState(D3DRS_EMISSIVEMATERIALSOURCE, D3DMCS_MATERIAL);
+    d->SetRenderState(D3DRS_SPECULARENABLE, TRUE);
+    d->SetRenderState(D3DRS_NORMALIZENORMALS, TRUE);
+    // Lower than the old high ambient fill, so facets catch the moving light.
+    // Still bright enough to read the lettering when an edge turns away.
+    d->SetRenderState(D3DRS_AMBIENT, D3DCOLOR_XRGB(108, 96, 122));
+
+    D3DLIGHT8 key, rim;
+    memset(&key, 0, sizeof(key));
+    memset(&rim, 0, sizeof(rim));
+    key.Type = D3DLIGHT_DIRECTIONAL;
+    key.Diffuse.r = 0.82f; key.Diffuse.g = 0.66f; key.Diffuse.b = 0.95f;
+    key.Diffuse.a = 1.0f;
+    key.Specular.r = 1.00f; key.Specular.g = 0.86f; key.Specular.b = 1.00f;
+    key.Specular.a = 1.0f;
+    // Sweeping across the face (not attached to the spinning object) makes
+    // successive bevels brighten and fade as the lettering turns.
+    const float sweep = sinf(radians * 0.72f);
+    const float lx = 0.57f * sweep;
+    const float ly = 0.29f;
+    const float lz = 0.84f;
+    const float invLength = 1.0f / (float)sqrt((double)(lx*lx + ly*ly + lz*lz));
+    key.Direction.x = lx * invLength;
+    key.Direction.y = ly * invLength;
+    key.Direction.z = lz * invLength;
+
+    // Opposite cool fill traces the extruded rim while the key moves.
+    rim.Type = D3DLIGHT_DIRECTIONAL;
+    rim.Diffuse.r = 0.28f; rim.Diffuse.g = 0.43f; rim.Diffuse.b = 0.77f;
+    rim.Diffuse.a = 1.0f;
+    rim.Specular.r = 0.26f; rim.Specular.g = 0.48f; rim.Specular.b = 0.86f;
+    rim.Specular.a = 1.0f;
+    rim.Direction.x = -0.42f;
+    rim.Direction.y = -0.26f;
+    rim.Direction.z = -0.87f;
+
+    d->SetLight(0, &key);
+    d->SetLight(1, &rim);
+    d->LightEnable(0, TRUE);
+    d->LightEnable(1, TRUE);
+    d->SetRenderState(D3DRS_LIGHTING, TRUE);
+}
+#endif
+
 bool XBRenderer::CreateCelVB(IDirect3DDevice8* d)
 {
     if (celMesh_.Ready()) return true;
     if (celBuildFailed_ || !d) return false;
-    // 7,170 triangles x 3 x 16 bytes ~336 KiB. Built once on the
-    // graphics thread, then transformed entirely by the Xbox NV2A.
+    // Immutable, GPU-resident cel mesh. Facet normals are built once and
+    // reused for NV2A diffuse/specular lighting as the mesh spins.
     void* mapped = 0;
     if (!celMesh_.BeginBuild(d, XB_CEL_TRIANGLES * 3u,
                              sizeof(XBCelVertex), XB_CEL_FVF, &mapped)) {
@@ -122,19 +202,34 @@ bool XBRenderer::CreateCelVB(IDirect3DDevice8* d)
         return false;
     }
     XBCelVertex* out = (XBCelVertex*)mapped;
-    // All geometry work occurs exactly once at boot. No runtime SVG/OBJ
-    // triangulation, no per-frame dynamic vertex allocation or CPU transforms.
     const unsigned char* b = XB_CEL_TRI_BYTES;
     for (unsigned t = 0; t < XB_CEL_TRIANGLES; ++t) {
         const DWORD tint = XB_CEL_PALETTE[b[18]];
+        XBCelVertex* face = out;
         for (int v = 0; v < 3; ++v) {
-            out->x = (float)CelSigned16(b + 6*v    ) * XB_CEL_SCALE;
-            out->y = (float)CelSigned16(b + 6*v + 2) * XB_CEL_SCALE;
-            out->z = (float)CelSigned16(b + 6*v + 4) * XB_CEL_SCALE;
-            out->diffuse = tint;
-            ++out;
+            face[v].x = (float)CelSigned16(b + 6*v    ) * XB_CEL_SCALE;
+            face[v].y = (float)CelSigned16(b + 6*v + 2) * XB_CEL_SCALE;
+            face[v].z = (float)CelSigned16(b + 6*v + 4) * XB_CEL_SCALE;
+            face[v].diffuse = tint;
         }
-        b += 19;
+#if D83_INTRO_LIGHTING
+        // Flat face normals preserve the deliberately faceted comic look.
+        const float ax=face[1].x-face[0].x, ay=face[1].y-face[0].y,
+                    az=face[1].z-face[0].z;
+        const float bx=face[2].x-face[0].x, by=face[2].y-face[0].y,
+                    bz=face[2].z-face[0].z;
+        float nx=ay*bz-az*by,ny=az*bx-ax*bz,nz=ax*by-ay*bx;
+        const float len2=nx*nx+ny*ny+nz*nz;
+        if(len2>0.00000000000001f) {
+            const float inv=1.0f/(float)sqrt((double)len2);
+            nx*=inv;ny*=inv;nz*=inv;
+        } else {nx=0.0f;ny=0.0f;nz=-1.0f;}
+        for(int v=0;v<3;++v) {
+            face[v].nx=nx;face[v].ny=ny;face[v].nz=nz;
+        }
+#endif
+        out+=3;
+        b+=19;
     }
     if (!celMesh_.EndBuild()) { celBuildFailed_ = true; return false; }
     return true;
@@ -155,8 +250,7 @@ void XBRenderer::DrawCelLogo(IDirect3DDevice8* d, const XBLogo& logo,
         DrawLogo(d, logo, width, height, radians, alpha, zoom);
         return;
     }
-    // Xbox fixed-function transform path. Two trig calls for the entire
-    // model. GPU handles all 21,510 vertices without CPU-side reprojection.
+    // The logo is lit directly by the Xbox hardware. No haze or fog passes.
     const float cy = cosf(radians), sy = sinf(radians);
     const float cx = 0.99280864f, sx = 0.11971221f;
     D3DMATRIX world, view, proj;
@@ -184,7 +278,13 @@ void XBRenderer::DrawCelLogo(IDirect3DDevice8* d, const XBLogo& logo,
     d->SetVertexShader(XB_CEL_FVF);
     d->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
     d->SetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
-    d->SetRenderState(D3DRS_LIGHTING, FALSE);
+#if D83_INTRO_LIGHTING
+    ConfigureIntroLights(d,radians);
+#else
+    d->SetRenderState(D3DRS_LIGHTING,FALSE);
+#endif
+    // Keep the original clean, dark backdrop: no distance fade on lettering.
+    d->SetRenderState(D3DRS_FOGENABLE, FALSE);
     d->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
     d->SetRenderState(D3DRS_ZENABLE, depthAvailable ? TRUE : FALSE);
     d->SetRenderState(D3DRS_ZWRITEENABLE, depthAvailable ? TRUE : FALSE);
@@ -198,6 +298,15 @@ void XBRenderer::DrawCelLogo(IDirect3DDevice8* d, const XBLogo& logo,
     d->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
     d->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
     celMesh_.DrawTriangles(d);
+    // The caller restores its D3DSBT_ALL snapshot; also locally disable the
+    // highlights to avoid state leaking into wireframe/text drawing.
+#if D83_INTRO_LIGHTING
+    d->LightEnable(0,FALSE);
+    d->LightEnable(1,FALSE);
+    d->SetRenderState(D3DRS_SPECULARENABLE,FALSE);
+    d->SetRenderState(D3DRS_LIGHTING,FALSE);
+#endif
+    d->SetRenderState(D3DRS_FOGENABLE,FALSE);
     d->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
     d->SetRenderState(D3DRS_ZENABLE, FALSE);
     d->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);

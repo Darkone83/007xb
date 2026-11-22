@@ -10,6 +10,15 @@
     <ClCompile Include="ge_original_input.cpp">
       <Filter>Xbox host</Filter>
     </ClCompile>
+    <ClCompile Include="ge_lan.cpp">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
+    <ClCompile Include="ge_lan_platform.cpp">
+      <Filter>Xbox host</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\port\src\ge_lan_game.c">
+      <Filter>Original engine</Filter>
+    </ClCompile>
     <ClCompile Include="gfx_cc.cpp">
       <Filter>Xbox host</Filter>
     </ClCompile>
@@ -1706,6 +1715,9 @@
     </ClInclude>
     <ClInclude Include="ge_phase0_profile.h">
       <Filter>Xbox host</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\port\fast3d\ge_native_run_cache.h">
+      <Filter>Fast3D</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

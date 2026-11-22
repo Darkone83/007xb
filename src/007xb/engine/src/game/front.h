@@ -3,6 +3,9 @@
 #include <ultra64.h>
 #include <bondgame.h>
 #include <bondconstants.h>
+#if defined(GE_XBOX_NATIVE32)
+#include "ge_lan.h"
+#endif
 
 
 #define TABS_LEFT_EDGE 390.0f
@@ -331,6 +334,14 @@ extern struct Model *cast_model_weapon;
 extern u32 full_actor_intro;
 
 void frontChangeMenu(MENU menu, s32 reload);
+#if defined(GE_XBOX_NATIVE32)
+/* LAN menu/game bridge. Applying a frozen match never consults a peer's
+ * local save unlocks, and leaves RNG initialization to the game bridge. */
+void frontLanCaptureSettings(GE_LanMatchConfig *config);
+int frontLanApplySettings(const GE_LanMatchConfig *config);
+s32 frontLanResolveStage(void);
+void frontLanReturnToMenu(void);
+#endif
 s32 get_selected_num_players(void);
 void do_extended_cast_display(bool doExtended);
 MPSCENARIOS get_scenario(void);

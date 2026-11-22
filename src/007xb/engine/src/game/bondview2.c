@@ -51,6 +51,7 @@
 #if defined(GE_XBOX_NATIVE32)
 #include "ge_native_platform.h"
 #include "ge_native_input.h"
+#include "ge_lan_game.h"
 #endif
 #ifdef PORT
 #include "envflag.h"   /* cached getenv for hot-path probes */
@@ -8168,6 +8169,9 @@ void bondviewFrozenMoveBond(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
 
 s16 getWidth320or440(void)
 {
+#if defined(GE_XBOX_NATIVE32)
+    if (GE_LanGameActive()) return SCREEN_WIDTH_320;
+#endif
     if (cameraBufferToggle != 0)
     {
         return SCREEN_WIDTH_440;
@@ -8179,6 +8183,9 @@ s16 getWidth320or440(void)
 
 s16 getHeight330or240(void)
 {
+#if defined(GE_XBOX_NATIVE32)
+    if (GE_LanGameActive()) return SCREEN_HEIGHT;
+#endif
     if (cameraBufferToggle != 0)
     {
         return SCREEN_HEIGHT_330;
@@ -8189,6 +8196,9 @@ s16 getHeight330or240(void)
 
 s16 bondviewGetCurrentPlayerViewportWidth(void)
 {
+#if defined(GE_XBOX_NATIVE32)
+    if (GE_LanGameActive()) return SCREEN_WIDTH_320;
+#endif
     if (getPlayerCount() >= 3)
     {
         return VIEWPORT_WIDTH_4P;
@@ -8214,6 +8224,9 @@ s16 bondviewGetCurrentPlayerViewportWidth(void)
 
 s16 get_curplayer_viewport_ulx(void)
 {
+#if defined(GE_XBOX_NATIVE32)
+    if (GE_LanGameActive()) return 0;
+#endif
     if (2 < getPlayerCount())
     {
         if ((get_cur_playernum() == 1) || (get_cur_playernum() == 3))
@@ -8234,6 +8247,9 @@ s16 get_curplayer_viewport_ulx(void)
 s16 bondviewGetCurrentPlayerViewportHeight(void)
 {
     f32 t;
+#if defined(GE_XBOX_NATIVE32)
+    if (GE_LanGameActive()) return SCREEN_HEIGHT;
+#endif
 
     if (getPlayerCount() >= 2)
     {
@@ -8280,6 +8296,9 @@ s16 bondviewGetCurrentPlayerViewportHeight(void)
 s16 bondviewGetCurrentPlayerViewportUly(void)
 {
     f32 t;
+#if defined(GE_XBOX_NATIVE32)
+    if (GE_LanGameActive()) return 0;
+#endif
 
     if (getPlayerCount() == 2)
     {
@@ -8468,6 +8487,13 @@ void bondviewMovePlayerUpdateViewport(s8 stick_x, s8 stick_y, u16 buttons)
     }
 #endif
 
+#if defined(GE_XBOX_NATIVE32)
+    if (GE_LanGameActive()) {
+        /* Never let local video settings change simulation visibility. */
+        set_cur_player_aspect(16.0f / 9.0f);
+        viSetAspect(16.0f / 9.0f);
+    }
+#endif
     set_cur_player_screen_size( bondviewGetCurrentPlayerViewportWidth(), bondviewGetCurrentPlayerViewportHeight());
     set_cur_player_viewport_size( get_curplayer_viewport_ulx(), bondviewGetCurrentPlayerViewportUly());
     viSetXY(getWidth320or440(), getHeight330or240());

@@ -59,6 +59,62 @@ struct P0Capture {
 #endif
 };
 static P0Capture s_p0;
+#if GE_XBOX_CINEMATIC_TRACE
+/* Main-thread only, fixed-size and allocation-free. A 1/16 Phase0 sample
+ * cannot reliably observe a ~59ms hitch, so cinematic phases are measured
+ * every game frame. The renderer has a separate serial and is never treated
+ * as the same event without an explicit correlation. */
+enum { CINE_TOP_MAIN=16, CINE_TOP_CPU=4 };
+struct CineFrame {
+    unsigned frame,mode,room,visible,gameGapUs,gameTotalUs;
+    unsigned phase[4]; /* logic, lvlRender, prep, submit */
+    unsigned scope[GE_CINE_SCOPE_COUNT];
+    unsigned wait[GE_CINE_WAIT_COUNT]; /* retraces skipped since prior frame */
+    unsigned loads,loadBytes;
+};
+static CineFrame s_cineCurrent,s_cineTop[CINE_TOP_MAIN],s_cineCpuTop[CINE_TOP_CPU];
+static unsigned s_cineTopCount=0,s_cineCpuTopCount=0,s_cineFrames=0;
+static unsigned s_cineSkipped[GE_CINE_WAIT_COUNT];
+static unsigned s_cineSkippedPrior[GE_CINE_WAIT_COUNT];
+static unsigned s_cineLoads=0,s_cineLoadBytes=0,s_cineMaxVisible=0;
+static unsigned s_cineGameOver28=0,s_cineGameOver50=0,s_cineMaxGameUs=0;
+static unsigned long long s_cineFrameStart=0,s_cinePhaseStart=0;
+static volatile LONG s_cineActive=0;
+static void CineKeep(const CineFrame& f) {
+    /* Rank by largest game-loop interval OR recorded CPU work so queue
+     * stalls survive even when lvlRender itself was inexpensive. */
+    unsigned score=f.gameGapUs>f.gameTotalUs?f.gameGapUs:f.gameTotalUs;
+    unsigned slot=s_cineTopCount;
+    if(slot<CINE_TOP_MAIN)++s_cineTopCount;
+    else {
+        slot=0;
+        for(unsigned i=1;i<CINE_TOP_MAIN;++i) {
+            unsigned x=s_cineTop[i].gameGapUs>s_cineTop[i].gameTotalUs?
+                s_cineTop[i].gameGapUs:s_cineTop[i].gameTotalUs;
+            unsigned y=s_cineTop[slot].gameGapUs>s_cineTop[slot].gameTotalUs?
+                s_cineTop[slot].gameGapUs:s_cineTop[slot].gameTotalUs;
+            if(x<y)slot=i;
+        }
+        unsigned lowest=s_cineTop[slot].gameGapUs>s_cineTop[slot].gameTotalUs?
+            s_cineTop[slot].gameGapUs:s_cineTop[slot].gameTotalUs;
+        if(score<=lowest)return;
+    }
+    s_cineTop[slot]=f;
+}
+/* A large main-thread CPU spike can be hidden by longer frame-start gaps.
+ * Keep an independent top-four for those genuinely CPU-expensive frames. */
+static void CineKeepCpu(const CineFrame& f) {
+    unsigned slot=s_cineCpuTopCount;
+    if(slot<CINE_TOP_CPU)++s_cineCpuTopCount;
+    else {
+        slot=0;
+        for(unsigned i=1;i<CINE_TOP_CPU;++i)
+            if(s_cineCpuTop[i].gameTotalUs<s_cineCpuTop[slot].gameTotalUs)slot=i;
+        if(f.gameTotalUs<=s_cineCpuTop[slot].gameTotalUs)return;
+    }
+    s_cineCpuTop[slot]=f;
+}
+#endif
 
 /* The graphics worker is a separate thread. Keep its count and sum atomic,
  * in 100-us units so a 32-bit accumulator lasts many hours. Max is advisory. */
@@ -208,6 +264,17 @@ static unsigned P0Percentile(unsigned pct) {
 static void P0InitStage(int stage) {
     memset(&s_p0,0,sizeof(s_p0));
     s_p0.stage=stage;s_p0.active=1;
+#if GE_XBOX_CINEMATIC_TRACE
+    memset(&s_cineCurrent,0,sizeof(s_cineCurrent));
+    memset(s_cineTop,0,sizeof(s_cineTop));
+    memset(s_cineCpuTop,0,sizeof(s_cineCpuTop));
+    memset(s_cineSkipped,0,sizeof(s_cineSkipped));
+    memset(s_cineSkippedPrior,0,sizeof(s_cineSkippedPrior));
+    s_cineTopCount=s_cineCpuTopCount=s_cineFrames=s_cineLoads=s_cineLoadBytes=0;
+    s_cineMaxVisible=s_cineGameOver28=s_cineGameOver50=s_cineMaxGameUs=0;
+    s_cineFrameStart=s_cinePhaseStart=0;
+    P0Store(&s_cineActive,0);
+#endif
     s_p0.gfxCountStart=P0Load(&s_gfxCount);
     s_p0.gfx100usStart=P0Load(&s_gfx100us);
     for(unsigned i=0;i<GE_P0B_COUNT;++i){
@@ -246,6 +313,19 @@ static void P0InitStage(int stage) {
 extern "C" void geP0FrameBegin(int stage) {
     if(!s_p0.active || s_p0.stage!=stage)P0InitStage(stage);
     unsigned long long t=P0NowUs();
+#if GE_XBOX_CINEMATIC_TRACE
+    memset(&s_cineCurrent,0,sizeof(s_cineCurrent));
+    s_cineCurrent.frame=s_p0.frames+1u;
+    for(unsigned i=0;i<GE_CINE_WAIT_COUNT;++i) {
+        s_cineCurrent.wait[i]=s_cineSkipped[i]-s_cineSkippedPrior[i];
+        s_cineSkippedPrior[i]=s_cineSkipped[i];
+    }
+    s_cineFrameStart=s_cinePhaseStart=t;
+    /* Keep the previous camera flag until the new camera is sampled in
+     * bgRoomVisibilityRelated. skyRender runs before that camera query. */
+    if(s_p0.lastFrameValid)
+        s_cineCurrent.gameGapUs=P0Delta(s_p0.lastFrameUs,t);
+#endif
     if(s_p0.lastFrameValid && t>=s_p0.lastFrameUs) {
         unsigned us=P0Delta(s_p0.lastFrameUs,t);
         if(us) {
@@ -265,18 +345,83 @@ extern "C" void geP0FrameBegin(int stage) {
     if(s_p0.sampled)++s_p0.samples;
 }
 extern "C" void geP0PhaseMark(int phase) {
+#if GE_XBOX_CINEMATIC_TRACE
+    if(phase<1 || phase>3)return;
+    const unsigned long long now=P0NowUs();
+    if(s_cineFrameStart) {
+        s_cineCurrent.phase[phase]=P0Delta(s_cinePhaseStart,now);
+        s_cinePhaseStart=now;
+    }
+    if(!s_p0.sampled || !s_p0.phaseUs)return;
+#else
     if(!s_p0.sampled || !s_p0.phaseUs || phase<1 || phase>3)return;
-    unsigned long long now=P0NowUs();
-    unsigned delta=P0Delta(s_p0.phaseUs,now);
+    const unsigned long long now=P0NowUs();
+#endif
+    const unsigned delta=P0Delta(s_p0.phaseUs,now);
     /* Phase 1 = logic, Phase 2 = lvlRender, Phase 3 = prep. */
     P0Record(&s_p0.phases[phase],delta);
     s_p0.phase=phase;s_p0.phaseUs=now;
 }
 extern "C" void geP0FrameEnd(void) {
+#if GE_XBOX_CINEMATIC_TRACE
+    const unsigned long long now=P0NowUs();
+    if(s_cineFrameStart) {
+        s_cineCurrent.phase[0]=P0Delta(s_cinePhaseStart,now);
+        s_cineCurrent.gameTotalUs=P0Delta(s_cineFrameStart,now);
+        if(P0Load(&s_cineActive)) {
+            ++s_cineFrames;
+            if(s_cineCurrent.gameGapUs>28000u)++s_cineGameOver28;
+            if(s_cineCurrent.gameGapUs>50000u)++s_cineGameOver50;
+            if(s_cineCurrent.gameTotalUs>s_cineMaxGameUs)
+                s_cineMaxGameUs=s_cineCurrent.gameTotalUs;
+            s_cineLoads+=s_cineCurrent.loads;
+            s_cineLoadBytes+=s_cineCurrent.loadBytes;
+            if(s_cineCurrent.visible>s_cineMaxVisible)
+                s_cineMaxVisible=s_cineCurrent.visible;
+            CineKeep(s_cineCurrent);
+            CineKeepCpu(s_cineCurrent);
+        }
+    }
+    s_cineFrameStart=s_cinePhaseStart=0;
+#else
+    const unsigned long long now=P0NowUs();
+#endif
     if(s_p0.sampled && s_p0.phase==3)
-        P0Record(&s_p0.phases[0],P0Delta(s_p0.phaseUs,P0NowUs()));
+        P0Record(&s_p0.phases[0],P0Delta(s_p0.phaseUs,now));
     s_p0.sampled=0;s_p0.phaseUs=0;
 }
+#if GE_XBOX_CINEMATIC_TRACE
+extern "C" void geP0CineCamera(int cameraMode,int room,int enabled) {
+    if(!s_cineFrameStart)return;
+    s_cineCurrent.mode=(unsigned)cameraMode;
+    s_cineCurrent.room=(unsigned)room;
+    P0Store(&s_cineActive,enabled?1:0);
+}
+extern "C" void geP0CineVisible(unsigned count) {
+    if(s_cineFrameStart && P0Load(&s_cineActive))s_cineCurrent.visible=count;
+}
+extern "C" unsigned long long geP0CineScopeBegin(int category) {
+    if(!s_cineFrameStart || !P0Load(&s_cineActive) || category<0 ||
+       category>=GE_CINE_SCOPE_COUNT)return 0;
+    return P0NowUs();
+}
+extern "C" void geP0CineScopeEnd(int category,unsigned long long start) {
+    if(!start || !s_cineFrameStart || !P0Load(&s_cineActive) || category<0 ||
+       category>=GE_CINE_SCOPE_COUNT)return;
+    s_cineCurrent.scope[category]+=P0Delta(start,P0NowUs());
+}
+extern "C" void geP0CineRoomEvent(unsigned loaded,unsigned bytes) {
+    if(s_cineFrameStart && P0Load(&s_cineActive) && loaded) {
+        ++s_cineCurrent.loads;
+        s_cineCurrent.loadBytes+=bytes;
+    }
+}
+extern "C" void geP0CineSkip(int reason) {
+    if(reason>=0 && reason<GE_CINE_WAIT_COUNT && P0Load(&s_cineActive))
+        ++s_cineSkipped[(unsigned)reason];
+}
+extern "C" int geP0CineIsActive(void) { return P0Load(&s_cineActive)!=0; }
+#endif
 extern "C" void geP0ScopeStart(int which) {
     if(which>=0 && which<(int)P0_SCOPES && s_p0.sampled)
         s_p0.scopeStarts[which]=P0NowUs();
@@ -478,6 +623,42 @@ static unsigned P0BGfxAvg(int category,unsigned tasks) {
 }
 extern "C" void geP0StageExit(int stage) {
     if(!s_p0.active || s_p0.stage!=stage)return;
+#if GE_XBOX_CINEMATIC_TRACE
+    /* Stage boundary, not a frame. Game-thread frame serials are not assumed
+     * to match graphics-worker serials (at most two frames can be pending). */
+    if(s_cineFrames) {
+        GENativePlatform_TraceIssue(
+            "CINE MAIN stage=%d frames=%u over28=%u over50=%u max_game_cpu_us=%u roomloads=%u roomload_kib=%u max_visible=%u top=%u\n",
+            stage,s_cineFrames,s_cineGameOver28,s_cineGameOver50,
+            s_cineMaxGameUs,s_cineLoads,s_cineLoadBytes/1024u,s_cineMaxVisible,s_cineTopCount);
+        for(unsigned i=0;i<s_cineTopCount;++i) {
+            const CineFrame& f=s_cineTop[i];
+            GENativePlatform_TraceIssue(
+                "CINE MAINFRAME stage=%d gameframe=%u mode=%u camera_room=%u visible=%u gap_since_prior_begin_us=%u game_cpu_us=%u logic_us=%u scene_us=%u prep_us=%u submit_us=%u vis_us=%u props_us=%u bg_us=%u sky_us=%u player_us=%u roomload_us=%u loaded_rooms=%u load_kib=%u wait_tick=%u wait_gfx=%u wait_demo=%u\n",
+                stage,f.frame,f.mode,f.room,f.visible,f.gameGapUs,f.gameTotalUs,
+                f.phase[GE_P0_LOGIC],f.phase[GE_P0_RENDER],f.phase[GE_P0_PREP],f.phase[0],
+                f.scope[GE_CINE_VIS],f.scope[GE_CINE_PROPS],f.scope[GE_CINE_BG],
+                f.scope[GE_CINE_SKY],f.scope[GE_CINE_PLAYER],f.scope[GE_CINE_ROOMLOAD],
+                f.loads,f.loadBytes/1024u,
+                f.wait[GE_CINE_WAIT_TICK],f.wait[GE_CINE_WAIT_GFX],f.wait[GE_CINE_WAIT_DEMO]);
+        }
+        GENativePlatform_TraceIssue(
+            "CINE SCHED stage=%d skipped_tick=%u skipped_gpu_full=%u skipped_demo_deadline=%u\n",
+            stage,s_cineSkipped[GE_CINE_WAIT_TICK],s_cineSkipped[GE_CINE_WAIT_GFX],
+            s_cineSkipped[GE_CINE_WAIT_DEMO]);
+        for(unsigned i=0;i<s_cineCpuTopCount;++i) {
+            const CineFrame& f=s_cineCpuTop[i];
+            GENativePlatform_TraceIssue(
+                "CINE MAINCPU stage=%d gameframe=%u mode=%u gap_us=%u game_cpu_us=%u logic_us=%u scene_us=%u vis_us=%u props_us=%u bg_us=%u roomload_us=%u loads=%u wait_tick=%u wait_gfx=%u wait_demo=%u\n",
+                stage,f.frame,f.mode,f.gameGapUs,f.gameTotalUs,
+                f.phase[GE_P0_LOGIC],f.phase[GE_P0_RENDER],
+                f.scope[GE_CINE_VIS],f.scope[GE_CINE_PROPS],f.scope[GE_CINE_BG],
+                f.scope[GE_CINE_ROOMLOAD],f.loads,
+                f.wait[GE_CINE_WAIT_TICK],f.wait[GE_CINE_WAIT_GFX],f.wait[GE_CINE_WAIT_DEMO]);
+        }
+    }
+    P0Store(&s_cineActive,0);
+#endif
     s_p0.active=0;P0Store(&s_stageActive,0);
     if(s_p0.frames<32u)return; /* No stage transition chatter. */
     const LONG gfxN=P0Load(&s_gfxCount)-s_p0.gfxCountStart;

@@ -11,6 +11,7 @@
 #include <deb.h>
 #include <fr.h>
 #include <memp.h>
+#include <mema.h>
 #include "bg.h"
 #include "lightfixture.h"
 #include "bondview.h"
@@ -25,6 +26,9 @@
 #endif
 #if defined(GE_XBOX_NATIVE32)
 #include "ge_native_platform.h"
+#include "ge_phase0_profile.h"
+#include <stdlib.h>
+#include <string.h>
 #endif
 #include "lv.h"
 #include "math_ceil.h"
@@ -34,6 +38,158 @@
 #include "explosion.h"
 #include "bgroomtrans.h"
 
+#if defined(GE_XBOX_NATIVE32)
+/* Stage-sized resident room arena. Every runtime size comes from the bounds
+ * pass, which has already inflated vertices and expanded the texture GDLs.
+ * The cap is only a safety limit; it is NOT a per-stage allocation target. */
+#ifndef GE_XBOX_BG_ALL_RESIDENT
+#define GE_XBOX_BG_ALL_RESIDENT 1
+#endif
+#ifndef GE_XBOX_BG_RESIDENT_MAX_POOL_BYTES
+#define GE_XBOX_BG_RESIDENT_MAX_POOL_BYTES (4u * 1024u * 1024u)
+#endif
+#ifndef GE_XBOX_BG_RESIDENT_STAGE_RESERVE_BYTES
+#define GE_XBOX_BG_RESIDENT_STAGE_RESERVE_BYTES (512u * 1024u)
+#endif
+#ifndef GE_XBOX_BG_RESIDENT_GLOBAL_RESERVE_64
+#define GE_XBOX_BG_RESIDENT_GLOBAL_RESERVE_64 (8u * 1024u * 1024u)
+#endif
+#ifndef GE_XBOX_BG_RESIDENT_GLOBAL_RESERVE_128
+#define GE_XBOX_BG_RESIDENT_GLOBAL_RESERVE_128 (24u * 1024u * 1024u)
+#endif
+static s32 s_bgResidentPoolReady = 0;
+static s32 s_bgAllRoomsResident = 0;
+/* Only non-NULL for malloc-backed MEMA. MEMPOOL_STAGE allocations remain
+ * owned by the stage bank and must never be freed through the CRT. */
+static void *s_bgResidentHostPool = NULL;
+extern s32 g_MemaHeapSize;
+
+/* Called after bgRoomCalcBB has loaded and released each room once. Include
+ * vtx_batch_bounds, which is a *second* MEMA allocation per room and wasn't
+ * counted by the original room-size sum. Avoid a blanket 256-KiB margin:
+ * it made even Runway's ~126-KiB room set unnecessarily leave its ~375-KiB
+ * pool. Account for fragmentation with 6.25% + a 32-KiB minimum instead. */
+static void bgXboxPrepareResidentPool(void)
+{
+#if GE_XBOX_BG_ALL_RESIDENT
+    u32 dataBytes = 0, boundsBytes = 0, usedBytes, spare, desired;
+    u32 total = 0, available = 0, reserve, previousBytes;
+    s32 i, needed = 0, bankFree;
+    void *newHeap = NULL;
+    const char *source = "existing";
+    const char *skip = NULL;
+    s_bgResidentPoolReady = 0;
+    s_bgAllRoomsResident = 0;
+    previousBytes = (u32)g_MemaHeapSize;
+
+    if (g_MaxNumRooms <= 1 || g_MaxNumRooms > MAXROOMCOUNT) {
+        skip = "invalid-room-count";
+        goto rejected;
+    }
+    for (i = 1; i < g_MaxNumRooms; ++i) {
+        s_room_info *room = &g_BgRoomInfo[i];
+        u32 part, bounds = 0;
+        if (!room->csize_point_index_binary &&
+            !room->csize_primary_DL_binary &&
+            !room->csize_secondary_DL_binary) continue;
+        if (room->model_bin_loaded || room->cur_room_totalsize <= 0) {
+            skip = "room-size-unmeasured";
+            goto rejected;
+        }
+        part = ((u32)room->cur_room_totalsize + 15u) & ~15u;
+        if (part > GE_XBOX_BG_RESIDENT_MAX_POOL_BYTES - dataBytes) {
+            skip = "data-over-cap";
+            goto rejected;
+        }
+        dataBytes += part;
+        if (room->num_vtx_batch_bounds > 0) {
+            u32 n = (u32)room->num_vtx_batch_bounds;
+            if (n > GE_XBOX_BG_RESIDENT_MAX_POOL_BYTES / sizeof(RoomVtxBatchBounds)) {
+                skip = "bounds-over-cap";
+                goto rejected;
+            }
+            bounds = (n * (u32)sizeof(RoomVtxBatchBounds) + 15u) & ~15u;
+        }
+        if (bounds > GE_XBOX_BG_RESIDENT_MAX_POOL_BYTES - boundsBytes) {
+            skip = "bounds-over-cap";
+            goto rejected;
+        }
+        boundsBytes += bounds;
+        ++needed;
+    }
+    if (!needed) return; /* title/empty level: no residency needed */
+    if (boundsBytes > GE_XBOX_BG_RESIDENT_MAX_POOL_BYTES - dataBytes) {
+        skip = "combined-over-cap";
+        goto rejected;
+    }
+    usedBytes = dataBytes + boundsBytes;
+    spare = usedBytes / 16u;
+    if (spare < 32u * 1024u) spare = 32u * 1024u;
+    spare = (spare + 15u) & ~15u;
+    if (spare > GE_XBOX_BG_RESIDENT_MAX_POOL_BYTES - usedBytes) {
+        skip = "margin-over-cap";
+        goto rejected;
+    }
+    desired = (usedBytes + spare + 15u) & ~15u;
+
+    /* Reuse the original N64 arena whenever the *free* space can hold the
+     * stage. Runway should usually take this path, with no new allocation. */
+    if (g_MemaHeapSize >= (s32)desired && memaGetLongestFree() >= (s32)desired) {
+        s_bgResidentPoolReady = 1;
+    } else {
+        /* Stage bank first: physical memory is already committed to that
+         * bank, and its lifetime is managed by the original engine. */
+        bankFree = mempGetBankSizeLeft(MEMPOOL_STAGE);
+        if (bankFree > 0 && desired <= (u32)bankFree &&
+            (u32)bankFree - desired >= GE_XBOX_BG_RESIDENT_STAGE_RESERVE_BYTES) {
+            newHeap = mempAllocBytesInBank(desired, MEMPOOL_STAGE);
+            source = "stage-bank";
+        }
+        if (!newHeap) {
+            /* If the stage bank is tight, the CRT heap can supply this
+             * sub-megabyte arena on Xbox. Unlike a stage-bank allocation,
+             * we must free it AFTER unload_rooms deletes the room data. */
+            if (!GENativePlatform_QueryPhysicalMemory(&total, &available) || !total) {
+                skip = "no-memory-query";
+                goto rejected;
+            }
+            reserve = total >= 96u * 1024u * 1024u ?
+                GE_XBOX_BG_RESIDENT_GLOBAL_RESERVE_128 :
+                GE_XBOX_BG_RESIDENT_GLOBAL_RESERVE_64;
+            if (available <= reserve || desired >= available - reserve) {
+                skip = "physical-reserve";
+                goto rejected;
+            }
+            /* mema expects a 16-byte-aligned arena; the CRT malloc
+             * alignment is not guaranteed to be 16 on every Xbox build. */
+            s_bgResidentHostPool = malloc(desired + 15u);
+            if (!s_bgResidentHostPool) {
+                skip = "host-heap-failed";
+                goto rejected;
+            }
+            newHeap = (void *)((((uintptr_t)s_bgResidentHostPool) + 15u) &
+                ~(uintptr_t)15u);
+            source = "host-heap";
+        }
+        memaReset(newHeap, desired);
+        s_bgResidentPoolReady = 1;
+    }
+    GENativePlatform_Trace(
+        "BG RESIDENT POOL source=%s rooms=%d data_kib=%u bounds_kib=%u arena_kib=%u previous_kib=%u\n",
+        source, (int)needed, (unsigned)(dataBytes / 1024u),
+        (unsigned)(boundsBytes / 1024u), (unsigned)(g_MemaHeapSize / 1024u),
+        (unsigned)(previousBytes / 1024u));
+    return;
+rejected:
+    GENativePlatform_Trace("BG RESIDENT disabled reason=%s rooms=%d data_kib=%u bounds_kib=%u\n",
+        skip ? skip : "unknown", (int)needed,
+        (unsigned)(dataBytes / 1024u), (unsigned)(boundsBytes / 1024u));
+#else
+    s_bgResidentPoolReady = 0;
+    s_bgAllRoomsResident = 0;
+#endif
+}
+#endif
 
 #define BG_STACK_SIZE 20
 #define STAGES_MAX 38
@@ -967,6 +1123,219 @@ s32 getSecMappingBinCount(s32 room)
 }
 
 
+#if defined(GE_XBOX_NATIVE32)
+/* Xbox-only decoded room data cache. An N64 level allocates just ~160-350 KiB
+ * in mema for *live* room geometry. Re-entering a cinematic room normally
+ * performs RZIP inflate and endian conversion again after its live mema slot
+ * is evicted. Keep unmodified, post-inflate room source blobs in a separate,
+ * bounded allocation. We still run lighting, texture fixups and revision
+ * updates on EVERY live room load; caching final mutated DLs is unsafe. */
+#ifndef GE_XBOX_BG_DECODE_CACHE
+#define GE_XBOX_BG_DECODE_CACHE 1
+#endif
+/* The decoded-source cache is separate from the N64 mema live-room arena.
+ * It reuses immutable post-decode room data after the stage bounds pass.
+ * Detect physical RAM once per stage: 128 MiB systems may use 16 MiB,
+ * retail 64 MiB systems at most 6 MiB. Keep a physical-RAM reserve for
+ * texture buffers, gameplay and OS heaps. Values are hard caps, not targets
+ * that must actually be filled. GE_XBOX_BG_DECODE_CACHE_BYTES is a global
+ * override ceiling (useful for A/B comparisons).
+ *
+ * Use fixed-size pages allocated on demand rather than immediately
+ * reserving 6/16 MiB. Individual source pointers remain stable for the
+ * entire stage; a stage reset releases all pages at once. */
+#define BG_NATIVE_MIB (1024u * 1024u)
+#ifndef GE_XBOX_BG_DECODE_CACHE_BYTES
+#define GE_XBOX_BG_DECODE_CACHE_BYTES (16u * BG_NATIVE_MIB)
+#endif
+#ifndef GE_XBOX_BG_DECODE_CACHE_64_BYTES
+#define GE_XBOX_BG_DECODE_CACHE_64_BYTES (6u * BG_NATIVE_MIB)
+#endif
+#ifndef GE_XBOX_BG_DECODE_CACHE_128_BYTES
+#define GE_XBOX_BG_DECODE_CACHE_128_BYTES (16u * BG_NATIVE_MIB)
+#endif
+#ifndef GE_XBOX_BG_DECODE_CACHE_RESERVE_64_BYTES
+#define GE_XBOX_BG_DECODE_CACHE_RESERVE_64_BYTES (24u * BG_NATIVE_MIB)
+#endif
+#ifndef GE_XBOX_BG_DECODE_CACHE_RESERVE_128_BYTES
+#define GE_XBOX_BG_DECODE_CACHE_RESERVE_128_BYTES (48u * BG_NATIVE_MIB)
+#endif
+/* Optional single-line stage reports to the issue log, produced during
+ * loading / stage changes, never in the cinematic rendering loop. */
+#ifndef GE_XBOX_BG_DECODE_CACHE_REPORT
+#define GE_XBOX_BG_DECODE_CACHE_REPORT 0
+#endif
+#if GE_XBOX_BG_DECODE_CACHE
+#define BG_NATIVE_SOURCE_VTX 0
+#define BG_NATIVE_SOURCE_PRIMARY 1
+#define BG_NATIVE_SOURCE_SECONDARY 2
+#define BG_NATIVE_SOURCE_PAGE_BYTES (256u * 1024u)
+#define BG_NATIVE_SOURCE_PAGE_ALIGN 65536u
+#define BG_NATIVE_SOURCE_PAGE_COUNT 128u
+typedef struct BgNativeSource {
+    const u8 *data;
+    u32 bytes;
+} BgNativeSource;
+typedef struct BgNativeSourcePage {
+    u8 *data;
+    u32 capacity;
+    u32 used;
+} BgNativeSourcePage;
+static BgNativeSource s_nativeBgSource[MAXROOMCOUNT][3];
+static BgNativeSourcePage s_nativeBgSourcePages[BG_NATIVE_SOURCE_PAGE_COUNT];
+static u32 s_nativeBgSourcePageCount;
+static u32 s_nativeBgSourceBudget;
+static u32 s_nativeBgSourceAllocated;
+static u32 s_nativeBgSourceUsed;
+static u32 s_nativeBgSourceHits;
+static u32 s_nativeBgSourceStores;
+static u32 s_nativeBgSourceSkipped;
+static u32 s_nativeBgSourceAllocFailures;
+static s32 s_nativeBgSourceAllocAttempted;
+
+/* Use *available* memory, not just the board's RAM size. In case the
+ * platform query is unavailable, retain the original conservative 2 MiB
+ * maximum. Round down to 64 KiB; never reserve more than available less the
+ * explicit headroom, even on memory-expanded consoles. */
+static u32 bgNativeRoomSourceTargetBytes(void)
+{
+    uint32_t total=0, available=0;
+    u32 cap;
+    u32 reserve;
+    if (!GENativePlatform_QueryPhysicalMemory(&total,&available) || !total) {
+        cap=2u * BG_NATIVE_MIB;
+    } else {
+        if (total >= 96u * BG_NATIVE_MIB) {
+            cap=GE_XBOX_BG_DECODE_CACHE_128_BYTES;
+            reserve=GE_XBOX_BG_DECODE_CACHE_RESERVE_128_BYTES;
+        } else {
+            cap=GE_XBOX_BG_DECODE_CACHE_64_BYTES;
+            reserve=GE_XBOX_BG_DECODE_CACHE_RESERVE_64_BYTES;
+        }
+        if (available <= reserve) return 0;
+        if (cap > available-reserve) cap=available-reserve;
+    }
+    if (cap > GE_XBOX_BG_DECODE_CACHE_BYTES) cap=GE_XBOX_BG_DECODE_CACHE_BYTES;
+    return cap & ~(BG_NATIVE_SOURCE_PAGE_ALIGN-1u);
+}
+
+static const BgNativeSource *bgNativeRoomSource(s32 room, s32 kind)
+{
+    if (room < 0 || room >= MAXROOMCOUNT || kind < 0 || kind > 2) return NULL;
+    return s_nativeBgSource[room][kind].data ? &s_nativeBgSource[room][kind] : NULL;
+}
+static void bgNativeRoomSourceRemember(s32 room,s32 kind,const u8 *src,u32 bytes)
+{
+    u32 offset;
+    BgNativeSource *entry;
+    BgNativeSourcePage *page=NULL;
+    if (!src || !bytes || room < 0 || room >= MAXROOMCOUNT || kind < 0 || kind > 2) return;
+    entry=&s_nativeBgSource[room][kind];
+    if (entry->data) return;
+    if (!s_nativeBgSourceAllocAttempted) {
+        s_nativeBgSourceBudget=bgNativeRoomSourceTargetBytes();
+        s_nativeBgSourceAllocAttempted=1;
+    }
+    if (s_nativeBgSourcePageCount) {
+        page=&s_nativeBgSourcePages[s_nativeBgSourcePageCount-1u];
+        offset=(page->used+15u)&~15u;
+        if (offset > page->capacity || bytes > page->capacity-offset) page=NULL;
+    }
+    if (!page) {
+        u32 capacity;
+        u32 remaining;
+        uint32_t total=0, available=0;
+        if (s_nativeBgSourcePageCount >= BG_NATIVE_SOURCE_PAGE_COUNT ||
+            s_nativeBgSourceAllocated >= s_nativeBgSourceBudget) {
+            ++s_nativeBgSourceSkipped;
+            return;
+        }
+        remaining=s_nativeBgSourceBudget-s_nativeBgSourceAllocated;
+        if (bytes > remaining || bytes > 0xffffffffu-(BG_NATIVE_SOURCE_PAGE_ALIGN-1u)) {
+            ++s_nativeBgSourceSkipped;
+            return;
+        }
+        capacity=(bytes+(BG_NATIVE_SOURCE_PAGE_ALIGN-1u)) & ~(BG_NATIVE_SOURCE_PAGE_ALIGN-1u);
+        if (capacity < BG_NATIVE_SOURCE_PAGE_BYTES) capacity=BG_NATIVE_SOURCE_PAGE_BYTES;
+        if (capacity > remaining) capacity=remaining & ~(BG_NATIVE_SOURCE_PAGE_ALIGN-1u);
+        /* The stage may allocate other game/texture storage after initial
+         * cache tier selection; recheck free memory before each new page. */
+        if (GENativePlatform_QueryPhysicalMemory(&total,&available) && total) {
+            u32 reserve=total >= 96u*BG_NATIVE_MIB ?
+                GE_XBOX_BG_DECODE_CACHE_RESERVE_128_BYTES : GE_XBOX_BG_DECODE_CACHE_RESERVE_64_BYTES;
+            u32 freeBudget=available>reserve ? available-reserve : 0u;
+            if (capacity > freeBudget) capacity=freeBudget & ~(BG_NATIVE_SOURCE_PAGE_ALIGN-1u);
+        }
+        if (capacity < bytes || capacity < BG_NATIVE_SOURCE_PAGE_ALIGN) {
+            ++s_nativeBgSourceSkipped;
+            return;
+        }
+        page=&s_nativeBgSourcePages[s_nativeBgSourcePageCount];
+        page->data=(u8 *)malloc(capacity);
+        if (!page->data) {
+            /* Fragmented host heap: retry smaller page if the source fits. */
+            while (!page->data && capacity > BG_NATIVE_SOURCE_PAGE_ALIGN) {
+                ++s_nativeBgSourceAllocFailures;
+                capacity=(capacity/2u)&~(BG_NATIVE_SOURCE_PAGE_ALIGN-1u);
+                if (capacity < bytes) break;
+                page->data=(u8 *)malloc(capacity);
+            }
+        }
+        if (!page->data) {
+            ++s_nativeBgSourceAllocFailures;
+            ++s_nativeBgSourceSkipped;
+            return; /* original decompression remains valid */
+        }
+        page->capacity=capacity;
+        page->used=0;
+        s_nativeBgSourceAllocated+=capacity;
+        ++s_nativeBgSourcePageCount;
+    }
+    offset=(page->used+15u)&~15u;
+    memcpy(page->data+offset,src,bytes);
+    entry->data=page->data+offset;
+    entry->bytes=bytes;
+    page->used=offset+bytes;
+    s_nativeBgSourceUsed+=bytes;
+    ++s_nativeBgSourceStores;
+}
+static void bgNativeRoomSourceReset(void)
+{
+    u32 i;
+    /* Suppressed in normal play; available with GE_NATIVE_TRACE_VERBOSE for
+     * comparing cache ceiling against first-use cinematic frame stalls. */
+    if (s_nativeBgSourceAllocAttempted) {
+#if GE_XBOX_BG_DECODE_CACHE_REPORT
+        GENativePlatform_TraceIssue(
+#else
+        GENativePlatform_Trace(
+#endif
+            "BG DECODE CACHE previous_stage limit_kib=%u alloc_kib=%u used_kib=%u pages=%u stores=%u hits=%u skipped=%u alloc_fail=%u\n",
+            (unsigned)(s_nativeBgSourceBudget/1024u),
+            (unsigned)(s_nativeBgSourceAllocated/1024u),
+            (unsigned)(s_nativeBgSourceUsed/1024u),
+            (unsigned)s_nativeBgSourcePageCount,
+            (unsigned)s_nativeBgSourceStores,(unsigned)s_nativeBgSourceHits,
+            (unsigned)s_nativeBgSourceSkipped,(unsigned)s_nativeBgSourceAllocFailures);
+    }
+    for (i=0; i<s_nativeBgSourcePageCount; ++i) {
+        free(s_nativeBgSourcePages[i].data);
+    }
+    memset(s_nativeBgSourcePages,0,sizeof(s_nativeBgSourcePages));
+    s_nativeBgSourcePageCount=0;
+    s_nativeBgSourceAllocated=0;
+    s_nativeBgSourceUsed=0;
+    s_nativeBgSourceBudget=0;
+    s_nativeBgSourceHits=0;
+    s_nativeBgSourceStores=0;
+    s_nativeBgSourceSkipped=0;
+    s_nativeBgSourceAllocFailures=0;
+    s_nativeBgSourceAllocAttempted=0;
+    memset(s_nativeBgSource,0,sizeof(s_nativeBgSource));
+}
+#endif
+#endif
+
 /*
  * Address: 0x7F0B40D4
 */
@@ -997,7 +1366,15 @@ void load_bg_file(LEVEL_INDEX levelid)
     s32 size;
     s32 header[0x10];
     s32 *data;
+
+#if defined(GE_XBOX_NATIVE32)
+    s_bgResidentPoolReady = 0;
+    s_bgAllRoomsResident = 0;
+#endif
  
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_BG_DECODE_CACHE
+    bgNativeRoomSourceReset();
+#endif
     levelentry_index = 0;
 
     for (i = 0; i < MAXROOMCOUNT; i++) 
@@ -1160,6 +1537,10 @@ void load_bg_file(LEVEL_INDEX levelid)
             }
  
             g_BgRoomInfo[i].cur_room_totalsize = -1;
+#if defined(GE_XBOX_NATIVE32)
+            /* The bounds pass measures this count again for this stage. */
+            g_BgRoomInfo[i].num_vtx_batch_bounds = 0;
+#endif
         }
  
         initializeRoomData();
@@ -1168,6 +1549,19 @@ void load_bg_file(LEVEL_INDEX levelid)
         {
             bgRoomCalcBB(i);
         }
+#if defined(GE_XBOX_NATIVE32)
+        bgXboxPrepareResidentPool();
+#endif
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_BG_DECODE_CACHE && GE_XBOX_BG_DECODE_CACHE_REPORT
+        /* The bounds pass has touched all geometry-bearing rooms. This is
+         * the useful fill ratio before a cinematic ever draws a triangle. */
+        GENativePlatform_TraceIssue(
+            "BG DECODE CACHE stage=%d preload_used_kib=%u limit_kib=%u pages=%u stores=%u skipped=%u\n",
+            (int)levelid, (unsigned)(s_nativeBgSourceUsed/1024u),
+            (unsigned)(s_nativeBgSourceBudget/1024u),
+            (unsigned)s_nativeBgSourcePageCount,
+            (unsigned)s_nativeBgSourceStores,(unsigned)s_nativeBgSourceSkipped);
+#endif
  
         for (i = 0; g_BgPortals[i].offset_portal != (NULL); i++)
         {
@@ -1289,6 +1683,12 @@ void bgRoomVisibilityRelated(void)
 
     pos = bondviewGetCurrentPlayersPosition();
     pos3 = bondviewGetCurrentPlayersPosition3();
+#if defined(GE_XBOX_NATIVE32)
+    geP0CineCamera(cammode,room,
+        cammode==CAMERAMODE_INTRO || cammode==CAMERAMODE_FADESWIRL ||
+        cammode==CAMERAMODE_SWIRL || cammode==CAMERAMODE_POSEND);
+    { const unsigned long long cineVisStart=geP0CineScopeBegin(GE_CINE_VIS);
+#endif
 
     // FAKE
     if (1) {}
@@ -1319,6 +1719,11 @@ void bgRoomVisibilityRelated(void)
 
     g_BgCurrentRoom = room;
     bgDetermineVisibleRooms();
+#if defined(GE_XBOX_NATIVE32)
+    geP0CineVisible((unsigned)g_BgNumberOfRoomsDrawn);
+    geP0CineScopeEnd(GE_CINE_VIS,cineVisStart);
+    }
+#endif
 }
 
 
@@ -2585,12 +2990,29 @@ s32 bgLoadRoomVtxData(s32 roomnum, u8 *dst, s32 len)
 #else
     offset = (((u8 *)ptr_bgdata_room_fileposition_list[roomnum].pPointTableBin + ptr_bg_data) - ptr_bg_data) + 0xf1000000;
 #endif
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_BG_DECODE_CACHE
+    {
+        const BgNativeSource *cached=bgNativeRoomSource(roomnum,BG_NATIVE_SOURCE_VTX);
+        if (cached && cached->bytes + 0x20u <= (u32)len) {
+            memcpy(dst,cached->data,cached->bytes);
+            result=(s32)cached->bytes;
+            ++s_nativeBgSourceHits;
+        } else {
+            obLoadBGFileBytesAtOffset(levelinfotable[levelentry_index].bg_seg_filename,
+                                      dst + (len - alignedsize), offset, alignedsize);
+            result = bgDecompress(dst + (len - alignedsize), dst);
+            bgSwapRoomVtx((Vtx *)dst, result);
+            if (result > 0) bgNativeRoomSourceRemember(roomnum,BG_NATIVE_SOURCE_VTX,dst,(u32)result);
+        }
+    }
+#else
     obLoadBGFileBytesAtOffset(levelinfotable[levelentry_index].bg_seg_filename, dst + (len - alignedsize), offset, alignedsize);
     result = bgDecompress(dst + (len - alignedsize), dst);
 
 #ifdef PORT
     /* D85: byte-swap the raw N64 Vtx table (16-byte struct, no widening). */
     bgSwapRoomVtx((Vtx *)dst, result);
+#endif
 #endif
 
     room->vertices = (Vtx *)dst;
@@ -2641,16 +3063,29 @@ s32 bgLoadRoomPrimaryGdl(s32 roomnum, u8 *dst, s32 allocsize)
     fileoffset += 0xf1000000;
 #endif
 
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_BG_DECODE_CACHE
+    {
+        const BgNativeSource *cached=bgNativeRoomSource(roomnum,BG_NATIVE_SOURCE_PRIMARY);
+        if (cached && cached->bytes + 0x20u <= (u32)allocsize) {
+            memcpy(dst,cached->data,cached->bytes);
+            expanded_size=(s32)cached->bytes;
+            ++s_nativeBgSourceHits;
+        } else {
+            obLoadBGFileBytesAtOffset(levelinfotable[levelentry_index].bg_seg_filename,
+                                      scratch, fileoffset, size);
+            expanded_size = bgDecompress(scratch, dst);
+            expanded_size = bgWidenRoomGdl(dst, expanded_size);
+            if (expanded_size > 0) bgNativeRoomSourceRemember(roomnum,BG_NATIVE_SOURCE_PRIMARY,dst,(u32)expanded_size);
+        }
+    }
+#else
     obLoadBGFileBytesAtOffset(levelinfotable[levelentry_index].bg_seg_filename, scratch, fileoffset, size);
-
-
     // Decompress from the end-of-buffer location at dst.
     expanded_size = bgDecompress(scratch, dst);
-
 #ifdef PORT
-    /* D85: widen the raw N64 GDL blob (8-byte BE Gfx) to PC Gfx_le
-     * (16-byte LE) in place before any consumer reads it. */
+    /* D85: raw N64 Gfx -> little-endian PC Gfx. */
     expanded_size = bgWidenRoomGdl(dst, expanded_size);
+#endif
 #endif
 
 
@@ -2722,15 +3157,29 @@ s32 bgLoadRoomSecondaryGdl(s32 roomnum, u8 *dst, s32 allocsize)
     fileoffset += 0xf1000000;
 #endif
 
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_BG_DECODE_CACHE
+    {
+        const BgNativeSource *cached=bgNativeRoomSource(roomnum,BG_NATIVE_SOURCE_SECONDARY);
+        if (cached && cached->bytes + 0x20u <= (u32)allocsize) {
+            memcpy(dst,cached->data,cached->bytes);
+            expanded_size=(s32)cached->bytes;
+            ++s_nativeBgSourceHits;
+        } else {
+            obLoadBGFileBytesAtOffset(levelinfotable[levelentry_index].bg_seg_filename,
+                                      scratch, fileoffset, size);
+            expanded_size = bgDecompress(scratch, dst);
+            expanded_size = bgWidenRoomGdl(dst, expanded_size);
+            if (expanded_size > 0) bgNativeRoomSourceRemember(roomnum,BG_NATIVE_SOURCE_SECONDARY,dst,(u32)expanded_size);
+        }
+    }
+#else
     obLoadBGFileBytesAtOffset(levelinfotable[levelentry_index].bg_seg_filename, scratch, fileoffset, size);
-
     // Decompress from the end-of-buffer location at dst.
     expanded_size = bgDecompress(scratch, dst);
-
 #ifdef PORT
-    /* D85: widen the raw N64 GDL blob (8-byte BE Gfx) to PC Gfx_le
-     * (16-byte LE) in place before any consumer reads it. */
+    /* D85: raw N64 Gfx -> little-endian PC Gfx. */
     expanded_size = bgWidenRoomGdl(dst, expanded_size);
+#endif
 #endif
 
     /**
@@ -2822,6 +3271,10 @@ void bgLoadRoomModelData(s32 roomID)
     s32 used;
     s32 result;
     u8 *data;
+#if defined(GE_XBOX_NATIVE32)
+    const unsigned long long cineRoomStart=geP0CineScopeBegin(GE_CINE_ROOMLOAD);
+    unsigned cineRoomDidLoad=0u;
+#endif
 
     used = 0;
 
@@ -2912,6 +3365,9 @@ void bgLoadRoomModelData(s32 roomID)
 
     g_BgRoomInfo[roomID].cur_room_totalsize = ((used + 0x20) & ~0xf);
     g_BgRoomInfo[roomID].model_bin_loaded = 1;
+#if defined(GE_XBOX_NATIVE32)
+    cineRoomDidLoad=1u;
+#endif
 #if defined(GE_XBOX_NATIVE32) && GE_XBOX_NATIVE_ROOM_BATCHES
     geNativeRoomBumpRevision(roomID);
 #endif
@@ -2962,7 +3418,11 @@ void bgLoadRoomModelData(s32 roomID)
     roomsHandleStateDebugging();
 
 end:;
-
+#if defined(GE_XBOX_NATIVE32)
+    geP0CineRoomEvent(cineRoomDidLoad,
+        cineRoomDidLoad?(unsigned)g_BgRoomInfo[roomID].cur_room_totalsize:0u);
+    geP0CineScopeEnd(GE_CINE_ROOMLOAD,cineRoomStart);
+#endif
 }
 
 
@@ -3019,6 +3479,10 @@ void delete_room_data(s32 roomID)
 void unload_rooms(void)
 {
     s32 i;
+#if defined(GE_XBOX_NATIVE32)
+    s_bgAllRoomsResident = 0;
+    s_bgResidentPoolReady = 0;
+#endif
 
     for(i = 1; i < g_MaxNumRooms; i++)
     {
@@ -3027,8 +3491,51 @@ void unload_rooms(void)
             delete_room_data(i);
         }
     }
+#if defined(GE_XBOX_NATIVE32)
+    /* No MEMA room pointers survive here; the next stage initializes its
+     * own MEMA before loading any new room data. */
+    if (s_bgResidentHostPool) {
+        free(s_bgResidentHostPool);
+        s_bgResidentHostPool = NULL;
+    }
+#endif
 }
 
+
+#if defined(GE_XBOX_NATIVE32)
+/* Run only after level state, fog and light tables have been established.
+ * Returns false if an arena cannot hold everything; then the original
+ * streaming/eviction path remains live and the existing intro warmup can
+ * run normally. Never discard or freeze authored light/vertex edits. */
+s32 bgXboxKeepRoomsResident(void)
+{
+#if GE_XBOX_BG_ALL_RESIDENT
+    s32 i, loaded = 0;
+    if (!s_bgResidentPoolReady || g_MaxNumRooms <= 1) return 0;
+    for (i = 1; i < g_MaxNumRooms; ++i) {
+        s_room_info *room = &g_BgRoomInfo[i];
+        if (!room->csize_point_index_binary &&
+            !room->csize_primary_DL_binary &&
+            !room->csize_secondary_DL_binary) continue;
+        if (!room->model_bin_loaded) bgLoadRoomModelData(i);
+        if (!room->model_bin_loaded) {
+            /* Do not change existing room data/pointers on a failed load.
+             * Unused candidates can be aged out by normal streaming. */
+            GENativePlatform_Trace("BG RESIDENT fallback room=%d loaded=%d\n",
+                (int)i, (int)loaded);
+            return 0;
+        }
+        ++loaded;
+    }
+    s_bgAllRoomsResident = 1;
+    GENativePlatform_Trace("BG RESIDENT active rooms=%d mema_free_kib=%u\n",
+        (int)loaded, (unsigned)(memaGetLongestFree() / 1024u));
+    return 1;
+#else
+    return 0;
+#endif
+}
+#endif
 
 /**
  * Address: 7F0B66E8
@@ -3039,6 +3546,10 @@ void unload_rooms(void)
 void bgRoomsTickUnload(void)
 {
     s32 i;
+#if defined(GE_XBOX_NATIVE32)
+    /* Original unload logic remains active unless every room is present. */
+    if (s_bgAllRoomsResident) return;
+#endif
 
     for(i = 1; i < g_MaxNumRooms; i++)
     {

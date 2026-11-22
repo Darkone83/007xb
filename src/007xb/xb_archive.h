@@ -27,6 +27,8 @@ public:
     int Count() const { return count_; }
     const char* Error() const { return error_; }
     bool IsOpen() const { return file_ != 0; }
+    // Stable manifest fingerprint for LAN compatibility; no disk reads.
+    XB_U32 ContentFingerprint() const;
 private:
     XBArchive(const XBArchive&);
     XBArchive& operator=(const XBArchive&);

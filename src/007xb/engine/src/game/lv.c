@@ -9,6 +9,9 @@
 #include <assets/font_dl.h>
 #include <deb.h>
 #include <memp.h>
+#if defined(GE_XBOX_NATIVE32)
+#include <mema.h>
+#endif
 #include <music.h>
 #include <tlb_manage.h>
 #include <fr.h>
@@ -66,6 +69,8 @@
 #include "chr.h"
 #if defined(GE_XBOX_NATIVE32)
 #include "ge_native_platform.h"
+#include "ge_phase0_profile.h"
+#include "ge_lan_game.h"
 extern u64 g_randomSeed;
 
 /* Stage-boundary records only. Persist the phase before entering it so a
@@ -75,6 +80,133 @@ static void lvlNativeLoadTrace(s32 stage, const char *phase)
     GENativePlatform_Trace("LOAD stage=%d phase=%s stage_free=%d rng=%08X%08X\n",
         (int)stage, phase, (int)mempGetBankSizeLeft(MEMPOOL_STAGE),
         (unsigned)(g_randomSeed >> 32), (unsigned)g_randomSeed);
+}
+#endif
+
+#if defined(GE_XBOX_NATIVE32)
+/* A small, view-prioritised preload on the *stage loading* thread. The
+ * original five-room warmup used bgCheckIfRoomModelNeedsLoad(), which sets
+ * field_35 permanently. On levels with 160-350 KiB mema pools that can
+ * starve subsequent cinematic room loads. We deliberately do not pin rooms:
+ * normal visibility keeps a needed room young and bgRoomsTickUnload can
+ * reclaim an unused candidate after four frames. */
+#ifndef GE_XBOX_INTRO_ROOM_PREWARM
+#define GE_XBOX_INTRO_ROOM_PREWARM 1
+#endif
+#ifndef GE_XBOX_INTRO_ROOM_PREWARM_MAX
+#define GE_XBOX_INTRO_ROOM_PREWARM_MAX 10
+#endif
+#ifndef GE_XBOX_INTRO_ROOM_PREWARM_RESERVE
+#define GE_XBOX_INTRO_ROOM_PREWARM_RESERVE (96 * 1024)
+#endif
+extern s32 bgGetConnectedRooms(s32 roomIndex, s32 *list, s32 max);
+extern void bgLoadRoomModelData(s32 roomID);
+
+#if GE_XBOX_INTRO_ROOM_PREWARM
+static s32 lvlNativeWarmOneRoom(s32 room, u8 *seen)
+{
+    if (room <= 0 || room >= g_MaxNumRooms || room >= MAXROOMCOUNT || seen[room])
+        return 0;
+    seen[room] = 1;
+    if (g_BgRoomInfo[room].model_bin_loaded ||
+        g_BgRoomInfo[room].csize_primary_DL_binary <= 0)
+        return 0;
+    {
+        /* bgRoomCalcBB has already loaded each room once and recorded the
+         * actual allocation size.  Do not let the speculative warmup consume
+         * the reserved live-room budget (plus 4 KiB for room metadata). */
+        const s32 freeBytes = memaGetLongestFree();
+        const s32 expected = g_BgRoomInfo[room].cur_room_totalsize;
+        if (expected <= 0 || freeBytes <= GE_XBOX_INTRO_ROOM_PREWARM_RESERVE + 4096 ||
+            expected > freeBytes - GE_XBOX_INTRO_ROOM_PREWARM_RESERVE - 4096)
+            return 0;
+    }
+    /* Does not set field_35: this is a prediction, NOT an authored preload. */
+    bgLoadRoomModelData(room);
+    return g_BgRoomInfo[room].model_bin_loaded != 0;
+}
+#endif
+
+static void lvlNativeWarmIntroRooms(s32 stage)
+{
+#if GE_XBOX_INTRO_ROOM_PREWARM
+    s32 root = -1, camera = 0, loaded = 0, neighbors[MAXPORTALSPERROOM];
+    s32 n, room, count, best, maxRooms;
+    u8 seen[MAXROOMCOUNT];
+    f32 cx = 0.0f, cy = 0.0f, cz = 0.0f;
+    f32 fx = 0.0f, fy = 0.0f, fz = -1.0f;
+    if (stage == LEVELID_TITLE || getPlayerCount() != 1 ||
+        !g_CurrentSetup.pads || g_MaxNumRooms <= 1 ||
+        g_MaxNumRooms > MAXROOMCOUNT) return;
+    if (bondviewGetCameraMode() == CAMERAMODE_INTRO && ptr_random06cam_entry) {
+        const PadRecord *pad = &g_CurrentSetup.pads[ptr_random06cam_entry->unk18];
+        const double yaw = (double)ptr_random06cam_entry->unk10.fval;
+        const double pitch = (double)ptr_random06cam_entry->unk14.fval;
+        if (pad->stan) root = pad->stan->room;
+        cx = ptr_random06cam_entry->unk04.fval;
+        cy = ptr_random06cam_entry->unk08.fval;
+        cz = ptr_random06cam_entry->unk0C.fval;
+        fx = (f32)(cos(pitch) * sin(yaw));
+        fy = (f32)sin(pitch);
+        fz = (f32)(-cos(pitch) * cos(yaw));
+        camera = 1;
+    } else if (startpadcount > 0 && g_Startpad[0] && g_Startpad[0]->stan) {
+        root = g_Startpad[0]->stan->room;
+    }
+    if (root <= 0 || root >= g_MaxNumRooms ||
+        memaGetLongestFree() < GE_XBOX_INTRO_ROOM_PREWARM_RESERVE) return;
+    memset(seen, 0, sizeof(seen));
+    maxRooms = GE_XBOX_INTRO_ROOM_PREWARM_MAX;
+    if (maxRooms > g_MaxNumRooms-1) maxRooms = g_MaxNumRooms-1;
+    if (maxRooms <= 0) return;
+
+    loaded += lvlNativeWarmOneRoom(root, seen);
+    /* Portal-adjacent rooms are useful even when the authored camera sits
+     * slightly outside its associated STAN pad. Keep the anchor near-first. */
+    count = g_BgPortals ? bgGetConnectedRooms(root, neighbors, MAXPORTALSPERROOM) : 0;
+    for (n = 0; n < count && n < 3 && loaded < maxRooms; ++n)
+        loaded += lvlNativeWarmOneRoom(neighbors[n], seen);
+
+    /* Cinematic camera coordinates can be far from their STAN pad. Prefer
+     * rooms inside its broad view cone rather than indiscriminately walking
+     * every nearby portal. A one-time O(rooms * cap) ranking is cheaper than
+     * a mid-frame decompression. No camera/tick/RNG state is changed. */
+    if (camera) {
+        while (loaded < maxRooms &&
+               memaGetLongestFree() >= GE_XBOX_INTRO_ROOM_PREWARM_RESERVE) {
+            f32 bestScore = 3.0e30f;
+            best = -1;
+            for (room = 1; room < g_MaxNumRooms; ++room) {
+                const s_room_info *info = &g_BgRoomInfo[room];
+                f32 x,y,z,dx,dy,dz,dist2,dot,score;
+                if (seen[room] || info->model_bin_loaded ||
+                    info->csize_primary_DL_binary <= 0) continue;
+                x = (info->minbounds.x + info->maxbounds.x) * 0.5f;
+                y = (info->minbounds.y + info->maxbounds.y) * 0.5f;
+                z = (info->minbounds.z + info->maxbounds.z) * 0.5f;
+                dx=x-cx;dy=y-cy;dz=z-cz;
+                dist2=dx*dx+dy*dy+dz*dz;
+                dot=dx*fx+dy*fy+dz*fz;
+                /* Use a loose hemisphere test: bounding centres alone are
+                 * not an exact frustum test, especially in large BG rooms. */
+                if (dot < -0.25f * (f32)sqrt((double)dist2 + 1.0)) continue;
+                score=dist2 / (1.0f + (dot>0.0f ? dot*0.003f : 0.0f));
+                if (!(score>=0.0f) || score>=bestScore) continue;
+                best=room;bestScore=score;
+            }
+            if (best<0) break;
+            /* A failed load should not be retried within this one warmup. */
+            if (!lvlNativeWarmOneRoom(best,seen)) {
+                if (memaGetLongestFree()<GE_XBOX_INTRO_ROOM_PREWARM_RESERVE) break;
+            } else ++loaded;
+        }
+    }
+    GENativePlatform_Trace(
+        "INTRO BG PREWARM stage=%d anchor=%d camera=%d rooms=%d free=%d retention=transient\n",
+        (int)stage,(int)root,(int)camera,(int)loaded,(int)memaGetLongestFree());
+#else
+    (void)stage;
+#endif
 }
 #endif
 
@@ -686,6 +818,15 @@ void lvlStageLoad(s32 stage)
         set_cur_player(0);
     }
 
+#if defined(GE_XBOX_NATIVE32)
+    /* The resident BG pass supersedes speculative camera-neighbour loads.
+     * If unavailable, retain the proven bounded prewarm + streaming path. */
+    {
+        extern s32 bgXboxKeepRoomsResident(void);
+        if (!bgXboxKeepRoomsResident()) lvlNativeWarmIntroRooms(stage);
+    }
+#endif
+
     /**
      * Leave stage load allocation mode.
      * From this point on, model creation should try to reuse existing slots.
@@ -849,6 +990,11 @@ Gfx *lvlPortalDebug7F0BDF10(Gfx *gdl)
 
 Gfx* lvlRender(Gfx* DL)
 {
+#if defined(GE_XBOX_NATIVE32)
+    /* A reset command is harmless for local play and makes ownership explicit
+     * for title/loading frames following a LAN display list. */
+    DL->words.w0 = _SHIFTL(0x4E, 24, 8); DL->words.w1 = 1; ++DL;
+#endif
     gSPSegment(DL++, SPSEGMENT_PHYSICAL, NULL);
     gSPSegment(DL++, SPSEGMENT_UNKNOWN, osVirtualToPhysical(ptr_font_DL));
 
@@ -874,6 +1020,13 @@ Gfx* lvlRender(Gfx* DL)
         for(i = 0; i < pcount; i++)
         {
             set_cur_player(get_nth_player_from_shuffled(i));
+#if defined(GE_XBOX_NATIVE32)
+            if (GE_LanGameActive()) {
+                DL->words.w0 = _SHIFTL(0x4E, 24, 8);
+                DL->words.w1 = GE_LanGameIsLocalPlayer(get_cur_playernum()) ? 1 : 0;
+                ++DL;
+            }
+#endif
 
             viSetViewSize(g_CurrentPlayer->viewx, g_CurrentPlayer->viewy);
             viSetViewPosition(g_CurrentPlayer->viewleft, g_CurrentPlayer->viewtop);
@@ -899,9 +1052,21 @@ Gfx* lvlRender(Gfx* DL)
             }
 
             DL = viSetupScreensForNumPlayers(DL);
+#if defined(GE_XBOX_NATIVE32)
+            { const unsigned long long start=geP0CineScopeBegin(GE_CINE_SKY);
+#endif
             DL = skyRender(DL);
+#if defined(GE_XBOX_NATIVE32)
+              geP0CineScopeEnd(GE_CINE_SKY,start); }
+#endif
             bgRoomVisibilityRelated();
+#if defined(GE_XBOX_NATIVE32)
+            { const unsigned long long start=geP0CineScopeBegin(GE_CINE_PROPS);
+#endif
             propsTick();
+#if defined(GE_XBOX_NATIVE32)
+              geP0CineScopeEnd(GE_CINE_PROPS,start); }
+#endif
             chraiUpdateOnscreenPropCount();
             chrpropUpdateAutoaimTarget();
             chraiCheckUseHeldItems();
@@ -912,8 +1077,18 @@ Gfx* lvlRender(Gfx* DL)
                 attempt_reload_item_in_hand(GUNLEFT);
             }
 
+#if defined(GE_XBOX_NATIVE32)
+            { const unsigned long long start=geP0CineScopeBegin(GE_CINE_PLAYER);
+#endif
             propsTickPlayer();
+#if defined(GE_XBOX_NATIVE32)
+              geP0CineScopeEnd(GE_CINE_PLAYER,start); }
+            { const unsigned long long start=geP0CineScopeBegin(GE_CINE_BG);
+#endif
             DL = bgLevelRender(DL);
+#if defined(GE_XBOX_NATIVE32)
+              geP0CineScopeEnd(GE_CINE_BG,start); }
+#endif
 
             if (get_debug_portal_flag())
             {
@@ -1007,6 +1182,9 @@ Gfx* lvlRender(Gfx* DL)
         }
     }
 
+#if defined(GE_XBOX_NATIVE32)
+    DL->words.w0 = _SHIFTL(0x4E, 24, 8); DL->words.w1 = 1; ++DL;
+#endif
     gDPSetScissor(DL++, G_SC_NON_INTERLACE, 0, 0, viGetX(), viGetY());
 
     return DL;
@@ -1658,6 +1836,9 @@ void lvlViewMoveTick(void)
     f32 temp_f2;
 
     local_player_number = get_cur_playernum();
+#if defined(GE_XBOX_NATIVE32)
+    if (!GE_LanGameActive())
+#endif
     cheat_buttons_mp_related();
 
     switch (get_debug_freeze_processing())

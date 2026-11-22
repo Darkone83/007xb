@@ -54,6 +54,9 @@ int GENativePlatform_TraceShutdown(void);
 int GENativePlatform_TraceReady(void);
 const char *GENativePlatform_TracePath(void);
 const char *GENativePlatform_TraceError(void);
+/* Xbox physical RAM and currently free bytes. Safe for use by the N64 C
+ * stage loader without including the XDK headers in game source files. */
+int GENativePlatform_QueryPhysicalMemory(uint32_t *totalBytes, uint32_t *availableBytes);
 
 void *geNativeDramBase(void);
 size_t geNativeDramBytes(void);

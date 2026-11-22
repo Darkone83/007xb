@@ -1,5 +1,8 @@
 #include <ultra64.h>
 #include "joy.h"
+#if defined(GE_XBOX_NATIVE32)
+#include "ge_lan_game.h"
+#endif
 #include <PR/os.h>
 
 #define JOY_CLAMP_MIN          0
@@ -273,6 +276,9 @@ void joyCheckStatus(void)
 s8 joyGetControllerCount(void)
 {
     s32 i;
+#if defined(GE_XBOX_NATIVE32)
+    if (GE_LanGameActive()) return (s8)GE_LanGamePlayerCount();
+#endif
 
     if (g_ContDataPtr->playbackcontcount >= 0)
     {
@@ -292,6 +298,9 @@ s8 joyGetControllerCount(void)
 
 u8 joyGetConnectedControllers(void)
 {
+#if defined(GE_XBOX_NATIVE32)
+    if (GE_LanGameActive()) return (u8)((1u << GE_LanGamePlayerCount()) - 1u);
+#endif
     return g_ConnectedControllers;
 }
 
@@ -407,6 +416,9 @@ void joyConsumeSamples(struct contdata *contdata)
 
 void joyConsumeSamplesWrapper(void)
 {
+#if defined(GE_XBOX_NATIVE32)
+    if (GE_LanGameActive()) return;
+#endif
     if (g_ContPlaybackFunc)
     {
         g_ContData[CONTDATA_PLAYBACK].nextlast = g_ContPlaybackFunc(g_ContData[CONTDATA_PLAYBACK].samples, g_ContData[CONTDATA_PLAYBACK].curlast);
@@ -532,6 +544,10 @@ void joyPoll(void)
 
 s8 joyGetStickX(s8 contpadnum)
 {
+#if defined(GE_XBOX_NATIVE32)
+    const GE_LanPlayerInput *lan = GE_LanGameInput((int)contpadnum);
+    if (lan) return lan->stick_x;
+#endif
     //this assert is on ALL stick functions below
 #ifdef DEBUG
     assert(contpadnum > 0); //j
@@ -548,6 +564,10 @@ s8 joyGetStickX(s8 contpadnum)
 //duplicate?
 s8 joy7000C174(s8 contpadnum)
 {
+#if defined(GE_XBOX_NATIVE32)
+    const GE_LanPlayerInput *lan = GE_LanGamePreviousInput((int)contpadnum);
+    if (lan) return lan->stick_x;
+#endif
     if ((g_ContDataPtr->playbackcontcount < 0) && ((g_ConnectedControllers >> contpadnum & 1) == 0))
     {
         g_ContBadReadsStickX[contpadnum]++;
@@ -559,6 +579,10 @@ s8 joy7000C174(s8 contpadnum)
 
 s8 joyGetStickY(s8 contpadnum)
 {
+#if defined(GE_XBOX_NATIVE32)
+    const GE_LanPlayerInput *lan = GE_LanGameInput((int)contpadnum);
+    if (lan) return lan->stick_y;
+#endif
     if ((g_ContDataPtr->playbackcontcount < 0) && ((g_ConnectedControllers >> contpadnum & 1) == 0))
     {
         g_ContBadReadsStickY[contpadnum]++;
@@ -570,6 +594,10 @@ s8 joyGetStickY(s8 contpadnum)
 
 s8 joy7000C284(s8 contpadnum)
 {
+#if defined(GE_XBOX_NATIVE32)
+    const GE_LanPlayerInput *lan = GE_LanGamePreviousInput((int)contpadnum);
+    if (lan) return lan->stick_y;
+#endif
     if ((g_ContDataPtr->playbackcontcount < 0) && ((g_ConnectedControllers >> contpadnum & 1) == 0))
     {
         g_ContBadReadsStickY[contpadnum]++;
@@ -581,6 +609,10 @@ s8 joy7000C284(s8 contpadnum)
 
 u16 joyGetButtons(s8 contpadnum, u16 mask)
 {
+#if defined(GE_XBOX_NATIVE32)
+    const GE_LanPlayerInput *lan = GE_LanGameInput((int)contpadnum);
+    if (lan) return lan->buttons & mask;
+#endif
     if ((g_ContDataPtr->playbackcontcount < 0) && ((g_ConnectedControllers >> contpadnum & 1) == 0))
     {
         g_ContBadReadsButtons[contpadnum]++;
@@ -592,6 +624,10 @@ u16 joyGetButtons(s8 contpadnum, u16 mask)
 
 u16 joyGetButtonsPressedThisFrame(s8 contpadnum, u16 mask)
 {
+#if defined(GE_XBOX_NATIVE32)
+    const GE_LanPlayerInput *lan = GE_LanGameInput((int)contpadnum);
+    if (lan) return lan->pressed & mask;
+#endif
     if ((g_ContDataPtr->playbackcontcount < 0) && ((g_ConnectedControllers >> contpadnum & 1) == 0))
     {
         g_ContBadReadsButtonsPressed[contpadnum]++;
@@ -819,6 +855,13 @@ s32 joyGamePakLongWrite(u8 address, u8 *buffer, s32 nbytes)
 void joyRumblePakStart(s32 controller, f32 duration)
 {
     s32 duration60 = (duration * 60.0f);
+#if defined(GE_XBOX_NATIVE32)
+    if (GE_LanGameActive()) {
+        if (!GE_LanGameIsLocalPlayer(controller)) return;
+        controller = 0; /* First compact local controller owns this console. */
+    }
+#endif
+    if (controller < 0 || controller >= MAXCONTROLLERS) return;
 
     if ((g_ContPlaybackFunc == NULL) && (g_ContRumblePakInitState[controller] > RUMBLEPAKINITSTATE_NOT_READY))
     {

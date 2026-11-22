@@ -1,4 +1,7 @@
 #include <ultra64.h>
+#if defined(GE_XBOX_NATIVE32)
+#include "ge_lan_game.h"
+#endif
 #include <music.h>
 #include <bondgame.h>
 #include <bondinv.h>
@@ -688,6 +691,12 @@ void mpwatchMenuTick(void)
 
                     if (g_gameOverFlag)
                     {
+#if defined(GE_XBOX_NATIVE32)
+                        if (GE_LanGameActive()) {
+                            GE_LanGameQuit(GE_LAN_END_FINISHED);
+                            return;
+                        }
+#endif
                         menu_count = 0;
                         g_CurrentPlayer->mpmenumode = MENU_FINISHED;
 
@@ -729,6 +738,12 @@ void mpwatchMenuTick(void)
                         mpwatchPlayBeep();
                         g_CurrentPlayer->mpmenuon = FALSE;
                         g_CurrentPlayer->healthdisplaytime = 0;
+#if defined(GE_XBOX_NATIVE32)
+                        if (GE_LanGameActive()) {
+                            GE_LanGameQuit(GE_LAN_END_QUIT);
+                            return;
+                        }
+#endif
                         mpCalculateAwards(FALSE);
                     }
                 }
@@ -1119,6 +1134,11 @@ Gfx *mp_watch_menu_display(Gfx *gdl)
         {
             two_player_x_offset = 0;
         }
+#if defined(GE_XBOX_NATIVE32)
+        /* The score table still lists every global player; its containing
+         * menu is centered in this console's full-screen view. */
+        if (GE_LanGameActive()) two_player_x_offset = 80;
+#endif
 
         switch (g_CurrentPlayer->mpmenumode)
         {

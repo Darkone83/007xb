@@ -183,6 +183,89 @@ Gfx * g_ExplosionDisplayLists[] = {
     &globalDL_0x9a8
 };
 
+/* Xbox host-renderer effect path.  Preserve original replay/console behavior
+ * and allow an exact A/B switch without modifying the game's RNG or ticks. */
+#ifndef GE_XBOX_EFFECT_QUAD_BATCHES
+# if defined(PORT) && defined(GE_XBOX_NATIVE32)
+#  define GE_XBOX_EFFECT_QUAD_BATCHES 1
+# else
+#  define GE_XBOX_EFFECT_QUAD_BATCHES 0
+# endif
+#endif
+
+
+/* The billboard camera and room-space scalar are constant for one prop
+ * render. Re-fetching them for every cloud incurs hundreds of repeated
+ * calls during a large detonation. Same matrix and arithmetic, fewer lookups. */
+typedef struct GEEffectCamera {
+    Mtxf *viewToWorld;
+    struct coord3d *eye;
+    f32 roomScalar;
+} GEEffectCamera;
+
+#if GE_XBOX_EFFECT_QUAD_BATCHES
+/* GE's gSP2Triangles is packed G_TRI4: each vertex index has FOUR bits.
+ * Four independent quads (16 Vtx) is the largest safe G_VTX batch. */
+enum { GE_EFFECT_QUADS_PER_LOAD = 4, GE_EFFECT_FRAME_COUNT = 15 };
+static Gfx *geEffectSubmitQuads(Gfx *gdl, Vtx *vertices, s32 quads)
+{
+    s32 q;
+    if (quads <= 0) return gdl;
+    gSPVertex(gdl++, osVirtualToPhysical(vertices), quads * 4, 0);
+    for (q = 0; q < quads; ++q) {
+        s32 j = q * 4;
+        gSP2Triangles(gdl++, j, j + 1, j + 2, 0, j, j + 2, j + 3, 0);
+    }
+    return gdl;
+}
+/* Persistent effect-buffer quads (scorch marks, bullet impacts) already have
+ * stable storage. Delay ONE quad without copying it; only acquire transient
+ * storage when a second draw shares the identical material/matrix. */
+typedef struct GEEffectQuadQueue {
+    Vtx *scratch;
+    const Vtx *first;
+    s32 count;
+} GEEffectQuadQueue;
+
+static void geEffectCopyQuad(Vtx *dst, const Vtx *src)
+{
+    dst[0] = src[0]; dst[1] = src[1];
+    dst[2] = src[2]; dst[3] = src[3];
+}
+static Gfx *geEffectFlushQueue(Gfx *gdl, GEEffectQuadQueue *q)
+{
+    if (q->count == 1) {
+        gSPVertex(gdl++, osVirtualToPhysical((void *)q->first), 4, 0);
+        gSP2Triangles(gdl++, 0, 1, 2, 0, 0, 2, 3, 0);
+    } else if (q->count > 1) {
+        gdl = geEffectSubmitQuads(gdl, q->scratch, q->count);
+    }
+    q->count = 0;
+    q->first = NULL;
+    q->scratch = NULL;
+    return gdl;
+}
+static Gfx *geEffectAppendQuad(Gfx *gdl, GEEffectQuadQueue *q,
+                               const Vtx *quad)
+{
+    if (!q->count) {
+        q->first = quad;
+        q->count = 1;
+    } else {
+        if (q->count == 1) {
+            q->scratch = dynAllocateVertices(GE_EFFECT_QUADS_PER_LOAD * 4);
+            geEffectCopyQuad(q->scratch, q->first);
+        }
+        geEffectCopyQuad(q->scratch + q->count * 4, quad);
+        ++q->count;
+        if (q->count == GE_EFFECT_QUADS_PER_LOAD)
+            gdl = geEffectFlushQueue(gdl, q);
+    }
+    return gdl;
+}
+
+#endif
+
 s32 g_NumParticleEntries = 0;
 s32 g_NumScorchEntries = 0;
 // canonically nextwallhit
@@ -232,6 +315,8 @@ void explosionInflictDamage(PropRecord *arg0, f32 arg1, f32 arg2);
 void explosionInflictDamage(struct PropRecord *arg0, f32 arg1, f32 arg2);
 void explosionScorchTick(struct coord3d *pos, f32 explosion_size, s16 room);
 Gfx *explosionRenderPart(struct ExplosionPart *arg0, Gfx *gdl, struct coord3d *coord);
+static void geExplosionBuildPart(struct ExplosionPart *arg0, struct coord3d *coord, Vtx *vertices, const GEEffectCamera *camera);
+static s32 geSmokeBuildPart(struct Smoke *smoke, struct SmokePart *smoke_part, struct coord3d *arg3, Vtx *vertices, const GEEffectCamera *camera);
 
 /*** *************************************************************************************************************/
 
@@ -914,6 +999,63 @@ Gfx *explosionRenderPropExplosion(PropRecord *prop, Gfx *gdl, s32 withalpha)
 
         gSPSegment(gdl++, SPSEGMENT_GETITLE, osVirtualToPhysical(pGlobalimagetable));
 
+#if GE_XBOX_EFFECT_QUAD_BATCHES
+        {
+            GEEffectCamera camera;
+            /* Stable bucket links preserve the original order: frame 14..0,
+             * particle index ascending. No sorting, RNG or tick changes. */
+            s32 head[GE_EFFECT_FRAME_COUNT];
+            s32 tail[GE_EFFECT_FRAME_COUNT];
+            s32 counts[GE_EFFECT_FRAME_COUNT];
+            s32 next[EXPLOSION_PARTS_LEN];
+            f32 speed = g_ExplosionTypes[temp_s5->explosion_type].flareanimspeed;
+            camera.viewToWorld = currentPlayerGetViewToWorldMtxf();
+            camera.eye = bondviewGetCurrentPlayersPosition();
+            camera.roomScalar = get_room_data_float1();
+            for (i = 0; i < GE_EFFECT_FRAME_COUNT; ++i) {
+                head[i] = tail[i] = -1;
+                counts[i] = 0;
+            }
+            for (i = 0; i < EXPLOSION_PARTS_LEN; ++i) {
+                next[i] = -1;
+                if (temp_s5->parts[i].frame > 0) {
+                    s32 frame = (s32)((f32)(temp_s5->parts[i].frame - 1) / speed);
+                    if (frame >= 0 && frame < GE_EFFECT_FRAME_COUNT) {
+                        if (tail[frame] < 0) head[frame] = i;
+                        else next[tail[frame]] = i;
+                        tail[frame] = i;
+                        ++counts[frame];
+                    }
+                }
+            }
+            for (var_s2 = GE_EFFECT_FRAME_COUNT - 1; var_s2 >= 0; --var_s2) {
+                Vtx *allVertices;
+                s32 emitted = 0;
+                s32 chunkStart = 0;
+                /* The unoptimized renderer leaves the frame-0 RDP texture
+                 * and combiner state active after this prop. Keep that final
+                 * state even when the animation contains no frame-0 quads. */
+                if (!counts[var_s2] && var_s2 != 0) continue;
+                gSPDisplayList(gdl++, g_ExplosionDisplayLists[var_s2]);
+                if (!counts[var_s2]) continue;
+                allVertices = dynAllocateVertices(counts[var_s2] * 4);
+                for (i = head[var_s2]; i >= 0; i = next[i]) {
+                    geExplosionBuildPart(&temp_s5->parts[i], temp_s6,
+                                          &allVertices[emitted * 4], &camera);
+                    ++emitted;
+                    if (emitted - chunkStart == GE_EFFECT_QUADS_PER_LOAD) {
+                        gdl = geEffectSubmitQuads(gdl,
+                                    &allVertices[chunkStart * 4],
+                                    GE_EFFECT_QUADS_PER_LOAD);
+                        chunkStart = emitted;
+                    }
+                }
+                if (emitted > chunkStart)
+                    gdl = geEffectSubmitQuads(gdl, &allVertices[chunkStart * 4],
+                                                emitted - chunkStart);
+            }
+        }
+#else
         for (var_s2 = 14;
             var_s2 >= 0;
             var_s2--)
@@ -930,6 +1072,7 @@ Gfx *explosionRenderPropExplosion(PropRecord *prop, Gfx *gdl, s32 withalpha)
             }
         }
 
+#endif
         gSPMatrix(gdl++, osVirtualToPhysical((void*)currentPlayerGetProjectionMatrix()), (G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION));
 
         temp_f10 = (s32) (g_ExplosionTypes[temp_s5->explosion_type].flareanimspeed * 15.0f);
@@ -953,7 +1096,7 @@ Gfx *explosionRenderPropExplosion(PropRecord *prop, Gfx *gdl, s32 withalpha)
  *
  * NTSC address 0x7F09D82C.
 */
-Gfx *explosionRenderPart(struct ExplosionPart *arg0, Gfx *gdl, struct coord3d *coord)
+static void geExplosionBuildPart(struct ExplosionPart *arg0, struct coord3d *coord, Vtx *vertices, const GEEffectCamera *camera)
 {
     s32 padding1;
     f32 f2;
@@ -970,7 +1113,6 @@ Gfx *explosionRenderPart(struct ExplosionPart *arg0, Gfx *gdl, struct coord3d *c
     f32 sp60;
     f32 sp5C;
 
-    Vtx *vertices;
 
     f32 sp54;
     f32 sp50;
@@ -980,31 +1122,33 @@ Gfx *explosionRenderPart(struct ExplosionPart *arg0, Gfx *gdl, struct coord3d *c
     f32 sp44;
 
     f32 temp_f0;
+    f32 distanceSq;
+    f32 roomScalar;
     f32 var_f12;
 
     spA0 = g_ExplosionRenderPartDefaultVertex;
 
-    sp9C = currentPlayerGetViewToWorldMtxf();
-    sp98 = bondviewGetCurrentPlayersPosition();
+    sp9C = camera ? camera->viewToWorld : currentPlayerGetViewToWorldMtxf();
+    sp98 = camera ? camera->eye : bondviewGetCurrentPlayersPosition();
+    roomScalar = camera ? camera->roomScalar : get_room_data_float1();
 
     sp64 = arg0->pos.f[0] - sp98->f[0];
     sp60 = arg0->pos.f[1] - sp98->f[1];
     sp5C = arg0->pos.f[2] - sp98->f[2];
 
-    temp_f0 = sqrtf((sp64 * sp64) + (sp60 * sp60) + (sp5C * sp5C));
-    var_f12 = temp_f0 * 0.5f;
-    if (var_f12 > 100.0f)
+    distanceSq = (sp64 * sp64) + (sp60 * sp60) + (sp5C * sp5C);
+#if GE_XBOX_EFFECT_QUAD_BATCHES
+    /* For nonzero distances <=200, (d - d*0.5)/d is exactly 0.5
+     * for normalized IEEE-754 floats. Avoid a libm sqrt per near cloud. */
+    if (distanceSq > 0.0f && distanceSq <= 40000.0f) {
+        f2 = 0.5f;
+    } else
+#endif
     {
-        var_f12 = 100.0f;
-    }
-
-    if (temp_f0 == 0)
-    {
-        f2 = 0.0f;
-    }
-    else
-    {
-        f2 = (temp_f0 - var_f12) / temp_f0;
+        temp_f0 = sqrtf(distanceSq);
+        var_f12 = temp_f0 * 0.5f;
+        if (var_f12 > 100.0f) var_f12 = 100.0f;
+        f2 = temp_f0 == 0.0f ? 0.0f : (temp_f0 - var_f12) / temp_f0;
     }
 
     sp54 = arg0->size * f2;
@@ -1014,7 +1158,6 @@ Gfx *explosionRenderPart(struct ExplosionPart *arg0, Gfx *gdl, struct coord3d *c
     sp48 = sp98->f[1] + (sp60 * f2);
     sp44 = sp98->f[2] + (sp5C * f2);
 
-    vertices = dynAllocateVertices(4);
 
     vertices[0] = spA0;
     vertices[1] = spA0;
@@ -1049,35 +1192,41 @@ Gfx *explosionRenderPart(struct ExplosionPart *arg0, Gfx *gdl, struct coord3d *c
     sp68.f[1] = sp9C->m[1][1] * sp50;
     sp68.f[2] = sp9C->m[1][2] * sp50;
 
-    vertices[0].v.ob[0] = (sp4c - sp8C.f[0] - sp68.f[0]) * get_room_data_float1() - coord->f[0];
-	vertices[0].v.ob[1] = (sp48 - sp8C.f[1] - sp68.f[1]) * get_room_data_float1() - coord->f[1];
-	vertices[0].v.ob[2] = (sp44 - sp8C.f[2] - sp68.f[2]) * get_room_data_float1() - coord->f[2];
+    vertices[0].v.ob[0] = (sp4c - sp8C.f[0] - sp68.f[0]) * roomScalar - coord->f[0];
+	vertices[0].v.ob[1] = (sp48 - sp8C.f[1] - sp68.f[1]) * roomScalar - coord->f[1];
+	vertices[0].v.ob[2] = (sp44 - sp8C.f[2] - sp68.f[2]) * roomScalar - coord->f[2];
 	vertices[0].v.tc[0] = 1760;
 	vertices[0].v.tc[1] = 0;
 
-	vertices[1].v.ob[0] = (sp4c + sp80.f[0] - sp74.f[0]) * get_room_data_float1() - coord->f[0];
-	vertices[1].v.ob[1] = (sp48 + sp80.f[1] - sp74.f[1]) * get_room_data_float1() - coord->f[1];
-	vertices[1].v.ob[2] = (sp44 + sp80.f[2] - sp74.f[2]) * get_room_data_float1() - coord->f[2];
+	vertices[1].v.ob[0] = (sp4c + sp80.f[0] - sp74.f[0]) * roomScalar - coord->f[0];
+	vertices[1].v.ob[1] = (sp48 + sp80.f[1] - sp74.f[1]) * roomScalar - coord->f[1];
+	vertices[1].v.ob[2] = (sp44 + sp80.f[2] - sp74.f[2]) * roomScalar - coord->f[2];
 	vertices[1].v.tc[0] = 0;
 	vertices[1].v.tc[1] = 0;
 
-	vertices[2].v.ob[0] = (sp4c + sp8C.f[0] + sp68.f[0]) * get_room_data_float1() - coord->f[0];
-	vertices[2].v.ob[1] = (sp48 + sp8C.f[1] + sp68.f[1]) * get_room_data_float1() - coord->f[1];
-	vertices[2].v.ob[2] = (sp44 + sp8C.f[2] + sp68.f[2]) * get_room_data_float1() - coord->f[2];
+	vertices[2].v.ob[0] = (sp4c + sp8C.f[0] + sp68.f[0]) * roomScalar - coord->f[0];
+	vertices[2].v.ob[1] = (sp48 + sp8C.f[1] + sp68.f[1]) * roomScalar - coord->f[1];
+	vertices[2].v.ob[2] = (sp44 + sp8C.f[2] + sp68.f[2]) * roomScalar - coord->f[2];
 	vertices[2].v.tc[0] = 0;
 	vertices[2].v.tc[1] = 1760;
 
-	vertices[3].v.ob[0] = (sp4c - sp80.f[0] + sp74.f[0]) * get_room_data_float1() - coord->f[0];
-	vertices[3].v.ob[1] = (sp48 - sp80.f[1] + sp74.f[1]) * get_room_data_float1() - coord->f[1];
-	vertices[3].v.ob[2] = (sp44 - sp80.f[2] + sp74.f[2]) * get_room_data_float1() - coord->f[2];
+	vertices[3].v.ob[0] = (sp4c - sp80.f[0] + sp74.f[0]) * roomScalar - coord->f[0];
+	vertices[3].v.ob[1] = (sp48 - sp80.f[1] + sp74.f[1]) * roomScalar - coord->f[1];
+	vertices[3].v.ob[2] = (sp44 - sp80.f[2] + sp74.f[2]) * roomScalar - coord->f[2];
 	vertices[3].v.tc[0] = 1760;
 	vertices[3].v.tc[1] = 1760;
 
+    return;
+}
+
+
+Gfx *explosionRenderPart(struct ExplosionPart *arg0, Gfx *gdl, struct coord3d *coord)
+{
+    Vtx *vertices = dynAllocateVertices(4);
+    geExplosionBuildPart(arg0, coord, vertices, NULL);
     gSPVertex(gdl++, osVirtualToPhysical(vertices), 4, 0);
-
-	gSP2Triangles(gdl++, 0, 1, 2, 0, 0, 2, 3, 0);
-
-	return gdl;
+    gSP2Triangles(gdl++, 0, 1, 2, 0, 0, 2, 3, 0);
+    return gdl;
 }
 
 
@@ -1087,9 +1236,8 @@ Gfx *explosionRenderPart(struct ExplosionPart *arg0, Gfx *gdl, struct coord3d *c
  *
  * NTSC address 0x7F09DDA4.
 */
-Gfx *explosionSmokeRenderPart(struct Smoke *smoke, struct SmokePart *smoke_part, Gfx *gdl, struct coord3d *arg3)
+static s32 geSmokeBuildPart(struct Smoke *smoke, struct SmokePart *smoke_part, struct coord3d *arg3, Vtx *vertices, const GEEffectCamera *camera)
 {
-    Vtx *vertices;
     Vtx spC0;
     Mtxf *mtx;
     struct coord3d spB0;
@@ -1107,6 +1255,8 @@ Gfx *explosionSmokeRenderPart(struct Smoke *smoke, struct SmokePart *smoke_part,
     f32 sp68;
     f32 sp64;
     f32 temp_f0;
+    f32 distanceSq;
+    f32 roomScalar;
     f32 range;
     f32 mult;
     f32 sp54;
@@ -1115,8 +1265,9 @@ Gfx *explosionSmokeRenderPart(struct Smoke *smoke, struct SmokePart *smoke_part,
 
     spC0 = g_SmokeRenderPartDefaultVertex;
 
-    mtx = currentPlayerGetViewToWorldMtxf();
-    sp70 = bondviewGetCurrentPlayersPosition();
+    mtx = camera ? camera->viewToWorld : currentPlayerGetViewToWorldMtxf();
+    sp70 = camera ? camera->eye : bondviewGetCurrentPlayersPosition();
+    roomScalar = camera ? camera->roomScalar : get_room_data_float1();
 
     if (g_SmokeTypes[smoke->smoke_type].rateappear >= smoke_part->count)
     {
@@ -1127,7 +1278,6 @@ Gfx *explosionSmokeRenderPart(struct Smoke *smoke, struct SmokePart *smoke_part,
         sp77 = smoke_part->alpha;
     }
 
-    vertices = dynAllocateVertices(4);
 
     vertices[0] = spC0;
     vertices[1] = spC0;
@@ -1145,24 +1295,19 @@ Gfx *explosionSmokeRenderPart(struct Smoke *smoke, struct SmokePart *smoke_part,
     sp68 = sp7C - sp70->f[1];
     sp64 = sp78 - sp70->f[2];
 
-    temp_f0 = sqrtf((sp6C * sp6C) + (sp68 * sp68) + (sp64 * sp64));
-
-    if (temp_f0 > 30000.0f)
+    distanceSq = (sp6C * sp6C) + (sp68 * sp68) + (sp64 * sp64);
+#if GE_XBOX_EFFECT_QUAD_BATCHES
+    if (distanceSq > 0.0f && distanceSq <= 40000.0f) {
+        mult = 0.5f;
+    } else
+#endif
     {
-        return gdl;
+        temp_f0 = sqrtf(distanceSq);
+        if (temp_f0 > 30000.0f) return 0;
+        range = temp_f0 * 0.5f;
+        if (range > 100.0f) range = 100.0f;
+        mult = temp_f0 == 0.0f ? 0.0f : (temp_f0 - range) / temp_f0;
     }
-
-    range = temp_f0 * 0.5f;
-
-	if (range > 100.0f) {
-		range = 100.0f;
-	}
-
-	if (temp_f0 == 0.0f) {
-		mult = 0.0f;
-	} else {
-		mult = (temp_f0 - range) / temp_f0;
-	}
 
 	sp88 = sp88 * mult;
 	sp84 = sp84 * mult;
@@ -1184,9 +1329,9 @@ Gfx *explosionSmokeRenderPart(struct Smoke *smoke, struct SmokePart *smoke_part,
 	sp8C.f[1] = mtx->m[1][1] * sp84;
 	sp8C.f[2] = mtx->m[1][2] * sp84;
 
-    sp54 = ((sp80 - spB0.f[0] - sp8C.f[0]) * get_room_data_float1() - arg3->f[0]) * 10.0f;
-	sp50 = ((sp7C - spB0.f[1] - sp8C.f[1]) * get_room_data_float1() - arg3->f[1]) * 10.0f;
-	sp4C = ((sp78 - spB0.f[2] - sp8C.f[2]) * get_room_data_float1() - arg3->f[2]) * 10.0f;
+    sp54 = ((sp80 - spB0.f[0] - sp8C.f[0]) * roomScalar - arg3->f[0]) * 10.0f;
+	sp50 = ((sp7C - spB0.f[1] - sp8C.f[1]) * roomScalar - arg3->f[1]) * 10.0f;
+	sp4C = ((sp78 - spB0.f[2] - sp8C.f[2]) * roomScalar - arg3->f[2]) * 10.0f;
 
     if (sp54 > 30000.0f
         || sp54 < -30000.0f
@@ -1195,7 +1340,7 @@ Gfx *explosionSmokeRenderPart(struct Smoke *smoke, struct SmokePart *smoke_part,
         || sp4C > 30000.0f
         || sp4C < -30000.0f)
     {
-		return gdl;
+		return 0;
 	}
 
     vertices[0].v.ob[0] = sp54;
@@ -1208,9 +1353,9 @@ Gfx *explosionSmokeRenderPart(struct Smoke *smoke, struct SmokePart *smoke_part,
     vertices[0].v.cn[2] = g_SmokeTypes[smoke->smoke_type].b;
     vertices[0].v.cn[3] = sp77;
 
-    vertices[1].v.ob[0] = ((((sp80 + spA4.f[0]) - sp98.f[0]) * get_room_data_float1()) - arg3->f[0]) * 10.0f;
-    vertices[1].v.ob[1] = ((((sp7C + spA4.f[1]) - sp98.f[1]) * get_room_data_float1()) - arg3->f[1]) * 10.0f;
-    vertices[1].v.ob[2] = ((((sp78 + spA4.f[2]) - sp98.f[2]) * get_room_data_float1()) - arg3->f[2]) * 10.0f;
+    vertices[1].v.ob[0] = ((((sp80 + spA4.f[0]) - sp98.f[0]) * roomScalar) - arg3->f[0]) * 10.0f;
+    vertices[1].v.ob[1] = ((((sp7C + spA4.f[1]) - sp98.f[1]) * roomScalar) - arg3->f[1]) * 10.0f;
+    vertices[1].v.ob[2] = ((((sp78 + spA4.f[2]) - sp98.f[2]) * roomScalar) - arg3->f[2]) * 10.0f;
     vertices[1].v.tc[0] = 0;
     vertices[1].v.tc[1] = 0;
     vertices[1].v.cn[0] = g_SmokeTypes[smoke->smoke_type].r;
@@ -1218,9 +1363,9 @@ Gfx *explosionSmokeRenderPart(struct Smoke *smoke, struct SmokePart *smoke_part,
     vertices[1].v.cn[2] = g_SmokeTypes[smoke->smoke_type].b;
     vertices[1].v.cn[3] = sp77;
 
-    vertices[2].v.ob[0] = (((sp80 + spB0.f[0] + sp8C.f[0]) * get_room_data_float1()) - arg3->f[0]) * 10.0f;
-    vertices[2].v.ob[1] = (((sp7C + spB0.f[1] + sp8C.f[1]) * get_room_data_float1()) - arg3->f[1]) * 10.0f;
-    vertices[2].v.ob[2] = (((sp78 + spB0.f[2] + sp8C.f[2]) * get_room_data_float1()) - arg3->f[2]) * 10.0f;
+    vertices[2].v.ob[0] = (((sp80 + spB0.f[0] + sp8C.f[0]) * roomScalar) - arg3->f[0]) * 10.0f;
+    vertices[2].v.ob[1] = (((sp7C + spB0.f[1] + sp8C.f[1]) * roomScalar) - arg3->f[1]) * 10.0f;
+    vertices[2].v.ob[2] = (((sp78 + spB0.f[2] + sp8C.f[2]) * roomScalar) - arg3->f[2]) * 10.0f;
     vertices[2].v.tc[0] = 0;
     vertices[2].v.tc[1] = 1760;
     vertices[2].v.cn[0] = g_SmokeTypes[smoke->smoke_type].r;
@@ -1228,9 +1373,9 @@ Gfx *explosionSmokeRenderPart(struct Smoke *smoke, struct SmokePart *smoke_part,
     vertices[2].v.cn[2] = g_SmokeTypes[smoke->smoke_type].b;
     vertices[2].v.cn[3] = sp77;
 
-    vertices[3].v.ob[0] = ((((sp80 - spA4.f[0]) + sp98.f[0]) * get_room_data_float1()) - arg3->f[0]) * 10.0f;
-    vertices[3].v.ob[1] = ((((sp7C - spA4.f[1]) + sp98.f[1]) * get_room_data_float1()) - arg3->f[1]) * 10.0f;
-    vertices[3].v.ob[2] = ((((sp78 - spA4.f[2]) + sp98.f[2]) * get_room_data_float1()) - arg3->f[2]) * 10.0f;
+    vertices[3].v.ob[0] = ((((sp80 - spA4.f[0]) + sp98.f[0]) * roomScalar) - arg3->f[0]) * 10.0f;
+    vertices[3].v.ob[1] = ((((sp7C - spA4.f[1]) + sp98.f[1]) * roomScalar) - arg3->f[1]) * 10.0f;
+    vertices[3].v.ob[2] = ((((sp78 - spA4.f[2]) + sp98.f[2]) * roomScalar) - arg3->f[2]) * 10.0f;
     vertices[3].v.tc[0] = 1760;
     vertices[3].v.tc[1] = 1760;
     vertices[3].v.cn[0] = g_SmokeTypes[smoke->smoke_type].r;
@@ -1238,11 +1383,18 @@ Gfx *explosionSmokeRenderPart(struct Smoke *smoke, struct SmokePart *smoke_part,
     vertices[3].v.cn[2] = g_SmokeTypes[smoke->smoke_type].b;
     vertices[3].v.cn[3] = sp77;
 
-    gSPVertex(gdl++, osVirtualToPhysical(vertices), 4, 0);
+    return 1;
+}
 
-	gSP2Triangles(gdl++, 0, 1, 2, 0, 0, 2, 3, 0);
 
-	return gdl;
+Gfx *explosionSmokeRenderPart(struct Smoke *smoke, struct SmokePart *smoke_part, Gfx *gdl, struct coord3d *arg3)
+{
+    Vtx *vertices = dynAllocateVertices(4);
+    if (geSmokeBuildPart(smoke, smoke_part, arg3, vertices, NULL)) {
+        gSPVertex(gdl++, osVirtualToPhysical(vertices), 4, 0);
+        gSP2Triangles(gdl++, 0, 1, 2, 0, 0, 2, 3, 0);
+    }
+    return gdl;
 }
 
 
@@ -1544,6 +1696,39 @@ Gfx *explosionRenderPropSmoke(PropRecord *arg0, Gfx *gdl, s32 withalpha)
 
     gDPSetColorDither(gdl++, G_CD_NOISE);
 
+#if GE_XBOX_EFFECT_QUAD_BATCHES
+    {
+        GEEffectCamera camera;
+        s32 candidates = 0;
+        s32 emitted = 0;
+        s32 chunkStart = 0;
+        Vtx *allVertices = NULL;
+        camera.viewToWorld = currentPlayerGetViewToWorldMtxf();
+        camera.eye = bondviewGetCurrentPlayersPosition();
+        camera.roomScalar = get_room_data_float1();
+        for (i = 0; i < SMOKE_PARTS_LEN; ++i) {
+            if (smoke->parts[i].size > 0.0f) ++candidates;
+            else smoke->parts[i].size = 0.0f;
+        }
+        if (candidates) allVertices = dynAllocateVertices(candidates * 4);
+        for (i = 0; i < SMOKE_PARTS_LEN; ++i) {
+            if (smoke->parts[i].size > 0.0f &&
+                geSmokeBuildPart(smoke, &smoke->parts[i], temp_s5,
+                                 &allVertices[emitted * 4], &camera)) {
+                ++emitted;
+                if (emitted - chunkStart == GE_EFFECT_QUADS_PER_LOAD) {
+                    gdl = geEffectSubmitQuads(gdl,
+                                &allVertices[chunkStart * 4],
+                                GE_EFFECT_QUADS_PER_LOAD);
+                    chunkStart = emitted;
+                }
+            }
+        }
+        if (emitted > chunkStart)
+            gdl = geEffectSubmitQuads(gdl, &allVertices[chunkStart * 4],
+                                      emitted - chunkStart);
+    }
+#else
     for (i = 0; i < SMOKE_PARTS_LEN; i++)
     {
         if (smoke->parts[i].size > 0.0f)
@@ -1556,6 +1741,7 @@ Gfx *explosionRenderPropSmoke(PropRecord *arg0, Gfx *gdl, s32 withalpha)
         }
     }
 
+#endif
     gDPSetColorDither(gdl++, G_CD_BAYER);
 
     gSPMatrix(gdl++, osVirtualToPhysical((void*)currentPlayerGetProjectionMatrix()), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
@@ -1907,6 +2093,9 @@ Gfx *explosionRenderScorchBuffer(Gfx *arg0)
     //temp_t6 = arg0;
     s32 i;
     s32 phi_s3 = -1;
+#if GE_XBOX_EFFECT_QUAD_BATCHES
+    GEEffectQuadQueue quadQueue = { NULL, NULL, 0 };
+#endif
 
     if (getPlayerCount() >= 2)
     {
@@ -1926,6 +2115,9 @@ Gfx *explosionRenderScorchBuffer(Gfx *arg0)
             {
                 if (phi_s3 != g_ScorchBuffer[i].roomid)
                 {
+#if GE_XBOX_EFFECT_QUAD_BATCHES
+                    arg0 = geEffectFlushQueue(arg0, &quadQueue);
+#endif
                     phi_s3 = g_ScorchBuffer[i].roomid;
                     arg0 = applyRoomMatrixToDisplayList(arg0, g_ScorchBuffer[i].roomid);
                 }
@@ -1938,13 +2130,21 @@ Gfx *explosionRenderScorchBuffer(Gfx *arg0)
                  * param v0: Starting index in vertex buffer where vertices are to be loaded
                  * gSPVertex(Gfx *gdl, Vtx *v, u32 n, u32 v0)
                 */
+#if GE_XBOX_EFFECT_QUAD_BATCHES
+                arg0 = geEffectAppendQuad(arg0, &quadQueue,
+                                      g_ScorchBuffer[i].vertex_list);
+#else
                 gSPVertex(arg0++, osVirtualToPhysical((void*)g_ScorchBuffer[i].vertex_list), 4, 0);
                 gSP2Triangles(arg0++,
                                 0, 1, 2, 0,
                                 0, 2, 3, 0);
+#endif
             }
         }
 
+#if GE_XBOX_EFFECT_QUAD_BATCHES
+        arg0 = geEffectFlushQueue(arg0, &quadQueue);
+#endif
         gDPSetColorDither(arg0++, G_CD_BAYER);
     }
 
@@ -2255,6 +2455,9 @@ Gfx *explosionRenderBulletImpactOnProp(Gfx *gdl, PropRecord *arg1, s32 arg2)
     s16 var_s5;
     s32 impact_type;
     s32 var_v0;
+#if GE_XBOX_EFFECT_QUAD_BATCHES
+    GEEffectQuadQueue quadQueue = { NULL, NULL, 0 };
+#endif
 
     var_s5 = -1;
     sp50 = 0;
@@ -2296,6 +2499,9 @@ Gfx *explosionRenderBulletImpactOnProp(Gfx *gdl, PropRecord *arg1, s32 arg2)
                         {
                             if (var_s5 != g_BulletImpactBuffer[i].model_render_pos_index)
                             {
+#if GE_XBOX_EFFECT_QUAD_BATCHES
+                                gdl = geEffectFlushQueue(gdl, &quadQueue);
+#endif
                                 render_pos = &sp4C->model->render_pos[g_BulletImpactBuffer[i].model_render_pos_index];
                                 var_s5 = g_BulletImpactBuffer[i].model_render_pos_index;
                                 gSPMatrix(gdl++, osVirtualToPhysical(render_pos), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
@@ -2305,6 +2511,9 @@ Gfx *explosionRenderBulletImpactOnProp(Gfx *gdl, PropRecord *arg1, s32 arg2)
                         {
                             if (var_s5 != g_BulletImpactBuffer[i].room)
                             {
+#if GE_XBOX_EFFECT_QUAD_BATCHES
+                                gdl = geEffectFlushQueue(gdl, &quadQueue);
+#endif
                                 var_s5 = g_BulletImpactBuffer[i].room;
                                 gdl = applyRoomMatrixToDisplayList(gdl, g_BulletImpactBuffer[i].room);
                             }
@@ -2312,17 +2521,29 @@ Gfx *explosionRenderBulletImpactOnProp(Gfx *gdl, PropRecord *arg1, s32 arg2)
 
                         if (sp48 != impact_type)
                         {
+#if GE_XBOX_EFFECT_QUAD_BATCHES
+                            gdl = geEffectFlushQueue(gdl, &quadQueue);
+#endif
                             texSelect(&gdl, &impactimages[impact_type], g_ImpactTypes[impact_type].unk1, g_ImpactTypes[impact_type].unk2, 2U);
                             sp48 = impact_type;
                         }
 
+#if GE_XBOX_EFFECT_QUAD_BATCHES
+                        gdl = geEffectAppendQuad(gdl, &quadQueue,
+                                           g_BulletImpactBuffer[i].vertex_list);
+#else
                         gSPVertex(gdl++, osVirtualToPhysical(g_BulletImpactBuffer[i].vertex_list), 4, 0);
                         gSP2Triangles(gdl++, 0, 1, 2, 0, 0, 2, 3, 0);
+#endif
                     }
                 }
             }
         }
     }
+
+#if GE_XBOX_EFFECT_QUAD_BATCHES
+    gdl = geEffectFlushQueue(gdl, &quadQueue);
+#endif
 
     if ((arg1 != NULL) && (sp50 == 0))
     {

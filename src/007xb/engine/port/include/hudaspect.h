@@ -33,12 +33,13 @@ extern float portNativeAspect(void);   /* port/src/video.c */
  * would be wider than the window and crop, so there the HUD keeps the canvas
  * mapping (squeezed, never cropped). 1.3334 so exact 4:3 emits nothing. */
 #if defined(GE_XBOX_NATIVE32)
+#include "ge_lan_game.h"
 #ifndef GE_XBOX_MP_HUD_LAYOUT_FIX
 #define GE_XBOX_MP_HUD_LAYOUT_FIX 1
 #endif
 /* The widescreen HUD anchors assume a full-screen viewport. In split
  * screen they shift elements across another player's half/quarter. */
-#define GE_MP_HUD_HAS_FULL_VIEW()  (!GE_XBOX_MP_HUD_LAYOUT_FIX || getPlayerCount() < 2)
+#define GE_MP_HUD_HAS_FULL_VIEW()  (!GE_XBOX_MP_HUD_LAYOUT_FIX || getPlayerCount() < 2 || GE_LanGameActive())
 #else
 #define GE_MP_HUD_HAS_FULL_VIEW()  1
 #endif

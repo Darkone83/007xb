@@ -51,6 +51,27 @@
 #include "model.h"
 #if defined(GE_XBOX_NATIVE32)
 #include "ge_native_video.h"
+#include "ge_lan.h"
+#include <string.h>
+static s32 s_frontLanMode;
+static s32 s_frontLanEndHandled;
+static s32 s_frontLanStickArmed = TRUE;
+static char s_frontLanNotice[96];
+static void frontLanPublishSettings(void);
+static void frontLanMenuPump(void);
+static void frontLanStart(void);
+static void frontLanSaveLocalOptions(void);
+static void frontLanRestoreLocalOptions(void);
+static void frontLanInterfaceBackground(void);
+static void init_menu_mp_connection(void);
+static void interface_menu_mp_connection(void);
+static void interface_menu_mp_lan_select(void);
+static void interface_menu_mp_lan_browser(void);
+static void interface_menu_mp_lan_lobby(void);
+static Gfx *constructor_menu_mp_connection(Gfx *DL);
+static Gfx *constructor_menu_mp_lan_select(Gfx *DL);
+static Gfx *constructor_menu_mp_lan_browser(Gfx *DL);
+static Gfx *constructor_menu_mp_lan_lobby(Gfx *DL);
 #endif
 #ifdef PORT
 #include "hudaspect.h"   /* D335 front-end pillarbox under native widescreen */
@@ -2948,7 +2969,12 @@ void interface_menu06_modesel(void)
             sndPlaySfx(g_musicSfxBufferPtr, DOOR_METAL_CLOSE_SFX, 0);
         }
     }
-    else if ((243.0f <= cursor_v_pos) && (joyGetControllerCount() >= 2))
+    else if ((243.0f <= cursor_v_pos) && (joyGetControllerCount() >=
+#if defined(GE_XBOX_NATIVE32)
+        1))
+#else
+        2))
+#endif
     {
         mission_difficulty_highlighted = DIFFICULTY_SECRET;
         if (joyGetButtonsPressedThisFrame(PLAYER_1, START_BUTTON|Z_TRIG|A_BUTTON))
@@ -2981,7 +3007,11 @@ void interface_menu06_modesel(void)
     }
     if (gamemode == GAMEMODE_MULTI)
     {
+#if defined(GE_XBOX_NATIVE32)
+        frontChangeMenu(MENU_MP_CONNECTION, FALSE);
+#else
         frontChangeMenu(MENU_MP_OPTIONS, FALSE);
+#endif
         return;
     }
     if (gamemode == GAMEMODE_CHEATS)
@@ -3096,7 +3126,12 @@ Gfx* constructor_menu06_modesel(Gfx* DL)
 
     x = 0x96;
     y = 0xFC;
-    if (joyGetControllerCount() >= 2)
+    if (joyGetControllerCount() >=
+#if defined(GE_XBOX_NATIVE32)
+        1)
+#else
+        2)
+#endif
     {
         text_color = 0xFF;
     }
@@ -4443,6 +4478,9 @@ void init_mp_options_for_scenario(s32 numplayers)
 void init_menu0E_mpoptions(void)
 {
     int numplayers;
+#if defined(GE_XBOX_NATIVE32)
+    GE_LanStatus lanstatus;
+#endif
 
     tab_start_selected = FALSE;
     tab_next_selected = FALSE;
@@ -4460,13 +4498,25 @@ void init_menu0E_mpoptions(void)
         maybe_is_in_menu = FALSE;
     }
 
+#if defined(GE_XBOX_NATIVE32)
+    GE_LanGetStatus(&lanstatus);
+    if (s_frontLanMode)
+    {
+        selected_num_players = (s32)lanstatus.player_count;
+    }
+    else
+#endif
     if (selected_num_players == 0)
     {
         numplayers = joyGetControllerCount();
         init_mp_options_for_scenario(numplayers);
     }
 
-    if (check_if_mp_stage_unlocked(MP_stage_selected) == FALSE)
+    if (
+#if defined(GE_XBOX_NATIVE32)
+        (!s_frontLanMode || lanstatus.role == GE_LAN_ROLE_HOST) &&
+#endif
+        check_if_mp_stage_unlocked(MP_stage_selected) == FALSE)
     {
         MP_stage_selected = MP_STAGE_TEMPLE;
     }
@@ -4504,19 +4554,51 @@ void interface_menu0E_mpoptions(void)
     s32 health_selected = 0;
     s32 controlstyle_selected = 0;
     s32 aimadjust_selected = 0;
+#if defined(GE_XBOX_NATIVE32)
+    GE_LanStatus lanstatus;
+    if (s_frontLanMode)
+    {
+        GE_LanGetStatus(&lanstatus);
+        if (lanstatus.state != GE_LAN_LOBBY)
+        {
+            frontChangeMenu(lanstatus.state == GE_LAN_LOADING || lanstatus.state == GE_LAN_RUNNING
+                ? MENU_MP_LAN_LOBBY : MENU_MP_LAN_SELECT, FALSE);
+            return;
+        }
+        selected_num_players = (s32)lanstatus.player_count;
+        if (lanstatus.role != GE_LAN_ROLE_HOST)
+        {
+            /* Clients can inspect the shared rule sheet, but cannot mutate
+             * it or enter all-controller confirmation submenus. */
+            frontLanInterfaceBackground();
+            if (joyGetButtonsPressedThisFrame(PLAYER_1, B_BUTTON | START_BUTTON)
+                || (tab_prev_highlight && joyGetButtonsPressedThisFrame(PLAYER_1, A_BUTTON | Z_TRIG | R_TRIG)))
+                frontChangeMenu(MENU_MP_LAN_LOBBY, FALSE);
+            return;
+        }
+    }
+#endif
 
     viSetFovY(FOV_Y_F);
     viSetAspect(ASPECT_RATIO_SD);
     viSetZRange(100.0f, 10000.0f);
     viSetUseZBuf(0);
 
-    if (joyGetControllerCount() < 2)
+    if (
+#if defined(GE_XBOX_NATIVE32)
+        !s_frontLanMode &&
+#endif
+        joyGetControllerCount() < 2)
     {
         frontChangeMenu(MENU_MODE_SELECT, 0);
         setCursorPOSforMode(gamemode);
     }
 
-    if (joyGetControllerCount() < selected_num_players)
+    if (
+#if defined(GE_XBOX_NATIVE32)
+        !s_frontLanMode &&
+#endif
+        joyGetControllerCount() < selected_num_players)
     {
         init_mp_options_for_scenario(joyGetControllerCount());
     }
@@ -4650,19 +4732,35 @@ void interface_menu0E_mpoptions(void)
     disable_all_switches(walletinst[0]);
     set_item_visibility_in_objinstance(walletinst[0], SW_TABS, 1);
     set_item_visibility_in_objinstance(walletinst[0], SW_PAPER, 1);
+#if defined(GE_XBOX_NATIVE32)
+    /* LAN supplies its own heading; reserve the wallet lettering for Local. */
+    set_item_visibility_in_objinstance(walletinst[0], SW_OHMSS, !s_frontLanMode);
+#else
     set_item_visibility_in_objinstance(walletinst[0], SW_OHMSS, 1);
+#endif
     set_item_visibility_in_objinstance(walletinst[0], SW_CONFIDENTIAL2, 1);
     frontUpdateControlStickPosition();
 
     if (tab_prev_selected)
     {
+#if defined(GE_XBOX_NATIVE32)
+        frontChangeMenu(s_frontLanMode ? MENU_MP_LAN_LOBBY : MENU_MP_CONNECTION, FALSE);
+#else
         frontChangeMenu(MENU_MODE_SELECT, 0);
+#endif
         setCursorPOSforMode(gamemode);
         return;
     }
 
     if (tab_start_selected)
     {
+#if defined(GE_XBOX_NATIVE32)
+        if (s_frontLanMode)
+        {
+            frontLanStart();
+            return;
+        }
+#endif
         if (multi_stage_setups[MP_stage_selected].stage_id < 0)
         {
             s32 temp_hi;
@@ -4686,6 +4784,13 @@ void interface_menu0E_mpoptions(void)
     if (players_selected)
     {
         s32 tmpNumPlayers;
+#if defined(GE_XBOX_NATIVE32)
+        if (s_frontLanMode)
+        {
+            frontChangeMenu(MENU_MP_LAN_LOBBY, FALSE);
+            return;
+        }
+#endif
 
         if (joyGetControllerCount() < selected_num_players + 1)
         {
@@ -4717,6 +4822,13 @@ void interface_menu0E_mpoptions(void)
     }
     if (character_selected)
     {
+#if defined(GE_XBOX_NATIVE32)
+        if (s_frontLanMode)
+        {
+            frontChangeMenu(MENU_MP_LAN_LOBBY, FALSE);
+            return;
+        }
+#endif
         frontChangeMenu(MENU_MP_CHAR_SELECT, 0);
         return;
     }
@@ -4727,11 +4839,25 @@ void interface_menu0E_mpoptions(void)
     }
     if (health_selected)
     {
+#if defined(GE_XBOX_NATIVE32)
+        if (s_frontLanMode)
+        {
+            frontChangeMenu(MENU_MP_LAN_LOBBY, FALSE);
+            return;
+        }
+#endif
         frontChangeMenu(MENU_MP_HANDICAP, 0);
         return;
     }
     if (controlstyle_selected)
     {
+#if defined(GE_XBOX_NATIVE32)
+        if (s_frontLanMode)
+        {
+            frontChangeMenu(MENU_MP_LAN_LOBBY, FALSE);
+            return;
+        }
+#endif
         frontChangeMenu(MENU_MP_CONTROL_STYLE, 0);
         return;
     }
@@ -4754,6 +4880,10 @@ Gfx * constructor_menu0E_mpoptions(Gfx *DL)
     int iStack24;
     int iStack28;
     u32 entry;
+#if defined(GE_XBOX_NATIVE32)
+    GE_LanStatus lanstatus;
+    GE_LanGetStatus(&lanstatus);
+#endif
 
 
   DL = viSetFillColor(DL,0,0,0);
@@ -4765,6 +4895,10 @@ Gfx * constructor_menu0E_mpoptions(Gfx *DL)
   DL = frontSetupMenuBackground(DL);
   DL = microcode_constructor(DL);
   text = langGet(getStringID(LTITLE, TITLE_STR_76_MPOPTIONS));
+#if defined(GE_XBOX_NATIVE32)
+  if (s_frontLanMode)
+      text = (u8 *)(lanstatus.role == GE_LAN_ROLE_HOST ? "LAN MATCH RULES\n" : "LAN RULES - HOST CONTROLS\n");
+#endif
   x = 0x37;
   y = 0x5f;
   DL = frontPrintText(DL, &x, &y, text, ptrFontZurichBoldChars, ptrFontZurichBold, 0xff, viGetX(), viGetY(), 0, 0);
@@ -4947,6 +5081,9 @@ Gfx * constructor_menu0E_mpoptions(Gfx *DL)
   }
   DL = frontPrintText(DL,&x,&y,text,ptrFontZurichBoldChars,ptrFontZurichBold,entry,viGetX(),viGetY(),0,0);
   DL = frontAddPreviousTabText(DL);
+#if defined(GE_XBOX_NATIVE32)
+  if (!s_frontLanMode || lanstatus.role == GE_LAN_ROLE_HOST)
+#endif
   DL = frontAddStartTabText(DL);
   DL = frontDrawCursor(DL);
   return DL;
@@ -8700,6 +8837,654 @@ Gfx * constructor_menu19_spectrum(Gfx * DL)
 #endif
 
 
+#if defined(GE_XBOX_NATIVE32)
+/* Native LAN front-end: the existing game mode remains GAMEMODE_MULTI.
+ * Roster ownership lives in ge_lan, never in the hardware pad count. */
+static GE_LanMatchConfig s_frontLanSavedLocal;
+static s32 s_frontLanSavedLocalValid;
+static s32 s_frontLanSavedPlayerCount;
+
+static void frontLanCopyNotice(const char *message)
+{
+    s32 i;
+    for (i = 0; i < (s32)sizeof(s_frontLanNotice) - 1 && message && message[i]; i++)
+        s_frontLanNotice[i] = message[i];
+    s_frontLanNotice[i] = 0;
+}
+
+void frontLanCaptureSettings(GE_LanMatchConfig *config)
+{
+    GE_LanStatus status;
+    s32 i;
+    if (!config) return;
+    GE_LanGetStatus(&status);
+    config->player_count = status.player_count;
+    config->mp_stage_index = MP_stage_selected;
+    config->stage_id = multi_stage_setups[MP_stage_selected].stage_id;
+    config->scenario = scenario;
+    config->weapon_set = getMPWeaponSet();
+    config->game_length = game_length;
+    config->aim_option = aim_sight_adjustment;
+    config->difficulty = selected_difficulty;
+    /* Player preferences belong to their consoles. Only the host's team
+     * assignment is taken from the shared setup menu here. */
+    for (i = 0; i < GE_LAN_MAX_PLAYERS; i++)
+        config->player[i].team = g_playerPlayerData[i].have_token_or_goldengun;
+}
+
+int frontLanApplySettings(const GE_LanMatchConfig *config)
+{
+    s32 i;
+    if (!config || config->player_count < 1 || config->player_count > MAX_PLAYER_COUNT
+        || config->mp_stage_index < 0 || config->mp_stage_index >= MP_STAGE_SELECTED_MAX
+        || config->scenario < 0 || config->scenario >= 8
+        || config->weapon_set < 0 || config->weapon_set > 13
+        || config->game_length < 0 || config->game_length > 7
+        || config->aim_option < 0 || config->aim_option > 3
+        || config->difficulty < DIFFICULTY_MULTI || config->difficulty >= DIFFICULTY_MAX)
+        return FALSE;
+    for (i = 0; i < (s32)config->player_count; i++)
+    {
+        const GE_LanPlayerOptions *p = &config->player[i];
+        if (p->character < 0 || p->character >= 64 || p->handicap < 0 || p->handicap > 10
+            || (p->control_style != CONTROLLER_CONFIG_HALO
+                && (p->control_style < CONTROLLER_CONFIG_HONEY || p->control_style > CONTROLLER_CONFIG_GOODNIGHT))
+            || p->team < 0 || p->team > 1)
+            return FALSE;
+    }
+    gamemode = GAMEMODE_MULTI;
+    selected_num_players = (s32)config->player_count;
+    reset_mp_options_for_scenario((MPSCENARIOS)config->scenario);
+    MP_stage_selected = config->mp_stage_index;
+    selected_stage = config->stage_id;
+    selected_difficulty = (DIFFICULTY)config->difficulty;
+    setMPWeaponSet(config->weapon_set);
+    game_length = config->game_length;
+    aim_sight_adjustment = config->aim_option;
+    copy_aim_settings_to_playerdata();
+    for (i = 0; i < (s32)config->player_count; i++)
+    {
+        player_char[i] = config->player[i].character;
+        player_handicap[i] = config->player[i].handicap;
+        controlstyle_player[i] = config->player[i].control_style;
+        g_playerPlayerData[i].have_token_or_goldengun = config->player[i].team;
+    }
+    return TRUE;
+}
+
+s32 frontLanResolveStage(void)
+{
+    s32 candidates[MP_STAGE_SELECTED_MAX];
+    s32 count = 0;
+    s32 i;
+    if (MP_stage_selected < 0 || MP_stage_selected >= MP_STAGE_SELECTED_MAX)
+        return LEVELID_NONE;
+    if (multi_stage_setups[MP_stage_selected].stage_id >= 0)
+        return check_if_mp_stage_unlocked(MP_stage_selected)
+            ? multi_stage_setups[MP_stage_selected].stage_id : LEVELID_NONE;
+    for (i = 1; i < MP_STAGE_SELECTED_MAX; i++)
+        if (check_if_mp_stage_unlocked(i)) candidates[count++] = i;
+    if (!count) return LEVELID_NONE;
+    i = candidates[randomGetNext() % (u32)count];
+    return multi_stage_setups[i].stage_id;
+}
+
+static void frontLanSaveLocalOptions(void)
+{
+    s32 i;
+    if (s_frontLanSavedLocalValid) return;
+    memset(&s_frontLanSavedLocal, 0, sizeof(s_frontLanSavedLocal));
+    s_frontLanSavedLocal.mp_stage_index = MP_stage_selected;
+    s_frontLanSavedLocal.stage_id = selected_stage;
+    s_frontLanSavedLocal.scenario = scenario;
+    s_frontLanSavedLocal.weapon_set = getMPWeaponSet();
+    s_frontLanSavedLocal.game_length = game_length;
+    s_frontLanSavedLocal.aim_option = aim_sight_adjustment;
+    s_frontLanSavedLocal.difficulty = selected_difficulty;
+    s_frontLanSavedPlayerCount = selected_num_players;
+    for (i = 0; i < MAX_PLAYER_COUNT; i++)
+    {
+        s_frontLanSavedLocal.player[i].character = player_char[i];
+        s_frontLanSavedLocal.player[i].handicap = player_handicap[i];
+        s_frontLanSavedLocal.player[i].control_style = controlstyle_player[i];
+        s_frontLanSavedLocal.player[i].team = g_playerPlayerData[i].have_token_or_goldengun;
+    }
+    s_frontLanSavedLocalValid = TRUE;
+}
+
+static void frontLanRestoreLocalOptions(void)
+{
+    s32 i;
+    if (!s_frontLanSavedLocalValid) return;
+    reset_mp_options_for_scenario((MPSCENARIOS)s_frontLanSavedLocal.scenario);
+    MP_stage_selected = s_frontLanSavedLocal.mp_stage_index;
+    selected_stage = s_frontLanSavedLocal.stage_id;
+    selected_difficulty = (DIFFICULTY)s_frontLanSavedLocal.difficulty;
+    setMPWeaponSet(s_frontLanSavedLocal.weapon_set);
+    game_length = s_frontLanSavedLocal.game_length;
+    aim_sight_adjustment = s_frontLanSavedLocal.aim_option;
+    selected_num_players = s_frontLanSavedPlayerCount;
+    copy_aim_settings_to_playerdata();
+    for (i = 0; i < MAX_PLAYER_COUNT; i++)
+    {
+        player_char[i] = s_frontLanSavedLocal.player[i].character;
+        player_handicap[i] = s_frontLanSavedLocal.player[i].handicap;
+        controlstyle_player[i] = s_frontLanSavedLocal.player[i].control_style;
+        g_playerPlayerData[i].have_token_or_goldengun = s_frontLanSavedLocal.player[i].team;
+    }
+    s_frontLanSavedLocalValid = FALSE;
+}
+
+void frontLanReturnToMenu(void)
+{
+    GE_LanStatus status;
+    GE_LanGetStatus(&status);
+    frontLanCopyNotice(status.message[0] ? status.message : GE_LanEndReasonText(status.end_reason));
+    GE_LanClearAfterEnd();
+    s_frontLanEndHandled = TRUE;
+    s_frontLanMode = TRUE;
+    gamemode = GAMEMODE_MULTI;
+    selected_num_players = 0;
+    /* A START cancelled while still in the title stage may already have
+     * requested the gameplay canvas. Complete the ordinary menu transition
+     * in the opposite direction before drawing the LAN sheet. */
+    spectrum_related_flag = TRUE;
+    is_emulating_spectrum = FALSE;
+    /* Discard a same-frame submenu transition before scheduling the title
+     * return; otherwise it can overtake MENU_SWITCH_SCREENS. */
+    maybe_prev_menu = MENU_INVALID;
+    frontChangeMenu(MENU_MP_LAN_SELECT, TRUE);
+}
+
+static void frontLanPublishSettings(void)
+{
+    GE_LanMatchConfig config;
+    GE_LanStatus status;
+    GE_LanGetStatus(&status);
+    if (!s_frontLanMode || status.role != GE_LAN_ROLE_HOST || status.state != GE_LAN_LOBBY
+        || !GE_LanGetConfig(&config)) return;
+    selected_num_players = (s32)status.player_count;
+    if (selected_num_players >= 2
+        && (selected_num_players < mp_player_counts[scenario].min
+            || selected_num_players > mp_player_counts[scenario].max))
+        reset_mp_options_for_scenario(SCENARIO_NORMAL);
+    if (MP_stage_selected < 0 || MP_stage_selected >= MP_STAGE_SELECTED_MAX
+        || !check_if_mp_stage_unlocked(MP_stage_selected))
+        MP_stage_selected = MP_STAGE_TEMPLE;
+    frontLanCaptureSettings(&config);
+    GE_LanPublishHostConfig(&config);
+}
+
+static void frontLanStart(void)
+{
+    GE_LanMatchConfig config;
+    GE_LanStatus status;
+    GE_LanGetStatus(&status);
+    if (status.role != GE_LAN_ROLE_HOST || status.state != GE_LAN_LOBBY) return;
+    frontLanPublishSettings();
+    if (!GE_LanGetConfig(&config)) return;
+    config.stage_id = frontLanResolveStage();
+    if (config.stage_id < 0)
+        frontLanCopyNotice("No available map for this roster.");
+    else if (!GE_LanRequestStartWithConfig(&config))
+    {
+        GE_LanGetStatus(&status);
+        frontLanCopyNotice(status.message);
+    }
+    else s_frontLanNotice[0] = 0;
+    frontChangeMenu(MENU_MP_LAN_LOBBY, FALSE);
+}
+
+static void frontLanMenuPump(void)
+{
+    GE_LanStatus status;
+    GE_LanMatchConfig config;
+    s32 i;
+    if (!s_frontLanMode) return;
+    GE_LanGetStatus(&status);
+    if (status.state == GE_LAN_ENDING || status.state == GE_LAN_ENDED)
+    {
+        /* menu_init is only reached from the title-stage branch. A commit
+         * can be cancelled before StageBegin takes ownership; round_active
+         * alone must not strand that case in ENDED forever. Once a stage
+         * has been scheduled boss stops calling the title menu, and its
+         * StageBegin terminal guard owns cancellation instead. */
+        if (!s_frontLanEndHandled) frontLanReturnToMenu();
+        return;
+    }
+    if (status.state == GE_LAN_ERROR && current_menu != MENU_MP_LAN_SELECT)
+    {
+        frontLanCopyNotice(status.message);
+        frontChangeMenu(MENU_MP_LAN_SELECT, FALSE);
+        return;
+    }
+    if (GE_LanPollStartConfiguration(&config))
+    {
+        /* Consume the frozen commit once on the game thread. Network code
+         * never writes stage globals or the front-end state machine. */
+        GE_LanGetStatus(&status);
+        if (status.state != GE_LAN_LOADING)
+        {
+            if (status.state == GE_LAN_ENDING || status.state == GE_LAN_ENDED)
+                frontLanReturnToMenu();
+            return;
+        }
+        if (!frontLanApplySettings(&config))
+        {
+            GE_LanRequestEnd(GE_LAN_END_PROTOCOL);
+            frontLanReturnToMenu();
+            return;
+        }
+        briefingpage = -1;
+        maybe_prev_menu = MENU_INVALID;
+        frontChangeMenu(MENU_RUN_STAGE, TRUE);
+        return;
+    }
+    if (status.state != GE_LAN_LOBBY) return;
+    if (GE_LanGetConfig(&config))
+    {
+        if (status.role == GE_LAN_ROLE_CLIENT)
+            frontLanApplySettings(&config);
+        else
+        {
+            selected_num_players = (s32)status.player_count;
+            for (i = 0; i < (s32)status.player_count; i++)
+            {
+                player_char[i] = config.player[i].character;
+                player_handicap[i] = config.player[i].handicap;
+                controlstyle_player[i] = config.player[i].control_style;
+            }
+            frontLanPublishSettings();
+        }
+    }
+    if (current_menu == MENU_MP_LAN_BROWSER || current_menu == MENU_MP_LAN_SELECT)
+        frontChangeMenu(MENU_MP_LAN_LOBBY, FALSE);
+}
+
+static void init_menu_mp_connection(void)
+{
+    tab_start_selected = tab_next_selected = tab_prev_selected = FALSE;
+    tab_start_highlight = tab_next_highlight = tab_prev_highlight = FALSE;
+    if (maybe_is_in_menu)
+    {
+        sndApplyVolumeAllSfxSlot(0x7fff);
+        musicTrack1ApplySeqpVol(0x7fff);
+        g_musicXTrack1Fade = MUSIC_FADESTATE_UNSET;
+        musicTrack1Play(M_FOLDERS);
+        maybe_is_in_menu = FALSE;
+    }
+    s_frontLanStickArmed = TRUE;
+    cursor_h_pos = 95.0f;
+    cursor_v_pos = current_menu == MENU_MP_LAN_LOBBY ? 258.0f : 141.0f;
+    load_walletbond();
+}
+
+static void frontLanInterfaceBackground(void)
+{
+    viSetFovY(FOV_Y_F);
+    viSetAspect(ASPECT_RATIO_SD);
+    viSetZRange(100.0f, 10000.0f);
+    viSetUseZBuf(FALSE);
+    disable_all_switches(walletinst[0]);
+    set_item_visibility_in_objinstance(walletinst[0], SW_TABS, TRUE);
+    set_item_visibility_in_objinstance(walletinst[0], SW_PAPER, TRUE);
+    /* Connection/LAN headings and status lines occupy the original OHMSS
+     * header area. The chooser also uses this helper before LAN is selected. */
+    set_item_visibility_in_objinstance(walletinst[0], SW_OHMSS, FALSE);
+    set_item_visibility_in_objinstance(walletinst[0], SW_CONFIDENTIAL2, TRUE);
+    frontUpdateControlStickPosition();
+    tab_prev_highlight = frontCheckCursorOnPreviousTab();
+    tab_next_highlight = frontCheckCursorOnNextTab();
+    tab_start_highlight = frontCheckCursorOnStartTab();
+}
+
+static s32 frontLanRow(s32 y, s32 step, s32 count)
+{
+    s32 row;
+    if (cursor_h_pos >= TABS_LEFT_EDGE || cursor_v_pos < (f32)(y - 3)) return -1;
+    row = ((s32)cursor_v_pos - y + 3) / step;
+    return row >= 0 && row < count ? row : -1;
+}
+
+static s32 frontLanConfirm(void)
+{
+    return joyGetButtonsPressedThisFrame(PLAYER_1, A_BUTTON | Z_TRIG | R_TRIG);
+}
+
+static s32 frontLanDelta(void)
+{
+    s32 x = joyGetStickX(PLAYER_1);
+    s32 delta = 0;
+    if (joyGetButtonsPressedThisFrame(PLAYER_1, L_JPAD | L_CBUTTONS)) delta = -1;
+    if (joyGetButtonsPressedThisFrame(PLAYER_1, R_JPAD | R_CBUTTONS)) delta = 1;
+    if (x > -20 && x < 20) s_frontLanStickArmed = TRUE;
+    else if (s_frontLanStickArmed && (x <= -40 || x >= 40))
+    {
+        s_frontLanStickArmed = FALSE;
+        delta = x < 0 ? -1 : 1;
+    }
+    return delta;
+}
+
+static void interface_menu_mp_connection(void)
+{
+    s32 row;
+    s32 confirm;
+    frontLanInterfaceBackground();
+    row = frontLanRow(140, 38, 2);
+    confirm = frontLanConfirm() || joyGetButtonsPressedThisFrame(PLAYER_1, START_BUTTON);
+    if (joyGetButtonsPressedThisFrame(PLAYER_1, B_BUTTON) || (confirm && tab_prev_highlight))
+    {
+        frontLanRestoreLocalOptions();
+        s_frontLanMode = FALSE;
+        frontChangeMenu(MENU_MODE_SELECT, FALSE);
+        setCursorPOSforMode(GAMEMODE_MULTI);
+    }
+    else if (confirm && row == 0)
+    {
+        if (joyGetControllerCount() < 2)
+            frontLanCopyNotice("Local split-screen needs two controllers.");
+        else
+        {
+            frontLanRestoreLocalOptions();
+            s_frontLanMode = FALSE;
+            s_frontLanNotice[0] = 0;
+            gamemode = GAMEMODE_MULTI;
+            frontChangeMenu(MENU_MP_OPTIONS, FALSE);
+        }
+    }
+    else if (confirm && row == 1)
+    {
+        frontLanSaveLocalOptions();
+        s_frontLanMode = TRUE;
+        s_frontLanNotice[0] = 0;
+        gamemode = GAMEMODE_MULTI;
+        frontChangeMenu(MENU_MP_LAN_SELECT, FALSE);
+    }
+}
+
+static void interface_menu_mp_lan_select(void)
+{
+    GE_LanStatus status;
+    s32 row;
+    s32 confirm;
+    frontLanInterfaceBackground();
+    GE_LanGetStatus(&status);
+    row = frontLanRow(140, 38, 2);
+    confirm = frontLanConfirm() || joyGetButtonsPressedThisFrame(PLAYER_1, START_BUTTON);
+    if (status.state == GE_LAN_ENDING) return;
+    if (joyGetButtonsPressedThisFrame(PLAYER_1, B_BUTTON) || (confirm && tab_prev_highlight))
+    {
+        if (status.state != GE_LAN_IDLE && status.state != GE_LAN_ERROR)
+            GE_LanRequestEnd(GE_LAN_END_QUIT);
+        else
+        {
+            frontLanRestoreLocalOptions();
+            s_frontLanMode = FALSE;
+            frontChangeMenu(MENU_MP_CONNECTION, FALSE);
+        }
+    }
+    else if (confirm && row == 0)
+    {
+        s_frontLanNotice[0] = 0;
+        if (GE_LanHost("007xb game"))
+        {
+            GE_LanPlayerOptions options;
+            s32 i;
+            s_frontLanEndHandled = FALSE;
+            options.character = 0;
+            options.handicap = 5;
+            options.control_style = controlstyle_player[0];
+            if (options.control_style != CONTROLLER_CONFIG_HALO
+                && (options.control_style < 0 || options.control_style > CONTROLLER_CONFIG_GOODNIGHT))
+                options.control_style = CONTROLLER_CONFIG_HALO;
+            options.team = 0;
+            GE_LanSetPlayerOptions(&options);
+            selected_num_players = 1;
+            reset_mp_options_for_scenario(SCENARIO_NORMAL);
+            for (i = 0; i < MAX_PLAYER_COUNT; i++)
+                g_playerPlayerData[i].have_token_or_goldengun = 0;
+            frontLanPublishSettings();
+            frontChangeMenu(MENU_MP_LAN_LOBBY, FALSE);
+        }
+    }
+    else if (confirm && row == 1)
+    {
+        s_frontLanNotice[0] = 0;
+        if (GE_LanBrowse())
+        {
+            s_frontLanEndHandled = FALSE;
+            frontChangeMenu(MENU_MP_LAN_BROWSER, FALSE);
+        }
+    }
+}
+
+static void interface_menu_mp_lan_browser(void)
+{
+    GE_LanStatus status;
+    s32 row;
+    s32 confirm;
+    frontLanInterfaceBackground();
+    GE_LanGetStatus(&status);
+    row = frontLanRow(120, 18, (s32)status.discovered_count);
+    confirm = frontLanConfirm();
+    if (joyGetButtonsPressedThisFrame(PLAYER_1, B_BUTTON) || (confirm && tab_prev_highlight))
+    {
+        GE_LanRequestEnd(GE_LAN_END_QUIT);
+        frontChangeMenu(MENU_MP_LAN_SELECT, FALSE);
+    }
+    else if (status.state == GE_LAN_BROWSING)
+    {
+        if (joyGetButtonsPressedThisFrame(PLAYER_1, START_BUTTON) || (confirm && tab_next_highlight))
+            GE_LanBrowse();
+        else if (confirm && row >= 0 && row < GE_LAN_MAX_HOSTS)
+            GE_LanJoin((unsigned)row);
+    }
+}
+
+static void interface_menu_mp_lan_lobby(void)
+{
+    GE_LanStatus status;
+    GE_LanMatchConfig config;
+    GE_LanPlayerOptions options;
+    s32 row, confirm, delta;
+    frontLanInterfaceBackground();
+    GE_LanGetStatus(&status);
+    confirm = frontLanConfirm();
+    row = frontLanRow(191, 22, 4);
+    delta = frontLanDelta();
+    if (joyGetButtonsPressedThisFrame(PLAYER_1, B_BUTTON) || (confirm && tab_prev_highlight))
+    {
+        GE_LanRequestEnd(GE_LAN_END_QUIT);
+        frontChangeMenu(MENU_MP_LAN_SELECT, FALSE);
+        return;
+    }
+    if (status.state != GE_LAN_LOBBY || status.local_slot < 0 || status.local_slot >= MAX_PLAYER_COUNT
+        || !GE_LanGetConfig(&config)) return;
+    if (status.role == GE_LAN_ROLE_HOST
+        && (joyGetButtonsPressedThisFrame(PLAYER_1, START_BUTTON) || (confirm && tab_start_highlight)))
+    {
+        frontLanStart();
+        return;
+    }
+    if (confirm && tab_next_highlight)
+    {
+        s_frontLanNotice[0] = 0;
+        frontChangeMenu(MENU_MP_OPTIONS, FALSE);
+        return;
+    }
+    if (row == 3 && (confirm || (status.role != GE_LAN_ROLE_HOST
+        && joyGetButtonsPressedThisFrame(PLAYER_1, START_BUTTON))))
+    {
+        s_frontLanNotice[0] = 0;
+        GE_LanSetReady((status.ready_mask & (1u << status.local_slot)) == 0);
+        return;
+    }
+    if (row < 0 || row > 2 || (!confirm && !delta)) return;
+    if (!delta) delta = 1;
+    options = config.player[status.local_slot];
+    if (row == 0)
+    {
+        s32 attempts, i, taken;
+        for (attempts = 0; attempts < 8; attempts++)
+        {
+            options.character = (options.character + 8 + delta) % 8;
+            taken = FALSE;
+            for (i = 0; i < (s32)config.player_count; i++)
+                if (i != status.local_slot && config.player[i].character == options.character) taken = TRUE;
+            if (!taken) break;
+        }
+    }
+    else if (row == 1)
+    {
+        s32 style = options.control_style == CONTROLLER_CONFIG_HALO ? 4 : options.control_style;
+        style = (style + 5 + delta) % 5;
+        options.control_style = style == 4 ? CONTROLLER_CONFIG_HALO : style;
+    }
+    else
+    {
+        if (!unlock_handicap) return;
+        options.handicap = (options.handicap + 11 + delta) % 11;
+    }
+    s_frontLanNotice[0] = 0;
+    GE_LanSetPlayerOptions(&options);
+}
+
+static Gfx *frontLanLine(Gfx *DL, const char *text, s32 y, s32 highlight, s32 enabled)
+{
+    char line[45];
+    s32 x = 55;
+    s32 i;
+    for (i = 0; i < 42 && text && text[i] && text[i] != '\n' && text[i] != '\r'; i++)
+        line[i] = text[i] >= 32 && text[i] <= 126 ? text[i] : ' ';
+    line[i++] = '\n';
+    line[i] = 0;
+    if (highlight) DL = microcode_constructor_related_to_menus(DL, 53, y - 1, 381, y + 14, 0x32);
+    return frontPrintText(DL, &x, &y, line, ptrFontZurichBoldChars, ptrFontZurichBold,
+        enabled ? 0xff : 0x70, viGetX(), viGetY(), 0, 0);
+}
+
+static Gfx *frontLanBackground(Gfx *DL, const char *title)
+{
+    DL = viSetFillColor(DL, 0, 0, 0);
+    DL = viFillScreen(DL);
+    DL = frontSetupMenuBackground(DL);
+    DL = microcode_constructor(DL);
+    return frontLanLine(DL, title, 45, FALSE, TRUE);
+}
+
+static Gfx *frontLanStatusLines(Gfx *DL, const char *message)
+{
+    char first[43];
+    s32 i;
+    for (i = 0; i < 42 && message && message[i]; i++) first[i] = message[i];
+    first[i] = 0;
+    DL = frontLanLine(DL, first, 66, FALSE, TRUE);
+    if (message && message[i]) DL = frontLanLine(DL, message + i, 82, FALSE, TRUE);
+    return DL;
+}
+
+static Gfx *constructor_menu_mp_connection(Gfx *DL)
+{
+    DL = frontLanBackground(DL, "MULTIPLAYER");
+    DL = frontLanStatusLines(DL, s_frontLanNotice[0] ? s_frontLanNotice : "Choose how to connect.");
+    DL = frontLanLine(DL, "LOCAL - split-screen", 140, frontLanRow(140,38,2) == 0,
+        joyGetControllerCount() >= 2);
+    DL = frontLanLine(DL, "LAN - linked consoles", 178, frontLanRow(140,38,2) == 1, TRUE);
+    DL = frontLanLine(DL, "LAN test: one player per console", 230, FALSE, TRUE);
+    DL = frontLanLine(DL, "2-4 players total. B: back", 250, FALSE, TRUE);
+    return frontDrawCursor(frontAddPreviousTabText(DL));
+}
+
+static Gfx *constructor_menu_mp_lan_select(Gfx *DL)
+{
+    GE_LanStatus status;
+    char line[96];
+    GE_LanGetStatus(&status);
+    DL = frontLanBackground(DL, "LOCAL AREA NETWORK");
+    DL = frontLanStatusLines(DL, s_frontLanNotice[0] ? s_frontLanNotice : status.message);
+    sprintf(line, "This console: %.23s", status.local_address[0] ? status.local_address : "waiting for an address");
+    DL = frontLanLine(DL, line, 102, FALSE, TRUE);
+    DL = frontLanLine(DL, "HOST GAME", 140, frontLanRow(140,38,2) == 0, status.state != GE_LAN_ENDING);
+    DL = frontLanLine(DL, "JOIN GAME", 178, frontLanRow(140,38,2) == 1, status.state != GE_LAN_ENDING);
+    DL = frontLanLine(DL, "Use the same build on every console.", 224, FALSE, TRUE);
+    DL = frontLanLine(DL, "Any player leaving ends the match.", 244, FALSE, TRUE);
+    DL = frontLanLine(DL, "B: back", 276, FALSE, TRUE);
+    return frontDrawCursor(frontAddPreviousTabText(DL));
+}
+
+static Gfx *constructor_menu_mp_lan_browser(Gfx *DL)
+{
+    GE_LanStatus status;
+    char line[96];
+    s32 i;
+    GE_LanGetStatus(&status);
+    DL = frontLanBackground(DL, "JOIN LAN GAME");
+    DL = frontLanStatusLines(DL, status.message);
+    if (!status.discovered_count)
+        DL = frontLanLine(DL, "Searching for hosts on this LAN...", 120, FALSE, TRUE);
+    for (i = 0; i < (s32)status.discovered_count && i < GE_LAN_MAX_HOSTS; i++)
+    {
+        sprintf(line, "%.12s %u/4 %.23s", status.hosts[i].name,
+            status.hosts[i].player_count, status.hosts[i].address);
+        DL = frontLanLine(DL, line, 120 + i * 18,
+            frontLanRow(120,18,(s32)status.discovered_count) == i, status.state == GE_LAN_BROWSING);
+    }
+    DL = frontLanLine(DL, "A: join  START: refresh  B: cancel", 280, FALSE, TRUE);
+    DL = frontAddNextTabText(DL);
+    return frontDrawCursor(frontAddPreviousTabText(DL));
+}
+
+static Gfx *constructor_menu_mp_lan_lobby(Gfx *DL)
+{
+    GE_LanStatus status;
+    GE_LanMatchConfig config;
+    char line[128];
+    s32 i, slot;
+    GE_LanGetStatus(&status);
+    memset(&config, 0, sizeof(config));
+    GE_LanGetConfig(&config);
+    slot = status.local_slot;
+    DL = frontLanBackground(DL, status.role == GE_LAN_ROLE_HOST ? "LAN LOBBY - HOST" : "LAN LOBBY - PLAYER");
+    DL = frontLanStatusLines(DL, s_frontLanNotice[0] ? s_frontLanNotice : status.message);
+    sprintf(line, "IP %.23s   Players %u/4", status.local_address, status.player_count);
+    DL = frontLanLine(DL, line, 101, FALSE, TRUE);
+    for (i = 0; i < (s32)status.player_count && i < MAX_PLAYER_COUNT; i++)
+    {
+        sprintf(line, "%sP%d %.17s  %s", i == slot ? ">" : " ", i + 1,
+            status.peer_name[i], status.ready_mask & (1u << i) ? "READY" : "WAIT");
+        DL = frontLanLine(DL, line, 121 + 15 * i, FALSE, TRUE);
+    }
+    if (slot >= 0 && slot < MAX_PLAYER_COUNT)
+    {
+        const GE_LanPlayerOptions *p = &config.player[slot];
+        const char *style;
+        s32 character = p->character >= 0 && p->character < 64 ? p->character : 0;
+        style = p->control_style == CONTROLLER_CONFIG_HALO ? "1.5 Halo"
+            : p->control_style == CONTROLLER_CONFIG_SOLITARE ? "1.2 Solitaire"
+            : p->control_style == CONTROLLER_CONFIG_KISSY ? "1.3 Kissy"
+            : p->control_style == CONTROLLER_CONFIG_GOODNIGHT ? "1.4 Goodnight" : "1.1 Honey";
+        sprintf(line, "Character: %.28s", langGet(mp_chr_setup[character].text_preset));
+        DL = frontLanLine(DL, line, 191, frontLanRow(191,22,4) == 0, status.state == GE_LAN_LOBBY);
+        sprintf(line, "Controls: %s", style);
+        DL = frontLanLine(DL, line, 213, frontLanRow(191,22,4) == 1, status.state == GE_LAN_LOBBY);
+        sprintf(line, "Health: %.30s", langGet(MP_handicap_table[p->handicap >= 0 && p->handicap <= 10 ? p->handicap : 5].text_preset));
+        DL = frontLanLine(DL, line, 235, frontLanRow(191,22,4) == 2,
+            status.state == GE_LAN_LOBBY && unlock_handicap);
+        DL = frontLanLine(DL, status.ready_mask & (1u << slot) ? "READY - A to change" : "NOT READY - A to confirm",
+            257, frontLanRow(191,22,4) == 3, status.state == GE_LAN_LOBBY);
+    }
+    DL = frontLanLine(DL, status.role == GE_LAN_ROLE_HOST
+        ? "NEXT: rules  START: launch  B: leave" : "NEXT: view rules  B: leave", 280, FALSE, TRUE);
+    DL = frontAddNextTabText(DL);
+    if (status.role == GE_LAN_ROLE_HOST)
+    {
+        DL = frontAddStartTabText(DL);
+    }
+    return frontDrawCursor(frontAddPreviousTabText(DL));
+}
+#endif /* GE_XBOX_NATIVE32 */
+
 void frontChangeMenu(MENU menu, s32 reload)
 {
     if ((menu == MENU_RUN_STAGE) || (menu == MENU_SPECTRUM_EMU))
@@ -8726,6 +9511,9 @@ MENU get_currentmenu(void)
 void menu_init(void)
 {
     s32 var_v0;
+#if defined(GE_XBOX_NATIVE32)
+    frontLanMenuPump();
+#endif
 
     if (current_menu == MENU_SWITCH_SCREENS)
     {
@@ -8814,6 +9602,12 @@ void menu_init(void)
             case MENU_NO_CONTROLLERS:         update_menu16_nocontrollers();        break;
             case MENU_DISPLAY_CAST:           update_menu18_displaycast();          break;
             case MENU_SPECTRUM_EMU:           update_menu19_spectrum();             break;
+#if defined(GE_XBOX_NATIVE32)
+            case MENU_MP_CONNECTION:
+            case MENU_MP_LAN_SELECT:
+            case MENU_MP_LAN_BROWSER:
+            case MENU_MP_LAN_LOBBY:                                                break;
+#endif
         }
 
         if (menu_update > MENU_INVALID)
@@ -8854,6 +9648,12 @@ void menu_init(void)
             case MENU_NO_CONTROLLERS:         init_menu16_nocontroller();           break;
             case MENU_DISPLAY_CAST:           init_menu18_displaycast();            break;
             case MENU_SPECTRUM_EMU:           init_menu19_spectrum();               break;
+#if defined(GE_XBOX_NATIVE32)
+            case MENU_MP_CONNECTION:
+            case MENU_MP_LAN_SELECT:
+            case MENU_MP_LAN_BROWSER:
+            case MENU_MP_LAN_LOBBY:           init_menu_mp_connection();            break;
+#endif
         }
     }
 
@@ -8883,6 +9683,12 @@ void menu_init(void)
         case MENU_NO_CONTROLLERS:         interface_menu16_nocontrollers();         break;
         case MENU_DISPLAY_CAST:           interface_menu18_displaycast();           break;
         case MENU_SPECTRUM_EMU:           interface_menu19_spectrum();              break;
+#if defined(GE_XBOX_NATIVE32)
+        case MENU_MP_CONNECTION:          interface_menu_mp_connection();           break;
+        case MENU_MP_LAN_SELECT:          interface_menu_mp_lan_select();           break;
+        case MENU_MP_LAN_BROWSER:         interface_menu_mp_lan_browser();          break;
+        case MENU_MP_LAN_LOBBY:           interface_menu_mp_lan_lobby();            break;
+#endif
         case MENU_RUN_STAGE:
             if (interface_menu0B_runstage())
             {
@@ -8890,7 +9696,11 @@ void menu_init(void)
             }
             else if (gamemode == GAMEMODE_MULTI)
             {
+#if defined(GE_XBOX_NATIVE32)
+                frontChangeMenu(s_frontLanMode ? MENU_MP_LAN_SELECT : MENU_MP_OPTIONS, TRUE);
+#else
                 frontChangeMenu(MENU_MP_OPTIONS, 1);
+#endif
             }
             /**
              * The intro roster only shows main characters. The credits roster shows minor characters like guards.
@@ -9024,6 +9834,20 @@ Gfx * menu_jump_constructor_handler(Gfx *DL)
             break;
         case MENU_SPECTRUM_EMU:
             DL = constructor_menu19_spectrum(DL);
+#if defined(GE_XBOX_NATIVE32)
+            break;
+        case MENU_MP_CONNECTION:
+            DL = constructor_menu_mp_connection(DL);
+            break;
+        case MENU_MP_LAN_SELECT:
+            DL = constructor_menu_mp_lan_select(DL);
+            break;
+        case MENU_MP_LAN_BROWSER:
+            DL = constructor_menu_mp_lan_browser(DL);
+            break;
+        case MENU_MP_LAN_LOBBY:
+            DL = constructor_menu_mp_lan_lobby(DL);
+#endif
     }
 
 #ifdef PORT

@@ -48,16 +48,68 @@ static GEFramePerf s_framePerf;
 static uint64_t s_perfTaskStart=0,s_perfPresentEnd=0;
 static unsigned s_perfWorkUs=0,s_perfPresentUs=0;
 static bool s_perfPresented=false;
-static char s_perfLine1[128]="FRAME TIMING: COLLECTING";
-static char s_perfLine2[128]="";
-static char s_perfRoomLine[128]="ROOMHW: COLLECTING";
-static char s_perfRoomRejectLine[128]="";
-static unsigned s_roomLastStats[8]={0};
-static unsigned s_roomLastGpuTriangles=0;
-static unsigned RoomWindowDelta(unsigned now,unsigned &last) {
-    /* Reset on backend reattach, otherwise monotonic cumulative counters. */
-    const unsigned delta=(now>=last)?now-last:now;
-    last=now;return delta;
+/* The overlay samples its own short, rolling window. Full telemetry remains
+ * in the existing Phase0 / stage-transition trace, not on the screen. */
+static GEFramePerf s_hudPerf;
+static char s_hudLine1[96]="FPS --.-   FRAME --.-MS   DIPS --";
+static char s_hudLine2[96]="GFX --.-MS   DRAWS ---   BATCH ---";
+static unsigned s_hudSeverity=0u;
+static bool s_hudVisibleLastFrame=false;
+#if GE_XBOX_PHASE0_PROFILE && GE_XBOX_CINEMATIC_TRACE
+/* Last 16 worst cinematic present gaps. The render-thread frame index is NOT
+ * the game-thread frame index; two graphics tasks may be queued. Keep both
+ * traces separate and use the stage + nearby frame index to compare. */
+enum { GE_CINE_GPU_TOP=16 };
+struct GECineGPUFrame {
+    int stage;
+    unsigned gfxFrame,approxCine, gapUs,workUs,presentUs,taskUs;
+    GEBackendFrameStats backend;
+};
+static GECineGPUFrame s_cineGpuTop[GE_CINE_GPU_TOP];
+static unsigned s_cineGpuCount=0,s_cineGpuFrames=0;
+static unsigned s_cineGpuOver28=0,s_cineGpuOver50=0,s_cineGpuMaxGap=0;
+static void RecordCineGPU(unsigned gap,unsigned work,unsigned present,unsigned task,
+                          const GEBackendFrameStats& b,int cine) {
+    if(!gap)return;
+    ++s_cineGpuFrames;
+    if(gap>28000u)++s_cineGpuOver28;
+    if(gap>50000u)++s_cineGpuOver50;
+    if(gap>s_cineGpuMaxGap)s_cineGpuMaxGap=gap;
+    if(gap<=28000u)return;
+    unsigned slot=s_cineGpuCount;
+    if(slot<GE_CINE_GPU_TOP)++s_cineGpuCount;
+    else {
+        slot=0;
+        for(unsigned i=1;i<GE_CINE_GPU_TOP;++i)
+            if(s_cineGpuTop[i].gapUs<s_cineGpuTop[slot].gapUs)slot=i;
+        if(gap<=s_cineGpuTop[slot].gapUs)return;
+    }
+    GECineGPUFrame& f=s_cineGpuTop[slot];
+    f.stage=s_traceStage;f.gfxFrame=s_stageCompletedFrames;
+    f.approxCine=cine?1u:0u;
+    f.gapUs=gap;f.workUs=work;f.presentUs=present;f.taskUs=task;
+    f.backend=b;
+}
+#endif
+static void ReportHudPerf(void) {
+    const GEFramePerfWindow& p=s_hudPerf.window;
+    if(p.frames<2u || !p.gaps || !p.gapUs)return;
+    const unsigned fps10=(unsigned)((10000000ull*p.gaps)/p.gapUs);
+    const unsigned frame10=GEFramePerf::Average(p.gapUs,p.gaps)/100u;
+    const unsigned gfx10=GEFramePerf::Average(p.workUs,p.frames)/100u;
+    s_hudSeverity=(fps10<300u || p.over50ms)?2u:
+                  (fps10<550u || p.over28ms)?1u:0u;
+    geXboxSnprintf(s_hudLine1,sizeof(s_hudLine1),
+        "FPS %u.%u   FRAME %u.%uMS   DIPS %u",
+        fps10/10u,fps10%10u,frame10/10u,frame10%10u,p.over28ms);
+    geXboxSnprintf(s_hudLine2,sizeof(s_hudLine2),
+        "GFX %u.%uMS   DRAWS %u   BATCH %u",
+        gfx10/10u,gfx10%10u,
+        GEFramePerf::Average(p.drawCalls,p.frames),
+        GEFramePerf::Average(p.batches,p.frames));
+    /* 30-frame (~0.5-1s) window shows rebound quickly; the 120-frame
+     * diagnostic collector is independent and keeps its complete counters. */
+    s_hudPerf.ClearWindow();
 }
 #if !GE_NATIVE_TRACE_VERBOSE
 /* Quiet builds have NO async trace writer.  Keep a bounded in-memory record
@@ -82,38 +134,13 @@ static char s_bootLabel[64];
 static void ReportFramePerf(void) {
     const GEFramePerfWindow& p=s_framePerf.window;
     if(!p.frames)return;
+#if GE_NATIVE_TRACE_VERBOSE
     const unsigned work=GEFramePerf::Average(p.workUs,p.frames);
     const unsigned present=GEFramePerf::Average(p.presentUs,p.frames);
-    const unsigned fps10=p.gapUs?(unsigned)((10000000ull*p.gaps)/p.gapUs):0;
-    const unsigned max10=p.maxGapUs/100u,work10=work/100u,present10=present/100u;
-    geXboxSnprintf(s_perfLine1,sizeof(s_perfLine1),
-        "FPS %u.%u  MAX GAP %u.%u MS  OVER 35 MS %u",
-        fps10/10u,fps10%10u,max10/10u,max10%10u,p.over35ms);
-    geXboxSnprintf(s_perfLine2,sizeof(s_perfLine2),
-        "GFX %u.%u MS  PRESENT %u.%u MS  BATCHES %u",
-        work10/10u,work10%10u,present10/10u,present10%10u,
-        GEFramePerf::Average(p.batches,p.frames));
-    /* ROOMHW is a TOTAL across the same window as FPS/GFX, not the one
-     * arbitrary frame where ReportFramePerf happened to run (old 6B bug). */
-    unsigned now[8]={0},delta[8]={0};
-#if defined(GE_XBOX_NATIVE32)
-    geNativeRoomPipelineCounters(now);
-#endif
-    for(unsigned i=0;i<8u;++i)
-        delta[i]=RoomWindowDelta(now[i],s_roomLastStats[i]);
-    const unsigned hardware=RoomWindowDelta(
-        ge_xbox_d3d8_room_hardware_triangles_total(),s_roomLastGpuTriangles);
-    geXboxSnprintf(s_perfRoomLine,sizeof(s_perfRoomLine),
-        "ROOMHW %u TRI / %u FR  ROOMS %u  RUNS %u  UP %u",
-        hardware,p.frames,delta[0],delta[1],delta[6]);
-    geXboxSnprintf(s_perfRoomRejectLine,sizeof(s_perfRoomRejectLine),
-        "ROOM SKIP SHORT %u  MAT %u  VTX %u  NEAR %u  GPU %u",
-        delta[2],delta[3],delta[4],delta[5],delta[7]);
-#if GE_NATIVE_TRACE_VERBOSE
     const unsigned gap=GEFramePerf::Average(p.gapUs,p.gaps);
     GENativePlatform_TraceDeferred(
         "FRAME PERF stage=%d completed=%u samples=%u gaps=%u "
-        "gap_us_avg=%u gap_us_max=%u over35ms=%u over50ms=%u over100ms=%u "
+        "gap_us_avg=%u gap_us_max=%u over28ms=%u over35ms=%u over50ms=%u over100ms=%u "
         "gfx_us_avg=%u gfx_us_max=%u present_us_avg=%u present_us_max=%u "
         "task_us_avg=%u task_us_max=%u draw_calls_avg=%u batches_avg=%u "
         "tri_in_avg=%u tri_out_avg=%u uploads=%u upload_kib=%u shader_creates=%u "
@@ -121,7 +148,7 @@ static void ReportFramePerf(void) {
         "worst_tri_out=%u worst_uploads=%u worst_upload_bytes=%u worst_shader_creates=%u "
         "trace_dropped=%u\n",
         s_traceStage,s_stageCompletedFrames,p.frames,p.gaps,gap,p.maxGapUs,
-        p.over35ms,p.over50ms,p.over100ms,work,p.maxWorkUs,present,p.maxPresentUs,
+        p.over28ms,p.over35ms,p.over50ms,p.over100ms,work,p.maxWorkUs,present,p.maxPresentUs,
         GEFramePerf::Average(p.taskUs,p.frames),p.maxTaskUs,
         GEFramePerf::Average(p.drawCalls,p.frames),GEFramePerf::Average(p.batches,p.frames),
         GEFramePerf::Average(p.inputTriangles,p.frames),GEFramePerf::Average(p.outputTriangles,p.frames),
@@ -136,14 +163,18 @@ static void ReportFramePerf(void) {
      * gameplay windows from the eight-slot history. Rank by average gap
      * instead; retain isolated >100ms hitches when room is available. */
     const unsigned gapAverage=GEFramePerf::Average(p.gapUs,p.gaps);
-    if(p.frames>=30u && (gapAverage>25000u || p.maxGapUs>100000u)) {
+    /* Always retain the first stage-intro window, even if it contains one
+     * isolated 33ms missed-vsync and otherwise runs at 60. Reserve slot 0
+     * for it; later windows compete for the seven worst steady-state slots.
+     * Never write a log on the graphics thread in issue-only builds. */
+    const bool intro=(s_stageCompletedFrames<=30u);
+    if(p.frames>=2u && (intro || gapAverage>25000u || p.maxGapUs>100000u)) {
         unsigned slot=s_dipHistoryCount;
-        if(slot<GE_DIP_HISTORY) ++s_dipHistoryCount;
+        if(intro && s_dipHistoryCount>0u)slot=0u;
+        else if(slot<GE_DIP_HISTORY) ++s_dipHistoryCount;
         else {
-            /* Retain the eight worst dip windows, not merely the first
-             * eight in a long recording.  Do not evict a more severe hitch. */
-            slot=0;
-            for(unsigned i=1;i<GE_DIP_HISTORY;++i)
+            slot=1u;
+            for(unsigned i=2;i<GE_DIP_HISTORY;++i)
                 if(GEFramePerf::Average(s_dipHistory[i].window.gapUs,s_dipHistory[i].window.gaps) <
                    GEFramePerf::Average(s_dipHistory[slot].window.gapUs,s_dipHistory[slot].window.gaps))
                     slot=i;
@@ -195,40 +226,7 @@ static void DrawBootStep(const char *message,int standalone) {
     }
 }
 
-/* Back-button statistics: keep all text inside a title-safe 4:3 viewport,
- * including 720p pillarboxed gameplay and anamorphic 480p/576i widescreen.
- * This is diagnostic-only drawing; the original game viewport is restored. */
-#define GE_STATS_MAX_ROWS 16u
-struct GEStatsOverlayRow {
-    char text[128];
-    DWORD colour;
-    unsigned section;
-};
-static unsigned GEStatsWrap(GEStatsOverlayRow *rows,unsigned count,
-                            const char *source,DWORD colour,unsigned section,
-                            unsigned maxChars) {
-    if(!source)return count;
-    if(maxChars>=sizeof(rows[0].text))maxChars=sizeof(rows[0].text)-1u;
-    while(*source && count<GE_STATS_MAX_ROWS) {
-        while(*source==' ' || *source=='\n')++source;
-        if(!*source)break;
-        unsigned take=0;
-        while(source[take] && source[take]!='\n' && take<maxChars)++take;
-        if(take==maxChars && source[take] && source[take]!='\n') {
-            unsigned space=take;
-            while(space && source[space]!=' ')--space;
-            if(space>=maxChars/3u)take=space;
-        }
-        if(!take)break;
-        memcpy(rows[count].text,source,take);
-        rows[count].text[take]=0;
-        rows[count].colour=colour;
-        rows[count].section=section;
-        ++count;
-        source+=take;
-    }
-    return count;
-}
+/* Minimal Back-button HUD, 2 lines, within title-safe 4:3 area. */
 static void GEStatsDrawBackground(IDirect3DDevice8 *d,
                                   float x,float y,float width,float height) {
     const float right=x+width,bottom=y+height;
@@ -258,12 +256,9 @@ static void GEStatsDrawBackground(IDirect3DDevice8 *d,
     d->SetTextureStageState(1,D3DTSS_ALPHAOP,D3DTOP_DISABLE);
     d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,2u,v,sizeof(v[0]));
 }
-static void GEStatsDrawOverlay(IDirect3DDevice8 *d,int traceReady) {
+static void GEStatsDrawOverlay(IDirect3DDevice8 *d) {
     const float width=(float)s_video->Width(),height=(float)s_video->Height();
     if(width<160.0f || height<120.0f)return;
-    /* A 4:3 area on a 16:9 display can be narrower than the backbuffer.
-     * Widescreen 480p uses non-square pixels: its 4:3 area is 75% of the
-     * encoded 640-pixel width, not 640 pixels. */
     float contentWidth=width;
     if(s_video->IsWidescreen()) {
         if(width*9.0f>=height*16.0f)contentWidth=height*(4.0f/3.0f);
@@ -271,48 +266,26 @@ static void GEStatsDrawOverlay(IDirect3DDevice8 *d,int traceReady) {
     }
     if(contentWidth>width)contentWidth=width;
     const float contentLeft=(width-contentWidth)*0.5f;
-    const float insetX=contentWidth*0.06f;
-    const float insetY=height*0.06f;
+    const float insetX=contentWidth*0.05f;
+    const float insetY=height*0.045f;
     const float left=contentLeft+insetX;
     const float usableWidth=contentWidth-2.0f*insetX;
-    const float outputScale=height/480.0f;
-    const float fontScale=1.10f*outputScale;
-    const float pad=9.0f*outputScale;
-    const float lineStep=10.0f*fontScale;
-    const float sectionGap=5.0f*fontScale;
-    const float shadow=1.1f*outputScale;
-    unsigned maxChars=(unsigned)((usableWidth-2.0f*pad)/(6.0f*fontScale));
-    if(maxChars<12u)maxChars=12u;
-    if(maxChars>126u)maxChars=126u;
-    GEStatsOverlayRow rows[GE_STATS_MAX_ROWS];
-    unsigned count=0;
-    count=GEStatsWrap(rows,count,"007XB - ORIGINAL GAME / FAST3D / LIBAUDIO",
-        0xFFE5EBF3u,0u,maxChars);
-    count=GEStatsWrap(rows,count,traceReady?
-        (GE_NATIVE_TRACE_VERBOSE?"LOG: VERBOSE":"LOG: ISSUES ONLY"):
-        "TRACE WRITE FAILED",0xFFFFB065u,1u,maxChars);
-    count=GEStatsWrap(rows,count,s_perfLine1,0xFFFFFFFFu,2u,maxChars);
-    count=GEStatsWrap(rows,count,s_perfLine2,0xFFFFFFFFu,2u,maxChars);
-    count=GEStatsWrap(rows,count,s_perfRoomLine,0xFFC4E9FFu,2u,maxChars);
-    count=GEStatsWrap(rows,count,s_perfRoomRejectLine,0xFFFFD2AAu,2u,maxChars);
-    if(!count)return;
-    unsigned widest=0;
-    for(unsigned i=0;i<count;++i) {
-        const unsigned length=(unsigned)strlen(rows[i].text);
-        if(length>widest)widest=length;
-    }
-    float panelWidth=2.0f*pad+(float)widest*6.0f*fontScale;
+    const float scale=height/480.0f;
+    const float fontScale=1.05f*scale;
+    const float pad=6.0f*scale;
+    const float step=12.0f*scale;
+    const unsigned len1=(unsigned)strlen(s_hudLine1);
+    const unsigned len2=(unsigned)strlen(s_hudLine2);
+    float panelWidth=2.0f*pad+(float)(len1>len2?len1:len2)*6.0f*fontScale;
     if(panelWidth>usableWidth)panelWidth=usableWidth;
-    const float panelHeight=2.0f*pad+(float)count*lineStep+sectionGap;
-    GEStatsDrawBackground(d,left,insetY,panelWidth,panelHeight);
-    float y=insetY+pad;
-    for(unsigned i=0;i<count;++i) {
-        if(i && rows[i].section==2u && rows[i-1].section!=2u)y+=sectionGap;
-        s_draw->DrawText(d,left+pad+shadow,y+shadow,fontScale,
-                         rows[i].text,0xFF000000u);
-        s_draw->DrawText(d,left+pad,y,fontScale,rows[i].text,rows[i].colour);
-        y+=lineStep;
-    }
+    GEStatsDrawBackground(d,left,insetY,panelWidth,2.0f*pad+2.0f*step);
+    const DWORD headline=s_hudSeverity==2u?0xFFFF8F86u:
+        s_hudSeverity==1u?0xFFFFCE7Eu:0xFFB9F7CAu;
+    const float y=insetY+pad;
+    /* Two glyph passes instead of four. The dark plate provides contrast
+     * without doubling the per-pixel diagnostic font geometry. */
+    s_draw->DrawText(d,left+pad,y,fontScale,s_hudLine1,headline);
+    s_draw->DrawText(d,left+pad,y+step,fontScale,s_hudLine2,0xFFD1E3F7u);
 }
 
 static void WM_Init(const GfxWindowInitSettings *) {}
@@ -376,7 +349,7 @@ static void WM_SwapBegin(void) {
                  * trim text, then let the backend restore the game scissor. */
                 D3DRECT fullClip={0,0,(LONG)s_video->Width(),(LONG)s_video->Height()};
                 d->SetScissors(1,FALSE,&fullClip);
-                GEStatsDrawOverlay(d,GENativePlatform_TraceReady());
+                GEStatsDrawOverlay(d);
             }
             if(savedViewport)d->SetViewport(&originalViewport);
             d->ApplyStateBlock(s_logoState);
@@ -473,8 +446,19 @@ extern "C" void GENativeVideo_TraceStage(int stage) {
     GEDeferredDip captured[GE_DIP_HISTORY];
     unsigned capturedCount=0,omitted=0;
 #endif
+#if GE_XBOX_PHASE0_PROFILE && GE_XBOX_CINEMATIC_TRACE
+    GECineGPUFrame gpuCaptured[GE_CINE_GPU_TOP];
+    unsigned gpuCount=0,gpuFrames=0,gpuOver28=0,gpuOver50=0,gpuMaxGap=0;
+#endif
     EnterCriticalSection(&s_bootLock);
     ReportFramePerf();
+#if GE_XBOX_PHASE0_PROFILE && GE_XBOX_CINEMATIC_TRACE
+    gpuCount=s_cineGpuCount;gpuFrames=s_cineGpuFrames;
+    gpuOver28=s_cineGpuOver28;gpuOver50=s_cineGpuOver50;
+    gpuMaxGap=s_cineGpuMaxGap;
+    for(unsigned i=0;i<gpuCount;++i)gpuCaptured[i]=s_cineGpuTop[i];
+    s_cineGpuCount=s_cineGpuFrames=s_cineGpuOver28=s_cineGpuOver50=s_cineGpuMaxGap=0;
+#endif
 #if !GE_NATIVE_TRACE_VERBOSE
     capturedCount=s_dipHistoryCount;
     for(unsigned i=0;i<capturedCount;++i)captured[i]=s_dipHistory[i];
@@ -484,17 +468,34 @@ extern "C" void GENativeVideo_TraceStage(int stage) {
     s_traceStage=stage;s_traceFrame=0;s_activeTraceFrame=0;
     s_stageCompletedFrames=0;
     s_framePerf.Reset();s_perfPresented=false;
-    strcpy(s_perfLine1,"FRAME TIMING: COLLECTING");s_perfLine2[0]=0;
-    strcpy(s_perfRoomLine,"ROOMHW: COLLECTING");s_perfRoomRejectLine[0]=0;
-    /* Keep cumulative baselines across stage changes; stats must represent
-     * only the new stage/window rather than the entire running session. */
-    unsigned nowRoomStats[8]={0};
-#if defined(GE_XBOX_NATIVE32)
-    geNativeRoomPipelineCounters(nowRoomStats);
-#endif
-    for(unsigned i=0;i<8u;++i)s_roomLastStats[i]=nowRoomStats[i];
-    s_roomLastGpuTriangles=ge_xbox_d3d8_room_hardware_triangles_total();
+    s_hudPerf.Reset();s_hudVisibleLastFrame=false;s_hudSeverity=0u;
+    strcpy(s_hudLine1,"FPS --.-   FRAME --.-MS   DIPS --");
+    strcpy(s_hudLine2,"GFX --.-MS   DRAWS ---   BATCH ---");
     LeaveCriticalSection(&s_bootLock);
+#if GE_XBOX_PHASE0_PROFILE && GE_XBOX_CINEMATIC_TRACE
+    /* Emit only between stages. No disk I/O, formatting or allocations
+     * on the 17 FPS frames themselves. Exact worker frame number included. */
+    if(gpuFrames) {
+        GENativePlatform_TraceIssue(
+            "CINE GPU stage_before=%d frames=%u gaps_over28=%u gaps_over50=%u gap_max_us=%u top=%u\n",
+            gpuCount?gpuCaptured[0].stage:stage,gpuFrames,
+            gpuOver28,gpuOver50,gpuMaxGap,gpuCount);
+        for(unsigned i=0;i<gpuCount;++i) {
+            const GECineGPUFrame& f=gpuCaptured[i];
+            const GEBackendFrameStats& b=f.backend;
+            GENativePlatform_TraceIssue(
+                "CINE GPUFRAME stage=%d gfxframe=%u camflag_approx=%u gap_us=%u gfx_work_us=%u present_us=%u task_us=%u draws=%u batches=%u triangles=%u output_tris=%u tex_uploads=%u upload_kib=%u shader_creates=%u shader_probes=%u sw_addr_tri=%u vb_locks=%u up_draws=%u small_up=%u vb_draws=%u native_up=%u native_idx=%u native_vb=%u native_static=%u driver_draw_us=%u driver_submit_us=%u driver_upload_us=%u\n",
+                f.stage,f.gfxFrame,f.approxCine,f.gapUs,f.workUs,f.presentUs,f.taskUs,
+                b.draw_calls,b.gpu_batches,b.input_triangles,b.output_triangles,
+                b.texture_uploads,b.texture_upload_bytes/1024u,
+                b.shader_creates,b.shader_probes,b.software_address_triangles,
+                b.vb_locks,b.up_submissions,b.small_up_submissions,b.vb_submissions,
+                b.native_up_submissions,b.native_indexed_submissions,
+                b.native_stream_vb_submissions,b.native_static_submissions,
+                b.draw_api_us,b.submit_us,b.upload_api_us);
+        }
+    }
+#endif
 #if defined(GE_XBOX_NATIVE32)
     /* Cumulative counters: compare consecutive entries to isolate dropped
      * VI messages from heavy gameplay, without writing during a frame. */
@@ -537,7 +538,7 @@ extern "C" void GENativeVideo_TraceStage(int stage) {
         const GEFramePerfWindow& w=d.window;
         GENativePlatform_TraceIssue(
             "FRAME DIP stage=%d completed=%u samples=%u gaps=%u "
-            "gap_us_avg=%u gap_us_max=%u over35ms=%u over50ms=%u over100ms=%u "
+            "gap_us_avg=%u gap_us_max=%u over28ms=%u over35ms=%u over50ms=%u over100ms=%u "
             "gfx_us_avg=%u gfx_us_max=%u present_us_avg=%u present_us_max=%u "
             "task_us_avg=%u task_us_max=%u draw_calls_avg=%u batches_avg=%u "
             "worst_gfx_us=%u worst_present_us=%u worst_task_us=%u "
@@ -547,7 +548,7 @@ extern "C" void GENativeVideo_TraceStage(int stage) {
             "vb_locks_avg=%u vb_draws_avg=%u up_draws_avg=%u small_up_avg=%u "
             "draw_api_us_avg=%u submit_us_avg=%u upload_api_us_avg=%u fast_swizzles_avg=%u\n",
             d.stage,d.completed,w.frames,w.gaps,GEFramePerf::Average(w.gapUs,w.gaps),
-            w.maxGapUs,w.over35ms,w.over50ms,w.over100ms,
+            w.maxGapUs,w.over28ms,w.over35ms,w.over50ms,w.over100ms,
             GEFramePerf::Average(w.workUs,w.frames),w.maxWorkUs,
             GEFramePerf::Average(w.presentUs,w.frames),w.maxPresentUs,
             GEFramePerf::Average(w.taskUs,w.frames),w.maxTaskUs,
@@ -626,11 +627,15 @@ extern "C" int geNativeRunGraphics(void *commands,unsigned bytes) {
     }
     int result=0;
     s_perfPresented=false;
+    /* Previously missing: PH0B's worker-side sampling was defined but
+     * never started. Begin before fast3d and finish after scene/present. */
+    const unsigned long long p0GraphicsStart=geP0GraphicsBegin();
     s_perfTaskStart=sysGetMicroseconds();
     if(!s_failed && !GENativePlatform_HasFatalError())
         result=geNativeGfxFrame(commands,bytes);
     const uint64_t taskEnd=sysGetMicroseconds();
     if(s_scene)WM_SwapBegin();
+    geP0GraphicsEnd(p0GraphicsStart);
     if(!result)s_failed=1;
     const int success=result && !s_failed && !GENativePlatform_HasFatalError();
     if(trace)GENativePlatform_Trace("FRAME GFX_RETURN stage=%d frame=%u success=%d dl_peak=%u\n",
@@ -638,14 +643,46 @@ extern "C" int geNativeRunGraphics(void *commands,unsigned bytes) {
     if(success) {
         ++s_frames;
         ++s_stageCompletedFrames;
-        /* First three tasks carry synchronous startup checkpoints. Exclude
-         * them and their interval from steady-state frame measurements. */
-        if(s_stageCompletedFrames>3u && s_perfPresented) {
+        /* Only the initial boot checkpoints are non-gameplay frames.
+         * Stage intros must include frame 1: skipping the first 3 frames of
+         * EVERY stage hid the cold room/decode/shader stalls we need to
+         * identify. GEFramePerf::Reset() already excludes inter-stage gaps. */
+        if(s_perfPresented && (!s_bootDisplay || s_stageCompletedFrames>3u)) {
             GEBackendFrameStats backend;
             ge_xbox_d3d8_frame_stats(&backend);
+            const unsigned taskUs=GEFramePerf::Elapsed(s_perfTaskStart,taskEnd);
+#if GE_XBOX_PHASE0_PROFILE && GE_XBOX_CINEMATIC_TRACE
+            /* This gap belongs to the current graphics task, not necessarily
+             * the game frame with the same ordinal (async queue). */
+            const unsigned cineGap=s_framePerf.hasLastPresent?
+                GEFramePerf::Elapsed(s_framePerf.lastPresentUs,s_perfPresentEnd):0u;
+            const int cineNow=geP0CineIsActive();
+            /* Include the first 360 graphics tasks even if an introductory
+             * camera uses an unexpected mode, then continue while a known
+             * intro/swirling cinematic mode is active. This does not add
+             * frame-time logging; only a bounded RAM sample is retained. */
+            if(s_stageCompletedFrames<=360u || cineNow)
+                RecordCineGPU(cineGap,s_perfWorkUs,s_perfPresentUs,taskUs,backend,cineNow);
+#endif
             s_framePerf.Record(s_perfPresentEnd,s_perfWorkUs,s_perfPresentUs,
-                GEFramePerf::Elapsed(s_perfTaskStart,taskEnd),backend);
-            if(s_framePerf.window.frames>=120u)ReportFramePerf();
+                taskUs,backend);
+            /* The HUD is sampled only when visible. A newly enabled overlay
+             * must not include frames from the prior stage or a paused game. */
+            if(s_showDiagnostics) {
+                if(!s_hudVisibleLastFrame) {
+                    s_hudPerf.Reset();
+                    s_hudVisibleLastFrame=true;
+                    s_hudSeverity=0u;
+                }
+                s_hudPerf.Record(s_perfPresentEnd,s_perfWorkUs,s_perfPresentUs,
+                    taskUs,backend);
+                if(s_hudPerf.window.frames>=30u)ReportHudPerf();
+            } else s_hudVisibleLastFrame=false;
+            /* Keep the first 30 presented frames separate from the steady
+             * 120-frame windows. This isolates stage-intro cold work without
+             * logging, formatting, or writing anything inside the frame. */
+            if(s_stageCompletedFrames==30u || s_framePerf.window.frames>=120u)
+                ReportFramePerf();
         }
         /* Keep a later crash distinguishable from an immediate first-frame
          * stop, without flushing a file on every steady-state frame. */
@@ -700,6 +737,9 @@ extern "C" void videoResetTextureCache(void) {
      * preceding D3D8/fast3d task releases its cache, otherwise the stage
      * reset can free a bound texture while the worker is rendering it. */
     if(s_bootLockReady)EnterCriticalSection(&s_bootLock);
+    /* Old room VBs may refer to the stage allocator's previous contents.
+     * Clear them before dropping Fast3D's texture identities. */
+    ge_xbox_d3d8_static_room_cache_reset();
     geNativeGfxTextureReset();
     /* The overlay state block also owns captured texture references. Refresh
      * it after the cache unbinds its images; never restore the discarded stage. */

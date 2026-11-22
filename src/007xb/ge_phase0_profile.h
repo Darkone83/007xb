@@ -11,6 +11,20 @@
 #ifndef GE_XBOX_PHASE0E_PROFILE
 #define GE_XBOX_PHASE0E_PROFILE 0 /* PH0E measurements collected; normal A/B now OFF */
 #endif
+/* Diagnostic build only: retain the most expensive cinematic frames in RAM,
+ * report them at stage exit.  Set to 0 for the clean performance build. */
+#ifndef GE_XBOX_CINEMATIC_TRACE
+#define GE_XBOX_CINEMATIC_TRACE 1
+#endif
+/* All counters are private to the game thread; gfx worker only reads the
+ * atomic cinematic-mode flag. Never write a trace during a frame. */
+enum { GE_CINE_VIS=0, GE_CINE_PROPS, GE_CINE_BG, GE_CINE_SKY,
+       GE_CINE_ROOMLOAD, GE_CINE_PLAYER, GE_CINE_SCOPE_COUNT };
+/* These are mutually exclusive reasons a retrace did not produce a new
+ * game frame. None of these counters changes gameplay pacing. */
+enum { GE_CINE_WAIT_TICK=0, GE_CINE_WAIT_GFX, GE_CINE_WAIT_DEMO,
+       GE_CINE_WAIT_COUNT };
+
 
 /* Instrument only the rendering task already selected by Phase 0.
  * Categories overlap (a display-list call invokes native draw and submit).
@@ -49,6 +63,23 @@ void geP0MemaSearchPass(void);
 void geP0PadEvent(int what);
 void geP0RetraceDrops(unsigned count);
 void geP0VisibleProps(unsigned count);
+#if GE_XBOX_CINEMATIC_TRACE
+void geP0CineCamera(int cameraMode,int room,int enabled);
+void geP0CineVisible(unsigned count);
+unsigned long long geP0CineScopeBegin(int category);
+void geP0CineScopeEnd(int category,unsigned long long start);
+void geP0CineRoomEvent(unsigned loaded,unsigned bytes);
+void geP0CineSkip(int reason);
+int geP0CineIsActive(void);
+#else
+#define geP0CineCamera(mode,room,enabled) ((void)0)
+#define geP0CineVisible(count) ((void)0)
+#define geP0CineScopeBegin(category) (0ull)
+#define geP0CineScopeEnd(category,start) ((void)0)
+#define geP0CineRoomEvent(loaded,bytes) ((void)0)
+#define geP0CineSkip(reason) ((void)0)
+#define geP0CineIsActive() (0)
+#endif
 void geP0HostBegin(void);
 void geP0HostInputDone(void);
 void geP0HostEnd(void);
@@ -83,6 +114,13 @@ void geP0ECommandNote(int category);
 #define geP0PadEvent(what) ((void)0)
 #define geP0RetraceDrops(count) ((void)0)
 #define geP0VisibleProps(count) ((void)0)
+#define geP0CineCamera(mode,room,enabled) ((void)0)
+#define geP0CineVisible(count) ((void)0)
+#define geP0CineScopeBegin(category) (0ull)
+#define geP0CineScopeEnd(category,start) ((void)0)
+#define geP0CineRoomEvent(loaded,bytes) ((void)0)
+#define geP0CineSkip(reason) ((void)0)
+#define geP0CineIsActive() (0)
 #define geP0HostBegin() ((void)0)
 #define geP0HostInputDone() ((void)0)
 #define geP0HostEnd() ((void)0)

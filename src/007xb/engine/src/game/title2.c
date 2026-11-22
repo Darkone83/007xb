@@ -1,5 +1,6 @@
 #include <ultra64.h>
 #include "title2.h"
+#include "gbi_extension.h"
 
 
 f32 D_8002BB00 = 0; // Set but never read
@@ -41,7 +42,30 @@ Gfx* titleRenderFolderMenuBackgroundLines(Gfx* gdl, u8 *image, s32 xOffset, stru
     D_8002BB0C = bottomRed;
     D_8002BB10 = bottomGreen;
     D_8002BB14 = bottomBlue;
+    /* Match the original side effects even on the cached-quad path. */
+    D_8002BB08 = topBlue;
+    D_8002BB04 = topGreen;
+    D_8002BB00 = topRed;
 
+#if defined(GE_XBOX_NATIVE32) && !defined(GE_XBOX_GUNBARREL_BG_LEGACY)
+    /* The Xbox can sample a full 440x299 texture. Encode source/gradient
+     * into the command buffer itself so asynchronous graphics cannot see a
+     * descriptor overwritten by the next game frame. The renderer builds
+     * one cached RGBA texture and issues ONE textured quad, not 299 rows. */
+    gdl->words.w0 = (u32)G_XBOX_GUNBARREL_BG_EXT << 24;
+    gdl->words.w1 = (u32)image;
+    ++gdl;
+    gdl->words.w0 = ((u32)(topColour->red & 255) << 16) |
+                    ((u32)(topColour->green & 255) << 8) | (u32)(topColour->blue & 255);
+    gdl->words.w1 = ((u32)(bottomColour->red & 255) << 16) |
+                    ((u32)(bottomColour->green & 255) << 8) | (u32)(bottomColour->blue & 255);
+    ++gdl;
+    /* xOffset is signed, and may exceed a 24-bit display-list argument. */
+    gdl->words.w0 = (u32)xOffset;
+    gdl->words.w1 = 0;
+    ++gdl;
+    return gdl;
+#else
     i = 0;
 
     while ((i + 1) < 300) 
@@ -81,6 +105,7 @@ Gfx* titleRenderFolderMenuBackgroundLines(Gfx* gdl, u8 *image, s32 xOffset, stru
     D_8002BB00 = topRed;
 
     return gdl;
+#endif
 }
 
 
