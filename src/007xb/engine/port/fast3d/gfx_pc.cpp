@@ -6415,6 +6415,12 @@ static int geP0EOpcodeCategory(uint32_t opcode) {
 #endif
 static void gfx_run_dl(Gfx* cmd) {
     NativeDLGuard depthGuard;
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_NATIVE_ROOM_BATCHES && GE_XBOX_NV2A_DYNAMIC_RUNS && GE_XBOX_NATIVE_ROOM_RUN_BAKE && GE_XBOX_ROOM_SEGMENT_COMPILER
+    /* A rejected useful segment falls back in its original command order.
+     * Do not repeat its speculative loads/hash for every remaining G_VTX.
+     * These bounds belong only to this traversal, never to a cached room. */
+    const Gfx *compiledFailedStart=0,*compiledFailedUntil=0;
+#endif
 #if defined(GE_XBOX_NATIVE32) && GE_XBOX_NATIVE_ROOM_BATCHES
     s_roomScope=-1;s_roomRevision=0;s_roomHasColorOverride=false;
     s_roomPrimaryStart=s_roomPrimaryEnd=0u;
@@ -6458,6 +6464,9 @@ static void gfx_run_dl(Gfx* cmd) {
         /* DP-only task buffers are length-delimited; nested Fast3D lists
            retain their native END_DL/branch semantics. */
         if(boundedTask && cmd==s_nativeTaskEnd) {
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_NATIVE_ROOM_BATCHES && GE_XBOX_NV2A_DYNAMIC_RUNS && GE_XBOX_NATIVE_ROOM_RUN_BAKE && GE_XBOX_ROOM_SEGMENT_COMPILER
+            compiledFailedStart=compiledFailedUntil=0;
+#endif
             if(!nativeDLPop(cmd,dListStart,boundedTask))return;
             continue;
         }
@@ -6474,6 +6483,18 @@ static void gfx_run_dl(Gfx* cmd) {
             }
         }
         uint32_t opcode = cmd->words.w0 >> 24;
+#if defined(GE_XBOX_NATIVE32) && GE_XBOX_NATIVE_ROOM_BATCHES && GE_XBOX_NV2A_DYNAMIC_RUNS && GE_XBOX_NATIVE_ROOM_RUN_BAKE && GE_XBOX_ROOM_SEGMENT_COMPILER
+        /* Match geCompiledScan's exact command set. Any state/flow command
+         * (including room/revision metadata) ends suppression before it runs,
+         * even if that command later proves idempotent. Leaving the span also
+         * allows an unrelated material segment to try normally. */
+        if(compiledFailedStart &&
+           ((uintptr_t)cmd<(uintptr_t)compiledFailedStart ||
+            (uintptr_t)cmd>=(uintptr_t)compiledFailedUntil ||
+            (opcode!=(uint8_t)G_VTX && opcode!=(uint8_t)G_TRI1 &&
+             opcode!=(uint8_t)G_TRI4 && opcode!=(uint8_t)G_SPNOOP)))
+            compiledFailedStart=compiledFailedUntil=0;
+#endif
 #if defined(GE_XBOX_NATIVE32) && GE_XBOX_NATIVE_ROOM_BATCHES && (GE_XBOX_LEGACY_ROOM_PACKET_PATH || !GE_XBOX_NV2A_DYNAMIC_RUNS)
         if(s_roomScope>=0 && !boundedTask &&
            (!s_roomAttemptedStart ||
@@ -6507,7 +6528,8 @@ static void gfx_run_dl(Gfx* cmd) {
         /* Whole material-segment replacement: multiple G_VTX/TRI groups are
          * emitted as one GPU-native packet, with every vertex load replayed
          * for subsequent Fast3D state correctness. */
-        if(!boundedTask && opcode==(uint8_t)G_VTX && s_roomScope>=0) {
+        if(!boundedTask && opcode==(uint8_t)G_VTX && s_roomScope>=0 &&
+           !compiledFailedStart) {
             unsigned hash=0u,tris=0u;
             const unsigned count=geCompiledScan(cmd,&hash,&tris);
             if(count && s_nativeCommandBudget>=count-1u) {
@@ -6517,6 +6539,8 @@ static void gfx_run_dl(Gfx* cmd) {
                     cmd+=done;
                     continue;
                 }
+                compiledFailedStart=cmd;
+                compiledFailedUntil=cmd+count;
             }
         }
 #endif

@@ -38,6 +38,9 @@ static volatile LONG s_rendering=0,s_failed=0,s_showDiagnostics=0;
 static unsigned s_frames=0;
 static int s_ready=0,s_scene=0;
 static int s_nativeWidth=640,s_nativeHeight=480;
+/* One coherent published pair; zero keeps the first update on the locked
+ * path. Only videoUpdateNativeResolution publishes, after applying it. */
+static volatile LONG s_nativeResolution=0;
 static DWORD s_logoState=0;
 static int s_logoStateValid=0;
 static DWORD s_ownerThread=0,s_renderThread=0;
@@ -724,11 +727,24 @@ extern "C" void geNativeDrawLogo(float radians,float scale,float alpha) {
 }
 extern "C" void videoUpdateNativeResolution(int w,int h) {
     if(w<1 || h<1)return;
-    /* Game and graphics now run on independent Xbox threads. Protect the
-     * Fast3D coordinate-space globals against an in-flight GPU task. */
+    /* osViSetMode repeats on every VI, before the scheduler services input,
+     * audio and game retraces. An unchanged mode must not wait behind an
+     * entire graphics task/Present. Pack both dimensions in one atomic read
+     * rather than reading the separately written width/height globals.
+     * Unusual >16-bit dimensions retain the original locked behavior. */
+    const LONG mode=(w<=0xFFFF && h<=0xFFFF)
+        ?(LONG)(((DWORD)w<<16)|(DWORD)h):0;
+    if(mode && InterlockedCompareExchange(
+        const_cast<LONG *>(&s_nativeResolution),0,0)==mode)return;
+    /* Startup calls precede engine threads. Once initialized, actual mode
+     * changes still serialize with graphics and publish only after apply. */
     if(s_bootLockReady)EnterCriticalSection(&s_bootLock);
-    s_nativeWidth=w;s_nativeHeight=h;
-    geNativeGfxResolution(w,h);
+    if(!mode || InterlockedCompareExchange(
+        const_cast<LONG *>(&s_nativeResolution),0,0)!=mode) {
+        s_nativeWidth=w;s_nativeHeight=h;
+        geNativeGfxResolution(w,h);
+        InterlockedExchange(const_cast<LONG *>(&s_nativeResolution),mode);
+    }
     if(s_bootLockReady)LeaveCriticalSection(&s_bootLock);
 }
 extern "C" void videoResetTextureCache(void) {
